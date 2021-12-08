@@ -1,0 +1,3 @@
+var config = {
+	fmis_url : "https://fmis.bpkp.go.id/xxxxx", // alamat aplikasi fmis
+};
