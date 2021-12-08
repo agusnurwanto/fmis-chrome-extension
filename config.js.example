@@ -1,5 +1,6 @@
 var config = {
 	fmis_url : "https://fmis.bpkp.go.id/xxxxx", // alamat aplikasi fmis
+	tahun_anggaran : "2022", // Tahun anggaran SIPD
 	url_server_lokal : "https://xxxxx.com/wp-admin/admin-ajax.php", // url server lokal
 	api_key : "xxxxxxxx", // api key server lokal
 };
