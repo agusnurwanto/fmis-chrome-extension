@@ -123,3 +123,23 @@ function singkronisasi_ssh(options){
 		jQuery('#wrap-loading').hide();
 	}
 }
+
+function intervalSession(no){
+	if(!_token){
+		return;
+	}else{
+		if(!no){
+			no = 0;
+		}
+		relayAjax({
+			url: config.fmis_url + '/dashboard',
+			success: function(html){
+				no++;
+				console.log('Interval session per 60s ke '+no);
+				setTimeout(function(){
+					intervalSession(no);
+				}, 60000);
+			}
+		});
+	}
+}

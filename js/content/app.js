@@ -3,6 +3,9 @@ if(typeof _token == 'undefined'){
 	console.log('_token', _token);
 }
 
+// untuk menjaga session
+intervalSession();
+
 var loading = ''
 	+'<div id="wrap-loading">'
         +'<div class="lds-hourglass"></div>'

@@ -9,7 +9,7 @@ Semoga bermanfaat
 
 ### Plugin Wordpress WP-SIPD https://github.com/agusnurwanto/wp-sipd
 
-### Pesan Untuk Tim Pengembang SIPD
+### Pesan Untuk Tim Pengembang FMIS
 - Semoga selalu diberi kesehatan dan aplikasi FMIS lancar digunakan oleh pemda
 - Extension ini dibuat untuk mengoptimasi kinerja aplikasi FMIS
 - Pengembangan script extension akan berhenti setelah aplikasi FMIS siap untuk mengakomodir semua fitur yang diperlukan oleh pemda
