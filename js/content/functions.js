@@ -83,6 +83,7 @@ function singkronisasi_ssh(options){
 		relayAjax({
 			url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
 			success: function(golongan){
+				var data_all = [];
 				var no_urut_golongan = 0;
 				for(var gol_id in data_ssh){
 					var nama_golongan = data_ssh[gol_id].nama;
@@ -103,7 +104,7 @@ function singkronisasi_ssh(options){
 					});
 					if(cek == false){
 						no_urut_golongan++;
-						jQuery.ajax({
+						data_all.push({
 							url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/save',
 				            type: "post",
 				            data: {
@@ -111,17 +112,139 @@ function singkronisasi_ssh(options){
 				                kdurut: no_urut_golongan,
 				                jns_ssh: jns_ssh,
 				                uraian: nama_golongan
-				            },
-				            success: function(data){
-
 				            }
-						})
+						});
 					}
 				}
+				var last = data_all.length;
+				data_all.reduce(function(sequence, nextData){
+                    return sequence.then(function(current_data){
+                		return new Promise(function(resolve_redurce, reject_redurce){
+		                	current_data.success = function(data){
+								return resolve_redurce(current_data);
+							};
+							current_data.error = function(argument) {
+								console.log(e);
+								return resolve_redurce(current_data);
+							};
+		                	relayAjax(current_data);
+		                })
+                        .catch(function(e){
+                            console.log(e);
+                            return Promise.resolve(nextData);
+                        });
+                    })
+                    .catch(function(e){
+                        console.log(e);
+                        return Promise.resolve(nextData);
+                    });
+                }, Promise.resolve(data_all[last]))
+                .then(function(data_last){
+            		run_script("initDatatable('golongan');");
+					singkronisasi_ssh_kelompok(data_ssh);
+                })
+                .catch(function(e){
+                    console.log(e);
+                });	
 			}
-		})
-		jQuery('#wrap-loading').hide();
+		});
 	}
+}
+
+function singkronisasi_ssh_kelompok(data_ssh){
+	relayAjax({
+		url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
+		success: function(golongan){
+			var data_all = [];
+			var sendData = [];
+			for(var gol_id in data_ssh){
+				var nama_golongan = data_ssh[gol_id].nama;
+				var kode_golongan = '';
+				golongan.data.map(function(b, i){
+					if(b.uraian == nama_golongan){
+						kode_golongan = b.action.split('code="')[1].split('"')[0];
+					}
+				});
+				if(kode_golongan != ''){
+					data_ssh[gol_id].code = kode_golongan;
+					sendData.push(new Promise(function(resolve, reject){
+						relayAjax({
+							url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/datatable?code='+data_ssh[gol_id].code+'&gol_id='+gol_id,
+							success: function(kelompok){
+								var _gol_id = this.url.split('&gol_id=')[1];
+								// console.log('gol_id', _gol_id);
+								var no_urut_kelompok = 0;
+								for(var kelompok_id in data_ssh[_gol_id].data){
+									var nama_kelompok = data_ssh[_gol_id].data[kelompok_id].nama;
+									var cek = false;
+									kelompok.data.map(function(b, i){
+										if(b.uraian == nama_kelompok){
+											cek = true;
+										}
+										if(no_urut_kelompok < b.kdurut){
+											no_urut_kelompok = b.kdurut;
+										}
+									});
+									if(cek == false){
+										no_urut_kelompok++;
+										data_all.push({
+											url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/save/'+data_ssh[_gol_id].code,
+								            type: "post",
+								            data: {
+								                _token: _token,
+								                kdurut: no_urut_kelompok,
+								                uraian: nama_kelompok
+								            }
+										});
+									}
+								}
+								resolve();
+							}
+						});
+					}));
+				}
+			}
+			Promise.all(sendData)
+        	.then(function(val_all){
+				// console.log('data_all kelompok', data_all);
+				var last = data_all.length;
+				data_all.reduce(function(sequence, nextData){
+	                return sequence.then(function(current_data){
+	            		return new Promise(function(resolve_redurce, reject_redurce){
+		                	current_data.success = function(data){
+								return resolve_redurce(nextData);
+							};
+							current_data.error = function(e) {
+								console.log(e);
+								return resolve_redurce(nextData);
+							};
+		                	relayAjax(current_data);
+		                })
+	                    .catch(function(e){
+	                        console.log(e);
+	                        return Promise.resolve(nextData);
+	                    });
+	                })
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            }, Promise.resolve(data_all[last]))
+	            .then(function(data_last){
+					jQuery('#wrap-loading').hide();
+					alert('Berhasil singkron SSH dari SIPD!');
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	            });
+            })
+            .catch(function(err){
+                console.log('err', err);
+        		alert('Ada kesalahan sistem!');
+        		jQuery('#wrap-loading').hide();
+            });
+		}
+	})
 }
 
 function intervalSession(no){
