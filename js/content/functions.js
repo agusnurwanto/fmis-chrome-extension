@@ -68,13 +68,13 @@ function singkronisasi_ssh(options){
 			}
 			if(!data_ssh[golongan].data[kelompok].data[sub_kelompok]){
 				data_ssh[golongan].data[kelompok].data[sub_kelompok] = {
-					nama: sub_kelompok,
+					nama: sub_kelompok+' '+b.nama_kel_standar_harga,
 					jenis: b.kelompok,
 					data: {}
 				}
 			}
 			data_ssh[golongan].data[kelompok].data[sub_kelompok].data[item_ssh] = {
-				nama: item_ssh,
+				nama: item_ssh+' '+b.nama_standar_harga,
 				jenis: b.kelompok,
 				data: b
 			}
@@ -116,7 +116,7 @@ function singkronisasi_ssh(options){
 						});
 					}
 				}
-				var last = data_all.length;
+				var last = data_all.length - 1;
 				data_all.reduce(function(sequence, nextData){
                     return sequence.then(function(current_data){
                 		return new Promise(function(resolve_redurce, reject_redurce){
@@ -207,7 +207,7 @@ function singkronisasi_ssh_kelompok(data_ssh){
 			Promise.all(sendData)
         	.then(function(val_all){
 				// console.log('data_all kelompok', data_all);
-				var last = data_all.length;
+				var last = data_all.length - 1;
 				data_all.reduce(function(sequence, nextData){
 	                return sequence.then(function(current_data){
 	            		return new Promise(function(resolve_redurce, reject_redurce){
@@ -231,8 +231,7 @@ function singkronisasi_ssh_kelompok(data_ssh){
 	                });
 	            }, Promise.resolve(data_all[last]))
 	            .then(function(data_last){
-					jQuery('#wrap-loading').hide();
-					alert('Berhasil singkron SSH dari SIPD!');
+	            	singkronisasi_ssh_sub_kelompok(data_ssh);
 	            })
 	            .catch(function(e){
 	                console.log(e);
@@ -245,6 +244,121 @@ function singkronisasi_ssh_kelompok(data_ssh){
             });
 		}
 	})
+}
+
+function singkronisasi_ssh_sub_kelompok(data_ssh){
+	var data_all = [];
+	var sendData = [];
+	for(var gol_id in data_ssh){
+		var nama_golongan = data_ssh[gol_id].nama;
+		if(data_ssh[gol_id].code){
+			sendData.push(new Promise(function(resolve, reject){
+				relayAjax({
+					url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/datatable?code='+data_ssh[gol_id].code+'&gol_id='+gol_id,
+					success: function(kelompok){
+						// console.log('gol_id', _gol_id);
+						var _gol_id = this.url.split('&gol_id=')[1];
+						var sendDataSub = [];
+						for(var kelompok_id in data_ssh[_gol_id].data){
+							var nama_kelompok = data_ssh[_gol_id].data[kelompok_id].nama;
+							var kode_kelompok = '';
+							kelompok.data.map(function(b, i){
+								if(b.uraian == nama_kelompok){
+									kode_kelompok = b.action.split('code="')[1].split('"')[0];
+								}
+							});
+							if(kode_kelompok != ''){
+								data_ssh[_gol_id].data[kelompok_id].code = kode_kelompok;
+								sendDataSub.push(new Promise(function(resolve2, reject2){
+								relayAjax({
+									url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+data_ssh[_gol_id].data[kelompok_id].code+'&gol_id='+_gol_id+'&kelompok_id='+kelompok_id,
+									success: function(subkelompok){
+										var __gol_id = this.url.split('&gol_id=')[1].split('&')[0];
+										var _kelompok_id = this.url.split('&kelompok_id=')[1];
+										var no_urut_subkelompok = 0;
+										for(var subkelompok_id in data_ssh[__gol_id].data[_kelompok_id].data){
+											var nama_subkelompok = data_ssh[__gol_id].data[_kelompok_id].data[subkelompok_id].nama;
+											var cek = false;
+											subkelompok.data.map(function(b, i){
+												if(b.uraian == nama_subkelompok){
+													cek = true;
+												}
+												if(no_urut_subkelompok < b.kdurut){
+													no_urut_subkelompok = b.kdurut;
+												}
+											});
+											if(cek == false){
+												no_urut_subkelompok++;
+												data_all.push({
+													url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/save/'+data_ssh[__gol_id].data[_kelompok_id].code,
+										            type: "post",
+										            data: {
+										                _token: _token,
+										                kdurut: no_urut_subkelompok,
+										                uraian: nama_subkelompok
+										            }
+												});
+											}
+										}
+										resolve2();
+									}
+								});
+							}));
+							}
+						}
+						Promise.all(sendDataSub)
+						.then(function(val_all){
+							resolve();
+					    })
+					    .catch(function(err){
+					        console.log('err', err);
+							alert('Ada kesalahan sistem!');
+							jQuery('#wrap-loading').hide();
+					    });
+					}
+				});
+			}));
+		}
+	}
+	Promise.all(sendData)
+	.then(function(val_all){
+		// console.log('data_all kelompok', data_all);
+		var last = data_all.length - 1;
+		data_all.reduce(function(sequence, nextData){
+            return sequence.then(function(current_data){
+        		return new Promise(function(resolve_redurce, reject_redurce){
+                	current_data.success = function(data){
+						return resolve_redurce(nextData);
+					};
+					current_data.error = function(e) {
+						console.log(e);
+						return resolve_redurce(nextData);
+					};
+                	relayAjax(current_data);
+                })
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(data_all[last]))
+        .then(function(data_last){
+			jQuery('#wrap-loading').hide();
+			alert('Berhasil singkron SSH dari SIPD!');
+        })
+        .catch(function(e){
+            console.log(e);
+        });
+    })
+    .catch(function(err){
+        console.log('err', err);
+		alert('Ada kesalahan sistem!');
+		jQuery('#wrap-loading').hide();
+    });
 }
 
 function intervalSession(no){
