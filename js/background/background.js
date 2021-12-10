@@ -23,7 +23,8 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 		    	if(request.message.content.return){
 			     	var options = {
 			     		type: 'response-fecth-url',
-			     		data: ret
+			     		data: ret,
+			     		tab: sender.tab
 			     	}
 			     	if(request.message.content.resolve){
 			     		options.resolve = resolve;

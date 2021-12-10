@@ -23,7 +23,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	jQuery('#golongan .btn-outline-dark').after(btn);
 	jQuery('#singkron-ssh-sipd').on('click', function(){
 		jQuery('#wrap-loading').show();
-		var data_prov = {
+		var data = {
 		    message:{
 		        type: "get-url",
 		        content: {
@@ -38,7 +38,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 				}
 		    }
 		};
-		chrome.runtime.sendMessage(data_prov, function(response) {
+		chrome.runtime.sendMessage(data, function(response) {
 		    console.log('responeMessage', response);
 		});
 	});
