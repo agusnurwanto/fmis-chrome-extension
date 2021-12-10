@@ -120,13 +120,13 @@ function singkronisasi_ssh(options){
 				var last = data_all.length - 1;
 				data_all.reduce(function(sequence, nextData){
                     return sequence.then(function(current_data){
-                		return new Promise(function(resolve_redurce, reject_redurce){
+                		return new Promise(function(resolve_reduce, reject_reduce){
 		                	current_data.success = function(data){
-								return resolve_redurce(current_data);
+								return resolve_reduce(current_data);
 							};
 							current_data.error = function(argument) {
 								console.log(e);
-								return resolve_redurce(current_data);
+								return resolve_reduce(current_data);
 							};
 		                	relayAjax(current_data);
 		                })
@@ -211,13 +211,13 @@ function singkronisasi_ssh_kelompok(data_ssh){
 				var last = data_all.length - 1;
 				data_all.reduce(function(sequence, nextData){
 	                return sequence.then(function(current_data){
-	            		return new Promise(function(resolve_redurce, reject_redurce){
+	            		return new Promise(function(resolve_reduce, reject_reduce){
 		                	current_data.success = function(data){
-								return resolve_redurce(nextData);
+								return resolve_reduce(nextData);
 							};
 							current_data.error = function(e) {
 								console.log(e);
-								return resolve_redurce(nextData);
+								return resolve_reduce(nextData);
 							};
 		                	relayAjax(current_data);
 		                })
@@ -327,13 +327,13 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
 		var last = data_all.length - 1;
 		data_all.reduce(function(sequence, nextData){
             return sequence.then(function(current_data){
-        		return new Promise(function(resolve_redurce, reject_redurce){
+        		return new Promise(function(resolve_reduce, reject_reduce){
                 	current_data.success = function(data){
-						return resolve_redurce(nextData);
+						return resolve_reduce(nextData);
 					};
 					current_data.error = function(e) {
 						console.log(e);
-						return resolve_redurce(nextData);
+						return resolve_reduce(nextData);
 					};
                 	relayAjax(current_data);
                 })
@@ -463,19 +463,40 @@ function singkronisasi_ssh_item(data_ssh){
 	}
 	Promise.all(sendData)
 	.then(function(val_all){
-		// console.log('data_all kelompok', data_all);
-		var last = data_all.length - 1;
-		data_all.reduce(function(sequence, nextData){
+		var _leng = 50;
+		var _data_all = [];
+		var _data = [];
+		data_all.map(function(ssh, i){
+			_data.push(ssh);
+			if((i+1)%_leng == 0){
+				_data_all.push(_data);
+				_data = [];
+			}
+		});
+		if(_data.length > 0){
+			_data_all.push(_data);
+		}
+
+		var last = _data_all.length - 1;
+		_data_all.reduce(function(sequence, nextData){
             return sequence.then(function(current_data){
-        		return new Promise(function(resolve_redurce, reject_redurce){
-                	current_data.success = function(data){
-						return resolve_redurce(nextData);
-					};
-					current_data.error = function(e) {
-						console.log(e);
-						return resolve_redurce(nextData);
-					};
-                	jQuery.ajax(current_data);
+        		return new Promise(function(resolve_reduce, reject_reduce){
+        			var sendData = current_data.map(function(ssh, i){
+        				return new Promise(function(resolve_reduce2, reject_reduce2){
+		                	ssh.success = function(data){
+								return resolve_reduce2();
+							};
+							ssh.error = function(e) {
+								console.log(e);
+								return resolve_reduce2();
+							};
+		                	jQuery.ajax(ssh);
+		                });
+	                });
+	                Promise.all(sendData)
+					.then(function(val_all){
+						resolve_reduce(nextData);
+					});
                 })
                 .catch(function(e){
                     console.log(e);
@@ -488,8 +509,7 @@ function singkronisasi_ssh_item(data_ssh){
             });
         }, Promise.resolve(data_all[last]))
         .then(function(data_last){
-			jQuery('#wrap-loading').hide();
-			alert('Berhasil singkron SSH dari SIPD!');
+			singkronisasi_ssh_rekening(data_ssh);
         })
         .catch(function(e){
             console.log(e);
@@ -500,6 +520,125 @@ function singkronisasi_ssh_item(data_ssh){
 		alert('Ada kesalahan sistem!');
 		jQuery('#wrap-loading').hide();
     });
+}
+function singkronisasi_ssh_rekening(data_ssh){
+	var sendData = [];
+	for(var gol_id in data_ssh){
+		var nama_golongan = data_ssh[gol_id].nama;
+		if(data_ssh[gol_id].code){
+			for(var kelompok_id in data_ssh[gol_id].data){
+				if(data_ssh[gol_id].data[kelompok_id].code){
+					for(var subkelompok_id in data_ssh[gol_id].data[kelompok_id].data){
+						if(data_ssh[gol_id].data[kelompok_id].data[subkelompok_id].code){
+							sendData.push(new Promise(function(resolve, reject){
+								relayAjax({
+									url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/datatable?code='+data_ssh[gol_id].data[kelompok_id].data[subkelompok_id].code+'&gol_id='+gol_id+'&kelompok_id='+kelompok_id+'&subkelompok_id='+subkelompok_id,
+									success: function(item){
+										var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
+										var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
+										var _subkelompok_id = this.url.split('&subkelompok_id=')[1].split('&')[0];
+										var sendDataSub = [];
+										for(var item_id in data_ssh[_gol_id].data[_kelompok_id].data[_subkelompok_id].data){
+											var nama_item = data_ssh[_gol_id].data[_kelompok_id].data[_subkelompok_id].data[item_id].nama;
+											var kode_item = false;
+											item.data.map(function(b, i){
+												if(b.uraian == nama_item){
+													kode_item = b.action.split('code="')[1].split('"')[0];
+												}
+											});
+											if(kode_item != false){
+												data_ssh[_gol_id].data[_kelompok_id].data[_subkelompok_id].data[item_id].code = kode_item;
+												sendDataSub.push(set_rekening_ssh(data_ssh[_gol_id].data[_kelompok_id].data[_subkelompok_id].data[item_id]));
+											}
+										}
+										Promise.all(sendDataSub)
+										.then(function(val_all){
+											resolve();
+									    })
+									    .catch(function(err){
+									        console.log('err', err);
+											alert('Ada kesalahan sistem!');
+											jQuery('#wrap-loading').hide();
+									    });
+									}
+								});
+							}));
+						}
+					}
+				}
+			}
+		}
+	}
+	Promise.all(sendData)
+	.then(function(val_all){
+		jQuery('#wrap-loading').hide();
+		alert('Berhasil singkron SSH dari SIPD!');
+    })
+    .catch(function(err){
+        console.log('err', err);
+		alert('Ada kesalahan sistem!');
+		jQuery('#wrap-loading').hide();
+    });
+}
+
+function set_rekening_ssh(options){
+	return new Promise(function(resolve2, reject2){
+		relayAjax({
+			url: config.fmis_url+'/parameter/ssh/struktur-ssh/rekening/datatable?code='+options.code,
+			success: function(rekening){
+				var data_post = {
+	                _token: _token,
+	                'table-rekening-ref_length': 10,
+	                kdrek: []
+	            };
+	            var tahun = getTahun();
+				options.data.rek_belanja.map(function(rek, i){
+					var rek_sipd = [];
+					rek.kode_akun.split('.').map(function(b, n){
+						rek_sipd.push(+b);
+					});
+					rek_sipd = rek_sipd.join('.');
+					var cek = false;
+					rekening.data.map(function(b, n){
+						if(rek_sipd == b.kdrek){
+							cek = true;
+						}
+					});
+					if(cek == false){
+						data_post.kdrek.push(tahun+'.'+rek_sipd);
+					}
+				});
+				if(data_post.kdrek.length >= 1){
+					// get code from generate form
+					relayAjax({
+						url: config.fmis_url+'/parameter/ssh/struktur-ssh/rekening/form?action=create&code='+options.code,
+						success: function(detail_ssh){
+							var url_save = detail_ssh.form.split('action=\"')[1].split('\"')[0];
+							// simpan rekening baru
+							jQuery.ajax({
+								url: url_save,
+								type: "post",
+					            data: data_post,
+					            success: function(res){
+					            	resolve2();
+					            },
+					            error: function(e){
+					            	console.log(e);
+					            	resolve2();
+					            }
+							});
+						}
+					});
+				}else{
+					resolve2();
+				}
+			}
+		});
+	});
+}
+
+function getTahun(){
+	return jQuery('.nav-link button.waves-light.dropdown-toggle strong').text();
 }
 
 function getIdSatuan(satuan, force, val_cb){
