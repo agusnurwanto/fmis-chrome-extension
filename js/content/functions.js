@@ -81,75 +81,123 @@ function singkronisasi_ssh(options){
 			}
 		});
 		run_script('window.data_ssh = '+JSON.stringify(data_ssh)+'; console.log(data_ssh);');
-		relayAjax({
-			url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
-			success: function(golongan){
-				var data_all = [];
-				var no_urut_golongan = 0;
-				for(var gol_id in data_ssh){
-					var nama_golongan = data_ssh[gol_id].nama;
-					var jns_golongan = data_ssh[gol_id].jenis;
-					if(jns_golongan == 1){
-						var jns_ssh = 1;
-					}else{
-						continue;
-					}
-					var cek = false;
-					golongan.data.map(function(b, i){
-						if(b.uraian == nama_golongan){
-							cek = true;
+		var modal_title = jQuery('#modal .modal-title > span').text();
+		if(
+			typeof modal_title != 'undefined'
+			&& modal_title == 'Tambah Data Tarif Item'
+		){
+			singkronisasi_ssh_tarif(options.data);
+		}else{
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
+				success: function(golongan){
+					var data_all = [];
+					var no_urut_golongan = 0;
+					for(var gol_id in data_ssh){
+						var nama_golongan = data_ssh[gol_id].nama;
+						var jns_golongan = data_ssh[gol_id].jenis;
+						if(jns_golongan == 1){
+							var jns_ssh = 1;
+						}else{
+							continue;
 						}
-						if(no_urut_golongan < b.kdurut){
-							no_urut_golongan = b.kdurut;
-						}
-					});
-					if(cek == false){
-						no_urut_golongan++;
-						data_all.push({
-							url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/save',
-				            type: "post",
-				            data: {
-				                _token: _token,
-				                kdurut: no_urut_golongan,
-				                jns_ssh: jns_ssh,
-				                uraian: nama_golongan
-				            }
+						var cek = false;
+						golongan.data.map(function(b, i){
+							if(b.uraian == nama_golongan){
+								cek = true;
+							}
+							if(no_urut_golongan < b.kdurut){
+								no_urut_golongan = b.kdurut;
+							}
 						});
+						if(cek == false){
+							no_urut_golongan++;
+							data_all.push({
+								url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/save',
+					            type: "post",
+					            data: {
+					                _token: _token,
+					                kdurut: no_urut_golongan,
+					                jns_ssh: jns_ssh,
+					                uraian: nama_golongan
+					            }
+							});
+						}
 					}
+					var last = data_all.length - 1;
+					data_all.reduce(function(sequence, nextData){
+	                    return sequence.then(function(current_data){
+	                		return new Promise(function(resolve_reduce, reject_reduce){
+			                	current_data.success = function(data){
+									return resolve_reduce(current_data);
+								};
+								current_data.error = function(argument) {
+									console.log(e);
+									return resolve_reduce(current_data);
+								};
+			                	relayAjax(current_data);
+			                })
+	                        .catch(function(e){
+	                            console.log(e);
+	                            return Promise.resolve(nextData);
+	                        });
+	                    })
+	                    .catch(function(e){
+	                        console.log(e);
+	                        return Promise.resolve(nextData);
+	                    });
+	                }, Promise.resolve(data_all[last]))
+	                .then(function(data_last){
+	            		run_script("initDatatable('golongan');");
+						singkronisasi_ssh_kelompok(data_ssh);
+	                })
+	                .catch(function(e){
+	                    console.log(e);
+	                });	
 				}
-				var last = data_all.length - 1;
-				data_all.reduce(function(sequence, nextData){
-                    return sequence.then(function(current_data){
-                		return new Promise(function(resolve_reduce, reject_reduce){
-		                	current_data.success = function(data){
-								return resolve_reduce(current_data);
-							};
-							current_data.error = function(argument) {
-								console.log(e);
-								return resolve_reduce(current_data);
-							};
-		                	relayAjax(current_data);
-		                })
-                        .catch(function(e){
-                            console.log(e);
-                            return Promise.resolve(nextData);
-                        });
-                    })
-                    .catch(function(e){
-                        console.log(e);
-                        return Promise.resolve(nextData);
-                    });
-                }, Promise.resolve(data_all[last]))
-                .then(function(data_last){
-            		run_script("initDatatable('golongan');");
-					singkronisasi_ssh_kelompok(data_ssh);
-                })
-                .catch(function(e){
-                    console.log(e);
-                });	
-			}
-		});
+			});
+		}
 	}
+}
+
+function singkronisasi_ssh_tarif(data_ssh){
+	var url_save_form = jQuery('#form').attr('action');
+	var form_code = url_save_form.split('/save/')[1];
+	var idssh_fmis = jQuery('#form .form-referensi > label').attr('for');
+	relayAjax({
+		url: config.fmis_url+'/parameter/ssh/perkada-ssh/datatable-ref?code='+form_code+'&action=add',
+		success: function(items){
+			var all_ssh = {};
+			data_ssh.map(function(b, i){
+				var uraian_item = b.kode_standar_harga+' '+b.id_standar_harga+' '+b.nama_standar_harga;
+				all_ssh[uraian_item] = b;
+			});
+			var data_post = {
+                _token: _token,
+                _method: 'PUT',
+                nilai: {}
+            };
+            data_post[idssh_fmis] = {};
+			items.data.map(function(b, i){
+				if(all_ssh[b.uraian]){
+					var id_fmis = b.nilai.split('idperkadatarif[')[1].split(']')[0];
+					data_post.nilai[id_fmis] = all_ssh[b.uraian].harga;
+					data_post[idssh_fmis][id_fmis] = id_fmis;
+				}
+			});
+			// return console.log('data_post', data_post);
+			relayAjax({
+				url: url_save_form,
+				type: "post",
+	            data: data_post,
+				success: function(items){
+					jQuery('#modal .btn.btn-secondary.ml-1').click();
+					alert('Berhasil singkroniasi tarif SSH!');
+					jQuery('#wrap-loading').hide();
+				}
+			});
+		}
+	});
 }
 
 function singkronisasi_ssh_kelompok(data_ssh){

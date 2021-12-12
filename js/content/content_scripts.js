@@ -9,6 +9,7 @@ function injectScript(file, node) {
     th.insertBefore(s, th.firstChild);
 }
 injectScript( chrome.extension.getURL('/config.js'), 'html');
+injectScript( chrome.extension.getURL('/js/content/content_inject.js'), 'html');
 
 chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 	console.log('sender, request', sender, request);

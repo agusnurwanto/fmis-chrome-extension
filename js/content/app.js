@@ -43,3 +43,25 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 		});
 	});
 }
+
+jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
+	jQuery("#wrap-loading").show();
+	var data = {
+	    message:{
+	        type: "get-url",
+	        content: {
+			    url: config.url_server_lokal,
+			    type: 'post',
+			    data: { 
+					action: 'get_ssh',
+					tahun_anggaran: config.tahun_anggaran,
+					api_key: config.api_key
+				},
+    			return: true
+			}
+	    }
+	};
+	chrome.runtime.sendMessage(data, function(response) {
+	    console.log('responeMessage', response);
+	});
+});
