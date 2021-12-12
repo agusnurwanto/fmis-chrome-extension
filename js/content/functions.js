@@ -555,7 +555,7 @@ function singkronisasi_ssh_item(data_ssh){
                 console.log(e);
                 return Promise.resolve(nextData);
             });
-        }, Promise.resolve(data_all[last]))
+        }, Promise.resolve(_data_all[last]))
         .then(function(data_last){
 			singkronisasi_ssh_rekening(data_ssh);
         })
@@ -774,5 +774,86 @@ function intervalSession(no){
 				}, 60000);
 			}
 		});
+	}
+}
+
+function detele_all_tarif(subkelompok_code, code_perkada){
+	if(
+		subkelompok_code == ''
+		|| code_perkada == ''
+	){
+		alert('Code sub kelompok tidak ditemukan!');
+	}else{
+		if(confirm('Apakah anda yakin untuk menghapus semua tarif SSH di sub kelompok ini?')){
+			jQuery('#wrap-loading').show();
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/perkada-ssh/tarif/datatable?code='+subkelompok_code+'&code_perkada='+code_perkada,
+				success: function(items){
+					var _leng = 50;
+					var _data_all = [];
+					var _data = [];
+					items.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(ssh, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			var url_tarif = ssh.action.split('href=\"')[1].split('\"')[0];
+					        			relayAjax({
+											url: url_tarif+'&action=delete',
+											success: function(form_delete){
+												var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_delete,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'DELETE'
+										            },
+													success: function(res){
+														resolve_reduce2(res);
+													}
+												});
+											}
+										});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+						run_script("initDatatable('item');");
+						alert('Berhasil hapus tarif SSH!');
+						jQuery('#wrap-loading').hide();
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
 	}
 }

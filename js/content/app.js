@@ -42,6 +42,17 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 		    console.log('responeMessage', response);
 		});
 	});
+}else if(current_url.indexOf('parameter/ssh/perkada-ssh') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-danger btn-sm btn-add" style="margin-left: 3px;" id="delete-all-tarif">'
+        +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH'
+    +'</button>';
+    jQuery('a[title="Edit Nilai Tarif Item"]').after(btn);
+    jQuery('#delete-all-tarif').on('click', function(){
+		var subkelompok_code = jQuery('input[name="code_subkelompok"]').val();
+		var code_perkada = jQuery('input[name="code_perkada"]').val();
+    	detele_all_tarif(subkelompok_code, code_perkada);
+    });
 }
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
