@@ -34,7 +34,8 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 						tahun_anggaran: config.tahun_anggaran,
 						api_key: config.api_key
 					},
-	    			return: true
+	    			return: true,
+	    			continue: 'get_ssh'
 				}
 		    }
 		};

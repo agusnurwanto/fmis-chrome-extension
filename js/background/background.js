@@ -21,15 +21,36 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 		    dataType: 'json',
 		    success:function(ret){
 		    	if(request.message.content.return){
-			     	var options = {
-			     		type: 'response-fecth-url',
-			     		data: ret,
-			     		tab: sender.tab
-			     	}
-			     	if(request.message.content.resolve){
-			     		options.resolve = resolve;
-			     	}
-			     	sendMessageTabActive(options);
+		    		// jika continue tidak kosong maka data akan dikirim secara terpisah agar terhindar dari limit makasimal
+		    		if(request.message.content.continue){
+		    			var ret_temp = ret;
+		    			var _length = ret.data.length;
+		    			ret.data.map(function(b, i){
+		    				ret_temp.data = b;
+		    				var options = {
+					     		type: 'response-fecth-url',
+					     		data: ret_temp,
+					     		tab: sender.tab,
+					     		continue: request.message.content.continue,
+					     		length: _length,
+					     		no: i+1
+					     	}
+					     	if(request.message.content.resolve){
+					     		options.resolve = resolve;
+					     	}
+					     	sendMessageTabActive(options);
+		    			})
+		    		}else{
+				     	var options = {
+				     		type: 'response-fecth-url',
+				     		data: ret,
+				     		tab: sender.tab
+				     	}
+				     	if(request.message.content.resolve){
+				     		options.resolve = resolve;
+				     	}
+				     	sendMessageTabActive(options);
+					}
 			    }
 		        // console.log(ret, request.message.content);
 		        console.log(ret);

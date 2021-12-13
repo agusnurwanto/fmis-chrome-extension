@@ -101,11 +101,19 @@ function sendMessageAll(data, cb){
 
 function sendMessageTabActive(data, cb){
     console.log('data', data);
-    chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
-        chrome.tabs.sendMessage(tabs[0].id, data, function(response) {
+    if(data.tab){
+        chrome.tabs.sendMessage(data.tab.id, data, function(response) {
             if(typeof cb == 'function'){
                 cb(response);
             }
         });
-    });
+    }else{
+        chrome.tabs.query({active: true, currentWindow: true}, function(tabs) {
+            chrome.tabs.sendMessage(tabs[0].id, data, function(response) {
+                if(typeof cb == 'function'){
+                    cb(response);
+                }
+            });
+        });
+    }
 }
