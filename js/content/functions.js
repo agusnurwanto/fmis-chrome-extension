@@ -106,8 +106,8 @@ function singkronisasi_ssh(options){
 							if(b.uraian == nama_golongan){
 								cek = true;
 							}
-							if(no_urut_golongan < b.kdurut){
-								no_urut_golongan = b.kdurut;
+							if(no_urut_golongan < +b.kdurut){
+								no_urut_golongan = +b.kdurut;
 							}
 						});
 						if(cek == false){
@@ -129,11 +129,11 @@ function singkronisasi_ssh(options){
 	                    return sequence.then(function(current_data){
 	                		return new Promise(function(resolve_reduce, reject_reduce){
 			                	current_data.success = function(data){
-									return resolve_reduce(current_data);
+									return resolve_reduce(nextData);
 								};
 								current_data.error = function(argument) {
 									console.log(e);
-									return resolve_reduce(current_data);
+									return resolve_reduce(nextData);
 								};
 			                	relayAjax(current_data);
 			                })
@@ -230,8 +230,8 @@ function singkronisasi_ssh_kelompok(data_ssh){
 										if(b.uraian == nama_kelompok){
 											cek = true;
 										}
-										if(no_urut_kelompok < b.kdurut){
-											no_urut_kelompok = b.kdurut;
+										if(no_urut_kelompok < +b.kdurut){
+											no_urut_kelompok = +b.kdurut;
 										}
 									});
 									if(cek == false){
@@ -332,8 +332,8 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
 												if(b.uraian == nama_subkelompok){
 													cek = true;
 												}
-												if(no_urut_subkelompok < b.kdurut){
-													no_urut_subkelompok = b.kdurut;
+												if(no_urut_subkelompok < +b.kdurut){
+													no_urut_subkelompok = +b.kdurut;
 												}
 											});
 											if(cek == false){
@@ -451,8 +451,8 @@ function singkronisasi_ssh_item(data_ssh){
 															if(b.uraian == nama_item){
 																cek = true;
 															}
-															if(no_urut_item < b.kdurut){
-																no_urut_item = b.kdurut;
+															if(no_urut_item < +b.kdurut){
+																no_urut_item = +b.kdurut;
 															}
 														});
 														if(cek == false){
