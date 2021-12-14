@@ -459,6 +459,9 @@ function singkronisasi_ssh_item(data_ssh){
 															no_urut_item++;
 															var keterangan_item = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.spek;
 															var satuan_asli = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.satuan.toLowerCase().trim();
+															if(satuan_asli == ''){
+																satuan_asli = 'kosong';
+															}
 															var satuan = satuan_asli+' ('+satuan_asli+')';
 															sendDataSatuan.push(new Promise(function(resolve3, reject3){
 																getIdSatuan(satuan_asli, false, {
