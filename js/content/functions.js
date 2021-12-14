@@ -1097,3 +1097,447 @@ function detele_all_tarif_golongan(code_perkada){
 		}
 	}
 }
+
+function delete_all_rekening(code_item, cb){
+	if(
+		code_item == ''
+	){
+		alert('Code item tidak ditemukan!');
+	}else{
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk menghapus semua rekening di item ini?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/struktur-ssh/rekening/datatable?code='+code_item,
+				success: function(rekening){
+					var _leng = 50;
+					var _data_all = [];
+					var _data = [];
+					rekening.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(rek, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			var url_rekening = rek.action.split('href=\"')[1].split('\"')[0];
+					        			relayAjax({
+											url: url_rekening+'&action=delete',
+											success: function(form_delete){
+												var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_delete,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'DELETE'
+										            },
+													success: function(res){
+														resolve_reduce2(res);
+													}
+												});
+											}
+										});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+			        	if(typeof cb != 'function'){
+							run_script("initDatatable('rekening');");
+							alert('Berhasil hapus rekening!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}
+
+function delete_all_item(code_subkelompok, cb){
+	if(
+		code_subkelompok == ''
+	){
+		alert('Code sub kelompok tidak ditemukan!');
+	}else{
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk menghapus semua rekening di sub kelompok ini?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/datatable?code='+code_subkelompok,
+				success: function(items){
+					var _leng = 50;
+					var _data_all = [];
+					var _data = [];
+					items.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(item, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			var item_code = item.action.split('data-code="')[1].split('"')[0];
+								    	delete_all_rekening(item_code, function(){
+								    		var url_item = item.action.split('href=\"')[1].split('\"')[0];
+						        			relayAjax({
+												url: url_item+'&action=delete',
+												success: function(form_delete){
+													var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+													relayAjax({
+														url: url_delete,
+														type: "post",
+											            data: {
+											                _token: _token,
+											                _method: 'DELETE'
+											            },
+														success: function(res){
+															resolve_reduce2(res);
+														}
+													});
+												}
+											});
+								    	});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+			        	if(typeof cb != 'function'){
+							run_script("initDatatable('item');");
+							alert('Berhasil hapus item SSH!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}
+
+function delete_all_subkelompok(code_kelompok, cb){
+	if(
+		code_kelompok == ''
+	){
+		alert('Code sub kelompok tidak ditemukan!');
+	}else{
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk menghapus semua item di sub kelompok ini?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+code_kelompok,
+				success: function(subkelompok){
+					var _leng = 50;
+					var _data_all = [];
+					var _data = [];
+					subkelompok.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(subkelompok, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			var subkelompok_code = subkelompok.action.split('data-code="')[1].split('"')[0];
+								    	delete_all_item(subkelompok_code, function(){
+								    		var url_subkelompok = subkelompok.action.split('href=\"')[1].split('\"')[0];
+						        			relayAjax({
+												url: url_subkelompok+'&action=delete',
+												success: function(form_delete){
+													var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+													relayAjax({
+														url: url_delete,
+														type: "post",
+											            data: {
+											                _token: _token,
+											                _method: 'DELETE'
+											            },
+														success: function(res){
+															resolve_reduce2(res);
+														}
+													});
+												}
+											});
+								    	});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+			        	if(typeof cb != 'function'){
+							run_script("initDatatable('subkelompok');");
+							alert('Berhasil hapus Sub Kelompok SSH!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}
+
+function delete_all_kelompok(code_golongan, cb){
+	if(
+		code_golongan == ''
+	){
+		alert('Code golongan tidak ditemukan!');
+	}else{
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk menghapus semua kelompok di golongan ini?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/datatable?code='+code_golongan,
+				success: function(kelompok){
+					var _leng = 50;
+					var _data_all = [];
+					var _data = [];
+					kelompok.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(kelompok, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			var kelompok_code = kelompok.action.split('data-code="')[1].split('"')[0];
+								    	delete_all_subkelompok(kelompok_code, function(){
+								    		var url_kelompok = kelompok.action.split('href=\"')[1].split('\"')[0];
+						        			relayAjax({
+												url: url_kelompok+'&action=delete',
+												success: function(form_delete){
+													var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+													relayAjax({
+														url: url_delete,
+														type: "post",
+											            data: {
+											                _token: _token,
+											                _method: 'DELETE'
+											            },
+														success: function(res){
+															resolve_reduce2(res);
+														}
+													});
+												}
+											});
+								    	});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+			        	if(typeof cb != 'function'){
+							run_script("initDatatable('kelompok');");
+							alert('Berhasil hapus Kelompok SSH!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}
+
+function delete_all_golongan(){
+	if(
+		confirm('Apakah anda yakin untuk menghapus semua golongan?')
+	){
+		jQuery('#wrap-loading').show();
+		relayAjax({
+			url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
+			success: function(golongan){
+				var _leng = 1;
+				var _data_all = [];
+				var _data = [];
+				golongan.data.map(function(ssh, i){
+					_data.push(ssh);
+					if((i+1)%_leng == 0){
+						_data_all.push(_data);
+						_data = [];
+					}
+				});
+				if(_data.length > 0){
+					_data_all.push(_data);
+				}
+
+				var last = _data_all.length - 1;
+				_data_all.reduce(function(sequence, nextData){
+		            return sequence.then(function(current_data){
+		        		return new Promise(function(resolve_reduce, reject_reduce){
+		        			var sendData = current_data.map(function(golongan, i){
+		        				return new Promise(function(resolve_reduce2, reject_reduce2){
+				        			var golongan_code = golongan.action.split('data-code="')[1].split('"')[0];
+							    	delete_all_kelompok(golongan_code, function(){
+							    		var url_golongan = golongan.action.split('href=\"')[1].split('\"')[0];
+					        			relayAjax({
+											url: url_golongan+'&action=delete',
+											success: function(form_delete){
+												var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_delete,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'DELETE'
+										            },
+													success: function(res){
+														resolve_reduce2(res);
+													}
+												});
+											}
+										});
+							    	});
+				                });
+			                });
+			                Promise.all(sendData)
+							.then(function(val_all){
+								resolve_reduce(nextData);
+							});
+		                })
+		                .catch(function(e){
+		                    console.log(e);
+		                    return Promise.resolve(nextData);
+		                });
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData);
+		            });
+		        }, Promise.resolve(_data_all[last]))
+		        .then(function(data_last){
+					run_script("initDatatable('golongan');");
+					alert('Berhasil hapus Golongan SSH!');
+					jQuery('#wrap-loading').hide();
+		        })
+		        .catch(function(e){
+		            console.log(e);
+		        });
+			}
+		});
+	}
+}
