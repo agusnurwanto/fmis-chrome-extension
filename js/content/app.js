@@ -45,7 +45,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	});
 }else if(current_url.indexOf('parameter/ssh/perkada-ssh') != -1){
 	var btn = ''
-	+'<button type="button" class="btn btn-outline-danger btn-sm btn-add" style="margin-left: 3px;" id="delete-all-tarif">'
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-tarif">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH'
     +'</button>';
     jQuery('a[title="Edit Nilai Tarif Item"]').after(btn);
@@ -56,14 +56,35 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
     });
 
 	var btn = ''
-	+'<button type="button" class="btn btn-outline-danger btn-sm btn-add" style="margin-left: 3px;" id="delete-all-tarif-sub-kelompok">'
-        +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH'
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-tarif-sub-kelompok">'
+        +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH Sub Kelompok'
     +'</button>';
     jQuery('a[title="Tambah Sub Kelompok"]').after(btn);
     jQuery('#delete-all-tarif-sub-kelompok').on('click', function(){
 		var kelompok_code = jQuery('input[name="code_kelompok"]').val();
 		var code_perkada = jQuery('input[name="code_perkada"]').val();
     	detele_all_tarif_sub_kelompok(kelompok_code, code_perkada);
+    });
+
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-tarif-kelompok">'
+        +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH Kelompok'
+    +'</button>';
+    jQuery('a[title="Tambah Kelompok"]').after(btn);
+    jQuery('#delete-all-tarif-kelompok').on('click', function(){
+		var golongan_code = jQuery('input[name="code_golongan"]').val();
+		var code_perkada = jQuery('input[name="code_perkada"]').val();
+    	detele_all_tarif_kelompok(golongan_code, code_perkada);
+    });
+
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-tarif-golongan">'
+        +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH Golongan'
+    +'</button>';
+    jQuery('a[title="Tambah Golongan"]').parent().append(btn);
+    jQuery('#delete-all-tarif-golongan').on('click', function(){
+		var code_perkada = jQuery('input[name="code_perkada"]').val();
+    	detele_all_tarif_golongan(code_perkada);
     });
 }
 

@@ -25,11 +25,19 @@ function capitalizeFirstLetter(string) {
   	return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-function relayAjax(options, retries=20, delay=30000, timeout=90000){
+function relayAjax(options, retries=20, delay=10000, timeout=90000){
 	options.timeout = timeout;
+	options.cache = false;
     jQuery.ajax(options)
-    .fail(function(){
-        if (retries > 0) {
+    .fail(function(jqXHR, exception){
+    	// console.log('jqXHR, exception', jqXHR, exception);
+    	if(jqXHR.status != '0'){
+    		if(jqXHR.responseJSON){
+    			options.success(jqXHR.responseJSON);
+    		}else{
+    			options.success(jqXHR.responseText);
+    		}
+    	}else if (retries > 0) {
             console.log('Koneksi error. Coba lagi '+retries);
             setTimeout(function(){ 
                 relayAjax(options, --retries, delay, timeout);
@@ -780,15 +788,20 @@ function intervalSession(no){
 	}
 }
 
-function detele_all_tarif(subkelompok_code, code_perkada){
+function detele_all_tarif(subkelompok_code, code_perkada, cb){
 	if(
 		subkelompok_code == ''
 		|| code_perkada == ''
 	){
 		alert('Code sub kelompok tidak ditemukan!');
 	}else{
-		if(confirm('Apakah anda yakin untuk menghapus semua tarif SSH di sub kelompok ini?')){
-			jQuery('#wrap-loading').show();
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk menghapus semua tarif SSH di sub kelompok ini?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
 			relayAjax({
 				url: config.fmis_url+'/parameter/ssh/perkada-ssh/tarif/datatable?code='+subkelompok_code+'&code_perkada='+code_perkada,
 				success: function(items){
@@ -848,7 +861,231 @@ function detele_all_tarif(subkelompok_code, code_perkada){
 			            });
 			        }, Promise.resolve(_data_all[last]))
 			        .then(function(data_last){
-						run_script("initDatatable('item');");
+			        	if(typeof cb != 'function'){
+							run_script("initDatatable('item');");
+							alert('Berhasil hapus tarif SSH!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}
+
+function detele_all_tarif_sub_kelompok(kelompok_code, code_perkada, cb){
+	if(
+		kelompok_code == ''
+		|| code_perkada == ''
+	){
+		alert('Code kelompok tidak ditemukan!');
+	}else{
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk menghapus semua tarif SSH di kelompok ini?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+kelompok_code+'&code_perkada='+code_perkada,
+				success: function(subkelompok){
+					var _leng = 1;
+					var _data_all = [];
+					var _data = [];
+					subkelompok.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(ssh, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			var subkelompok_code = ssh.action.split('data-code="')[1].split('"')[0];
+								    	detele_all_tarif(subkelompok_code, code_perkada, function(){
+								    		resolve_reduce2();
+								    	});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+			        	if(typeof cb != 'function'){
+							run_script("initDatatable('subkelompok');");
+							alert('Berhasil hapus tarif SSH!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}
+
+function detele_all_tarif_kelompok(golongan_code, code_perkada, cb){
+	if(
+		golongan_code == ''
+		|| code_perkada == ''
+	){
+		alert('Code golongan tidak ditemukan!');
+	}else{
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk menghapus semua tarif SSH di golongan ini?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/datatable?code='+golongan_code+'&code_perkada='+code_perkada,
+				success: function(kelompok){
+					var _leng = 1;
+					var _data_all = [];
+					var _data = [];
+					kelompok.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(ssh, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			var kelompok_code = ssh.action.split('data-code="')[1].split('"')[0];
+								    	detele_all_tarif_sub_kelompok(kelompok_code, code_perkada, function(){
+								    		resolve_reduce2();
+								    	});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+			        	if(typeof cb != 'function'){
+							run_script("initDatatable('kelompok');");
+							alert('Berhasil hapus tarif SSH!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}
+
+function detele_all_tarif_golongan(code_perkada){
+	if(
+		code_perkada == ''
+	){
+		alert('Code perkada tidak ditemukan!');
+	}else{
+		if(
+			confirm('Apakah anda yakin untuk menghapus semua tarif SSH di golongan ini?')
+		){
+			jQuery('#wrap-loading').show();
+			relayAjax({
+				url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable?code_perkada='+code_perkada,
+				success: function(golongan){
+					var _leng = 1;
+					var _data_all = [];
+					var _data = [];
+					golongan.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(ssh, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			var golongan_code = ssh.action.split('data-code="')[1].split('"')[0];
+								    	detele_all_tarif_kelompok(golongan_code, code_perkada, function(){
+								    		resolve_reduce2();
+								    	});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+						run_script("initDatatable('golongan');");
 						alert('Berhasil hapus tarif SSH!');
 						jQuery('#wrap-loading').hide();
 			        })
