@@ -99,8 +99,10 @@ function sendMessageAll(data, cb){
     });
 }
 
-function sendMessageTabActive(data, cb){
-    console.log('data', data);
+function sendMessageTabActive(data, cb, nodebug){
+    if(!nodebug){
+        console.log('data', data);
+    }
     if(data.tab){
         chrome.tabs.sendMessage(data.tab.id, data, function(response) {
             if(typeof cb == 'function'){

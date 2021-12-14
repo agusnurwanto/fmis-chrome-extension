@@ -38,7 +38,11 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 					     	if(request.message.content.resolve){
 					     		options.resolve = resolve;
 					     	}
-					     	sendMessageTabActive(options);
+					     	if(i+1 < _length){
+					     		sendMessageTabActive(options, '', true);
+					     	}else{
+					     		sendMessageTabActive(options);
+					     	}
 		    			})
 		    		}else{
 				     	var options = {

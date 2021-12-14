@@ -131,7 +131,7 @@ function singkronisasi_ssh(options){
 			                	current_data.success = function(data){
 									return resolve_reduce(nextData);
 								};
-								current_data.error = function(argument) {
+								current_data.error = function(e) {
 									console.log(e);
 									return resolve_reduce(nextData);
 								};
