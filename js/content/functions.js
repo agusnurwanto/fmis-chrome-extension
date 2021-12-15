@@ -1541,3 +1541,112 @@ function delete_all_golongan(){
 		});
 	}
 }
+
+function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
+	if(
+		url_tambah_skpd == ''
+	){
+		alert('Url tambah SKPD tidak ditemukan!');
+	}else{
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk mengsingkronkan data SKPD dari SIPD?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
+			var code_bidang = url_tambah_skpd.split('code=')[1].split('&')[0];
+			var data_skpd_selected = [];
+			data_skpd.map(function(b, i){
+				if(b.code == code_bidang){
+					data_skpd_selected.push(b);
+				}
+			});
+			return console.log('data_skpd_selected', data_skpd_selected); // bersambung, perlu menambahkan nama_bidang_urusan berdasarkan data_unit
+			relayAjax({
+				url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_bidang+'&table=skpd',
+				success: function(skpd){
+					var _leng = 5;
+					var _data_all = [];
+					var _data = [];
+					skpd.data.map(function(ssh, i){
+						_data.push(ssh);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(skpd, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+							    		var url_edit = skpd.action.split('href=\"')[1].split('\"')[0];
+							    		url_edit = jQuery('<textarea />').html(url_edit).text();
+					        			relayAjax({
+											url: url_edit+'&action=edit',
+											success: function(form_edit){
+												var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+												var form = jQuery(form_edit.form);
+												var kdskpd = form.find('#kdskpd').val();
+												var nmskpd = form.find('#nmskpd').val();
+												var idbidang_utama = form.find('input[name="idbidang_utama"]:checked').val();
+												var idbidang2 = form.find('#idbidang2').val();
+												var idbidang3 = form.find('#idbidang3').val();
+												relayAjax({
+													url: url_save,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'PUT',
+										                idbidang_utama: idbidang_utama,
+										                idbidang2: idbidang2,
+										                idbidang3: idbidang3,
+										                kdskpd: kdskpd,
+										                nmskpd: nmskpd
+										            },
+													success: function(res){
+														resolve_reduce2(res);
+													}
+												});
+											}
+										});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+			        	if(typeof cb != 'function'){
+							run_script("initUnitTable(2);");
+							alert('Berhasil singkron SKPD!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}

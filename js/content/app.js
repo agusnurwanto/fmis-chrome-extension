@@ -135,6 +135,34 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 		var code_perkada = jQuery('input[name="code_perkada"]').val();
     	detele_all_tarif_golongan(code_perkada);
     });
+}else if(current_url.indexOf('parameter/unit-organisasi') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-skpd">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SKPD SIPD'
+    +'</button>';
+    jQuery('a[title="Tambah SKPD"]').after(btn);
+    jQuery('#singkron-skpd').on('click', function(){
+    	jQuery("#wrap-loading").show();
+		var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'get_skpd',
+						run: 'singkron_skpd_sipd',
+						tahun_anggaran: config.tahun_anggaran,
+						api_key: config.api_key
+					},
+	    			return: true
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
+    });
 }
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
