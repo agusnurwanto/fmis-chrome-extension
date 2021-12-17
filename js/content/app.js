@@ -163,6 +163,34 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 		    console.log('responeMessage', response);
 		});
     });
+
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-skpd-all">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi All SKPD SIPD'
+    +'</button>';
+    jQuery('#bidang .p-2 > h4').after(btn);
+    jQuery('#singkron-skpd-all').on('click', function(){
+    	jQuery("#wrap-loading").show();
+		var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'get_skpd',
+						run: 'singkron_skpd_sipd_all',
+						tahun_anggaran: config.tahun_anggaran,
+						api_key: config.api_key
+					},
+	    			return: true
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
+    });
 }
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){

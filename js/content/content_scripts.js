@@ -51,6 +51,8 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			if(res.run == 'singkron_skpd_sipd'){
 				var url_tambah_skpd = jQuery('a[title="Tambah SKPD"]').attr('href');
 		    	singkron_skpd_sipd(url_tambah_skpd, res.data);
+			}else if(res.run == 'singkron_skpd_sipd_all'){
+		    	singkron_skpd_sipd_all(res.data);
 			}
 		}
 		if(hide_loading){

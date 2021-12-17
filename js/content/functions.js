@@ -1542,6 +1542,27 @@ function delete_all_golongan(){
 	}
 }
 
+function singkron_skpd_sipd_all(data_skpd){
+	if(confirm('Apakah anda yakin untuk mengsingkronkan data All SKPD dari SIPD?')){
+		jQuery('#wrap-loading').show();
+		var sendData = [];
+		jQuery('#bidang li[data-type="bidang"]').map(function(i, b){
+			sendData.push(new Promise(function(resolve_reduce2, reject_reduce2){
+				var code_bidur = jQuery(b).attr('data-code');
+				var url_tambah_skpd = config.fmis_url+'/parameter/unit-organisasi/form?code='+code_bidur+'&table=skpd'
+				singkron_skpd_sipd(url_tambah_skpd, data_skpd, function(){
+					resolve_reduce2();
+				});
+	        }));
+	    });
+	    Promise.all(sendData)
+		.then(function(val_all){
+			jQuery('#wrap-loading').hide();
+			alert('Berhasil singkron All SKPD!');
+		});
+	}
+}
+
 function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 	if(
 		url_tambah_skpd == ''
