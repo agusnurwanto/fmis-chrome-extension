@@ -1558,19 +1558,26 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 			var code_bidang = url_tambah_skpd.split('code=')[1].split('&')[0];
 			var data_skpd_selected = [];
 			data_skpd.map(function(b, i){
-				if(b.code == code_bidang){
+				if(
+					b.code == code_bidang
+					&& b.isskpd == 1
+				){
 					data_skpd_selected.push(b);
 				}
 			});
-			return console.log('data_skpd_selected', data_skpd_selected); // bersambung, perlu menambahkan nama_bidang_urusan berdasarkan data_unit
 			relayAjax({
 				url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_bidang+'&table=skpd',
 				success: function(skpd){
 					var _leng = 5;
 					var _data_all = [];
 					var _data = [];
-					skpd.data.map(function(ssh, i){
-						_data.push(ssh);
+					data_skpd_selected.map(function(unit, i){
+						skpd.data.map(function(_unit, _i){
+							if(unit.nama_skpd == _unit.nmskpd){
+								unit.fmis = _unit;
+							}
+						});
+						_data.push(unit);
 						if((i+1)%_leng == 0){
 							_data_all.push(_data);
 							_data = [];
@@ -1586,36 +1593,70 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 			        		return new Promise(function(resolve_reduce, reject_reduce){
 			        			var sendData = current_data.map(function(skpd, i){
 			        				return new Promise(function(resolve_reduce2, reject_reduce2){
-							    		var url_edit = skpd.action.split('href=\"')[1].split('\"')[0];
-							    		url_edit = jQuery('<textarea />').html(url_edit).text();
-					        			relayAjax({
-											url: url_edit+'&action=edit',
-											success: function(form_edit){
-												var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
-												var form = jQuery(form_edit.form);
-												var kdskpd = form.find('#kdskpd').val();
-												var nmskpd = form.find('#nmskpd').val();
-												var idbidang_utama = form.find('input[name="idbidang_utama"]:checked').val();
-												var idbidang2 = form.find('#idbidang2').val();
-												var idbidang3 = form.find('#idbidang3').val();
-												relayAjax({
-													url: url_save,
-													type: "post",
-										            data: {
-										                _token: _token,
-										                _method: 'PUT',
-										                idbidang_utama: idbidang_utama,
-										                idbidang2: idbidang2,
-										                idbidang3: idbidang3,
-										                kdskpd: kdskpd,
-										                nmskpd: nmskpd
-										            },
-													success: function(res){
-														resolve_reduce2(res);
-													}
-												});
-											}
-										});
+			        					if(skpd.fmis){
+								    		var url_edit = skpd.fmis.action.split('href=\"')[1].split('\"')[0];
+								    		url_edit = jQuery('<textarea />').html(url_edit).text();
+						        			relayAjax({
+												url: url_edit+'&action=edit',
+												success: function(form_edit){
+													var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+													var form = jQuery(form_edit.form);
+													var kdskpd = skpd.id_skpd;
+													var nmskpd = skpd.nama_skpd;
+													var idbidang_utama = form.find('input[name="idbidang_utama"]:checked').val();
+													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2);
+													var idbidang3 = get_id_bidur_skpd(form.find('#idbidang3 option'), skpd.bidur3);
+													relayAjax({
+														url: url_save,
+														type: "post",
+											            data: {
+											                _token: _token,
+											                _method: 'PUT',
+											                idbidang_utama: idbidang_utama,
+											                idbidang2: idbidang2,
+											                idbidang3: idbidang3,
+											                kdskpd: kdskpd,
+											                nmskpd: nmskpd
+											            },
+														success: function(res){
+															resolve_reduce2(res);
+														}
+													});
+												}
+											});
+						        		}else{
+						        			relayAjax({
+												url: url_tambah_skpd+'&action=create',
+												success: function(form_edit){
+													var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+													var form = jQuery(form_edit.form);
+													var idbidang = form.find('input[name="idbidang"]').val();
+													var idpemda = form.find('input[name="idpemda"]').val();
+													var kdskpd = skpd.id_skpd;
+													var nmskpd = skpd.nama_skpd;
+													var idbidang_utama = idbidang;
+													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2);
+													var idbidang3 = get_id_bidur_skpd(form.find('#idbidang3 option'), skpd.bidur3);
+													relayAjax({
+														url: url_save,
+														type: "post",
+											            data: {
+											                _token: _token,
+											                idpemda: idpemda,
+											                idbidang: idbidang,
+											                idbidang_utama: idbidang_utama,
+											                idbidang2: idbidang2,
+											                idbidang3: idbidang3,
+											                kdskpd: kdskpd,
+											                nmskpd: nmskpd
+											            },
+														success: function(res){
+															resolve_reduce2(res);
+														}
+													});
+												}
+											});
+						        		}
 					                });
 				                });
 				                Promise.all(sendData)
@@ -1649,4 +1690,27 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 			});
 		}
 	}
+}
+
+function get_id_bidur_skpd(html, bidur_sipd){
+	if(!bidur_sipd || bidur_sipd == ''){
+		return '';
+	}else{
+		bidur_sipd = get_text_bidur(bidur_sipd);
+		var id_bidur = '';
+		html.map(function(i, b){
+			var bidur_fmis = get_text_bidur(jQuery(b).text());
+			if(bidur_sipd == bidur_fmis){
+				id_bidur = jQuery(b).attr('value');
+			}
+		});
+		return id_bidur;
+	}
+}
+
+function get_text_bidur(text){
+	text = text.split(' ');
+	text.shift();
+	text = text.join(' ');
+	return text;
 }

@@ -41,9 +41,9 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 				bidur[jQuery(b).attr('data-info')] = jQuery(b).attr('data-code');
 			});
 			res.data.map(function(b, i){
-				var bidur_sipd = b.nama_bidang_urusan.split(' ');
+				var bidur_sipd = b.bidur1.split(' ');
 				bidur_sipd.shift();
-				bidur_sipd.join(' ');
+				bidur_sipd = bidur_sipd.join(' ');
 				if(bidur[bidur_sipd]){
 					res.data[i].code = bidur[bidur_sipd];
 				}
