@@ -1696,13 +1696,29 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 			            });
 			        }, Promise.resolve(_data_all[last]))
 			        .then(function(data_last){
-			        	if(typeof cb != 'function'){
-							run_script("initUnitTable(2);");
-							alert('Berhasil singkron SKPD!');
-							jQuery('#wrap-loading').hide();
-						}else{
-							cb();
-						}
+			        	relayAjax({
+							url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_bidang+'&table=skpd',
+							success: function(skpd){
+								var _data = [];
+								data_skpd_selected.map(function(unit, i){
+									skpd.data.map(function(_unit, _i){
+										if(unit.nama_skpd == _unit.nmskpd){
+											unit.fmis = _unit;
+											_data.push(unit);
+										}
+									});
+								});
+					        	if(typeof cb != 'function'){
+									singkron_unit_sipd(_data, function(){
+										run_script("initUnitTable(2);");
+										alert('Berhasil singkron SKPD!');
+										jQuery('#wrap-loading').hide();
+									});
+								}else{
+									singkron_unit_sipd(_data, cb);
+								}
+							}
+						});
 			        })
 			        .catch(function(e){
 			            console.log(e);
@@ -1711,6 +1727,112 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 			});
 		}
 	}
+}
+
+function singkron_unit_sipd(data_skpd, cb){
+	var last = data_skpd.length - 1;
+	data_skpd.reduce(function(sequence, nextData){
+        return sequence.then(function(current_data){
+    		return new Promise(function(resolve_reduce, reject_reduce){
+    			var code_skpd = current_data.fmis.code;
+				update_save_unit_sipd(current_data.sub_unit, code_skpd, function(){
+					resolve_reduce(nextData);
+				});
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        })
+        .catch(function(e){
+            console.log(e);
+            return Promise.resolve(nextData);
+        });
+    }, Promise.resolve(data_skpd[last]))
+    .then(function(data_last){
+    	cb();
+    });
+}
+
+function update_save_unit_sipd(sub_unit, code_skpd, cb){
+	var last = sub_unit.length - 1;
+	relayAjax({
+		url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_skpd+'&table=unit',
+		success: function(units){
+			sub_unit.reduce(function(sequence, nextData){
+		        return sequence.then(function(unit_sipd){
+		    		return new Promise(function(resolve_reduce, reject_reduce){
+						var unit_fmis = false;
+						units.data.map(function(unit, ii){
+							if(unit_sipd.nama_skpd == unit.nmunit){
+								unit_fmis = unit
+							}
+						});
+						if(unit_fmis){
+				    		var url_edit = unit_fmis.action.split('href=\"')[1].split('\"')[0];
+				    		url_edit = jQuery('<textarea />').html(url_edit).text();
+		        			relayAjax({
+								url: url_edit+'&action=edit',
+								success: function(form_edit){
+									var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+									var kdunit = unit_sipd.id_skpd;
+									var nmunit = unit_sipd.nama_skpd;
+									relayAjax({
+										url: url_save,
+										type: "post",
+							            data: {
+							                _token: _token,
+							                _method: 'PUT',
+							                kdunit: kdunit,
+							                nmunit: nmunit
+							            },
+										success: function(res){
+											resolve_reduce(nextData);
+										}
+									});
+								}
+							});
+		        		}else{
+		        			relayAjax({
+								url: config.fmis_url+'/parameter/unit-organisasi/form?code='+code_skpd+'&table=unit&action=create',
+								success: function(form_edit){
+									var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+									var form = jQuery(form_edit.form);
+									var idskpd = form.find('input[name="idskpd"]').val();
+									var kdunit = unit_sipd.id_skpd;
+									var nmunit = unit_sipd.nama_skpd;
+									relayAjax({
+										url: url_save,
+										type: "post",
+							            data: {
+							                _token: _token,
+							                idskpd: idskpd,
+							                kdunit: kdunit,
+							                nmunit: nmunit
+							            },
+										success: function(res){
+											resolve_reduce(nextData);
+										}
+									});
+								}
+							});
+		        		}
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData);
+		            });
+		        })
+		        .catch(function(e){
+		            console.log(e);
+		            return Promise.resolve(nextData);
+		        });
+		    }, Promise.resolve(sub_unit[last]))
+		    .then(function(data_last){
+		    	cb();
+		    });
+		}
+	});
 }
 
 function get_id_bidur_skpd(html, bidur_sipd){

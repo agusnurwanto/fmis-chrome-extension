@@ -40,19 +40,34 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			jQuery('li[data-type="bidang"]').map(function(i, b){ 
 				bidur[jQuery(b).attr('data-info')] = jQuery(b).attr('data-code');
 			});
+			var data_skpd = [];
 			res.data.map(function(b, i){
 				var bidur_sipd = b.bidur1.split(' ');
 				bidur_sipd.shift();
 				bidur_sipd = bidur_sipd.join(' ');
 				if(bidur[bidur_sipd]){
-					res.data[i].code = bidur[bidur_sipd];
+					b.code = bidur[bidur_sipd];
 				}
+				if(b.isskpd == 1){
+					var sub_unit = [];
+					sub_unit.push(b);
+					res.data.map(function(bb, ii){
+						if(
+							bb.isskpd == 0
+							&& bb.id_unit == b.id_skpd
+						){
+							sub_unit.push(bb);
+						}
+					});
+					b.sub_unit = sub_unit;
+				}
+				data_skpd.push(b);
 			});
 			if(res.run == 'singkron_skpd_sipd'){
 				var url_tambah_skpd = jQuery('a[title="Tambah SKPD"]').attr('href');
-		    	singkron_skpd_sipd(url_tambah_skpd, res.data);
+		    	singkron_skpd_sipd(url_tambah_skpd, data_skpd);
 			}else if(res.run == 'singkron_skpd_sipd_all'){
-		    	singkron_skpd_sipd_all(res.data);
+		    	singkron_skpd_sipd_all(data_skpd);
 			}
 		}
 		if(hide_loading){
