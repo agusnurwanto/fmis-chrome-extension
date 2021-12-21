@@ -1699,24 +1699,32 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 			        	relayAjax({
 							url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_bidang+'&table=skpd',
 							success: function(skpd){
-								var _data = [];
-								data_skpd_selected.map(function(unit, i){
-									skpd.data.map(function(_unit, _i){
-										if(unit.nama_skpd == _unit.nmskpd){
-											unit.fmis = _unit;
-											_data.push(unit);
+								relayAjax({
+									url: url_tambah_skpd+'&action=create',
+									success: function(form_edit){
+										var _data = [];
+										var form = jQuery(form_edit.form);
+										var idbidang = form.find('input[name="idbidang"]').val();
+										data_skpd_selected.map(function(unit, i){
+											skpd.data.map(function(_unit, _i){
+												if(unit.nama_skpd == _unit.nmskpd){
+													unit.idbidang = idbidang;
+													unit.fmis = _unit;
+													_data.push(unit);
+												}
+											});
+										});
+							        	if(typeof cb != 'function'){
+											singkron_unit_sipd(_data, function(){
+												run_script("initUnitTable(2);");
+												alert('Berhasil singkron SKPD!');
+												jQuery('#wrap-loading').hide();
+											});
+										}else{
+											singkron_unit_sipd(_data, cb);
 										}
-									});
+									}
 								});
-					        	if(typeof cb != 'function'){
-									singkron_unit_sipd(_data, function(){
-										run_script("initUnitTable(2);");
-										alert('Berhasil singkron SKPD!');
-										jQuery('#wrap-loading').hide();
-									});
-								}else{
-									singkron_unit_sipd(_data, cb);
-								}
 							}
 						});
 			        })
@@ -1735,7 +1743,7 @@ function singkron_unit_sipd(data_skpd, cb){
         return sequence.then(function(current_data){
     		return new Promise(function(resolve_reduce, reject_reduce){
     			var code_skpd = current_data.fmis.code;
-				update_save_unit_sipd(current_data.sub_unit, code_skpd, function(){
+				update_save_unit_sipd(current_data, code_skpd, function(){
 					resolve_reduce(nextData);
 				});
             })
@@ -1754,65 +1762,199 @@ function singkron_unit_sipd(data_skpd, cb){
     });
 }
 
-function update_save_unit_sipd(sub_unit, code_skpd, cb){
-	var last = sub_unit.length - 1;
+function update_save_unit_sipd(unit_sipd, code_skpd, cb){
 	relayAjax({
 		url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_skpd+'&table=unit',
 		success: function(units){
+			var unit_fmis = false;
+			units.data.map(function(unit, ii){
+				if(unit_sipd.nama_skpd == unit.nmunit){
+					unit_fmis = unit
+				}
+			});
+			new Promise(function(resolve_reduce, reject_reduce){
+				if(unit_fmis){
+		    		var url_edit = unit_fmis.action.split('href=\"')[1].split('\"')[0];
+		    		url_edit = jQuery('<textarea />').html(url_edit).text();
+	    			relayAjax({
+						url: url_edit+'&action=edit',
+						success: function(form_edit){
+							var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+							var kdunit = unit_sipd.id_skpd;
+							var nmunit = unit_sipd.nama_skpd;
+							relayAjax({
+								url: url_save,
+								type: "post",
+					            data: {
+					                _token: _token,
+					                _method: 'PUT',
+					                kdunit: kdunit,
+					                nmunit: nmunit
+					            },
+								success: function(res){
+									resolve_reduce();
+								}
+							});
+						}
+					});
+	    		}else{
+	    			relayAjax({
+						url: config.fmis_url+'/parameter/unit-organisasi/form?code='+code_skpd+'&table=unit&action=create',
+						success: function(form_edit){
+							var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+							var form = jQuery(form_edit.form);
+							var idskpd = form.find('input[name="idskpd"]').val();
+							var kdunit = unit_sipd.id_skpd;
+							var nmunit = unit_sipd.nama_skpd;
+							relayAjax({
+								url: url_save,
+								type: "post",
+					            data: {
+					                _token: _token,
+					                idskpd: idskpd,
+					                kdunit: kdunit,
+					                nmunit: nmunit
+					            },
+								success: function(res){
+									resolve_reduce();
+								}
+							});
+						}
+					});
+	    		}
+	    	})
+	    	.then(function(){
+	    		if(unit_sipd.sub_unit){
+		    		relayAjax({
+						url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_skpd+'&table=unit',
+						success: function(units){
+							var unit_fmis = false;
+							units.data.map(function(unit, ii){
+								if(unit_sipd.nama_skpd == unit.nmunit){
+									unit_fmis = unit
+								}
+							});
+							relayAjax({
+								url: config.fmis_url+'/parameter/unit-organisasi/form?code='+code_skpd+'&table=unit&action=create',
+								success: function(form_edit){
+									var form = jQuery(form_edit.form);
+									unit_fmis.idskpd = form.find('input[name="idskpd"]').val();
+									unit_fmis.idbidang = unit_sipd.idbidang;
+									update_save_sub_unit_sipd(unit_sipd.sub_unit, unit_fmis, cb);
+
+								}
+							});
+						}
+					});
+		    	}else{
+		    		cb();
+		    	}
+	    	});
+		}
+	});
+}
+
+function update_save_sub_unit_sipd(sub_unit, unit_fmis, cb){
+	var code_unit = unit_fmis.code;
+	var last = sub_unit.length - 1;
+	relayAjax({
+		url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_unit+'&table=subunit',
+		success: function(units){
 			sub_unit.reduce(function(sequence, nextData){
-		        return sequence.then(function(unit_sipd){
+		        return sequence.then(function(sub_unit_sipd){
 		    		return new Promise(function(resolve_reduce, reject_reduce){
-						var unit_fmis = false;
-						units.data.map(function(unit, ii){
-							if(unit_sipd.nama_skpd == unit.nmunit){
-								unit_fmis = unit
+						var sub_unit_fmis = false;
+						units.data.map(function(subunit, ii){
+							if(sub_unit_sipd.nama_skpd == subunit.nmsubunit){
+								sub_unit_fmis = subunit
 							}
 						});
-						if(unit_fmis){
-				    		var url_edit = unit_fmis.action.split('href=\"')[1].split('\"')[0];
+						if(sub_unit_fmis){
+				    		var url_edit = sub_unit_fmis.action.split('href=\"')[1].split('\"')[0];
 				    		url_edit = jQuery('<textarea />').html(url_edit).text();
 		        			relayAjax({
 								url: url_edit+'&action=edit',
 								success: function(form_edit){
 									var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
-									var kdunit = unit_sipd.id_skpd;
-									var nmunit = unit_sipd.nama_skpd;
-									relayAjax({
-										url: url_save,
-										type: "post",
-							            data: {
-							                _token: _token,
-							                _method: 'PUT',
-							                kdunit: kdunit,
-							                nmunit: nmunit
-							            },
-										success: function(res){
-											resolve_reduce(nextData);
+									var kdsubunit = sub_unit_sipd.id_skpd;
+									var nmsubunit = sub_unit_sipd.nama_skpd;
+									var form = jQuery(form_edit.form);
+									var idunit = form.find('input[name="idunit"]').val();
+									var idso = '';
+									var uraian_so = 'Kepala '+nmsubunit;
+									form.find('#table-so .select-so').map(function(i, b){
+										var uraian = jQuery(b).attr('data-uraian');
+										if(uraian == uraian_so){
+											idso = jQuery(b).attr('data-so');
 										}
+									});
+									getIdSo({
+										idso: idso,
+										uraian_so: uraian_so,
+										idbidur: unit_fmis.idbidang,
+										idskpd: unit_fmis.idskpd,
+										idunit: idunit
+									}).then(function(val){
+										relayAjax({
+											url: url_save,
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'PUT',
+								                idso: val.idso,
+								                uraian_so: val.uraian_so,
+								                'table-so_length': 10,
+								                idunit: idunit,
+								                kdsubunit: kdsubunit,
+								                nmsubunit: nmsubunit
+								            },
+											success: function(res){
+												resolve_reduce(nextData);
+											}
+										});
 									});
 								}
 							});
 		        		}else{
 		        			relayAjax({
-								url: config.fmis_url+'/parameter/unit-organisasi/form?code='+code_skpd+'&table=unit&action=create',
+								url: config.fmis_url+'/parameter/unit-organisasi/form?code='+code_unit+'&table=subunit&action=create',
 								success: function(form_edit){
 									var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+									var kdsubunit = sub_unit_sipd.id_skpd;
+									var nmsubunit = sub_unit_sipd.nama_skpd;
 									var form = jQuery(form_edit.form);
-									var idskpd = form.find('input[name="idskpd"]').val();
-									var kdunit = unit_sipd.id_skpd;
-									var nmunit = unit_sipd.nama_skpd;
-									relayAjax({
-										url: url_save,
-										type: "post",
-							            data: {
-							                _token: _token,
-							                idskpd: idskpd,
-							                kdunit: kdunit,
-							                nmunit: nmunit
-							            },
-										success: function(res){
-											resolve_reduce(nextData);
+									var idunit = form.find('input[name="idunit"]').val();
+									var idso = '';
+									var uraian_so = 'Kepala '+nmsubunit;
+									form.find('#table-so .select-so').map(function(i, b){
+										var uraian = jQuery(b).attr('data-uraian');
+										if(uraian == uraian_so){
+											idso = jQuery(b).attr('data-so');
 										}
+									});
+									getIdSo({
+										idso: idso,
+										uraian_so: uraian_so,
+										idbidur: unit_fmis.idbidang,
+										idskpd: unit_fmis.idskpd,
+										idunit: idunit
+									}).then(function(val){
+										relayAjax({
+											url: url_save,
+											type: "post",
+								            data: {
+								                _token: _token,
+								                idso: val.idso,
+								                uraian_so: val.uraian_so,
+								                'table-so_length': 10,
+								                idunit: idunit,
+								                kdsubunit: kdsubunit,
+								                nmsubunit: nmsubunit
+								            },
+											success: function(res){
+												resolve_reduce(nextData);
+											}
+										});
 									});
 								}
 							});
@@ -1835,18 +1977,77 @@ function update_save_unit_sipd(sub_unit, code_skpd, cb){
 	});
 }
 
+function getIdSo(options){
+	return new Promise(function(resolve_reduce, reject_reduce){
+		if(options.idso != ''){
+			resolve_reduce(options);
+		}else{
+			relayAjax({
+				url: config.fmis_url+'/parameter/struktur-organisasi/chart?idunit='+options.idunit,
+				success: function(so){
+					if(so.struktur.title == options.uraian_so){
+						options.idso = so.struktur.idso;
+						resolve_reduce(options);
+					}else{
+						so.struktur.children.map(function(b, i){
+							if(b.title == options.uraian_so){
+								options.idso = b.idso;
+							}
+						});
+						if(options.idso != ''){
+							resolve_reduce(options);
+						}else{
+							relayAjax({
+								url: config.fmis_url+'/parameter/struktur-organisasi/form?idso='+so.struktur.idso+'&idunit='+options.idunit+'&action=create',
+								success: function(form_create){
+									var url_save = form_create.form.split('action=\"')[1].split('\"')[0];
+									var form = jQuery(form_create.form);
+									relayAjax({
+										url: url_save,
+										type: "post",
+							            data: {
+							                _token: _token,
+							                idunit: options.idunit,
+							                nm_so: options.uraian_so,
+							                status: 1,
+							                uraian_so: so.struktur.title,
+							                idsoref: so.struktur.idso,
+							                'table-so_length': 10
+							            },
+										success: function(res){
+											getIdSo(options).then(function(val){
+												resolve_reduce(val);
+											});
+										}
+									});
+								}
+							});
+						}
+					}
+				}
+			});
+		}
+	});
+}
+
 function get_id_bidur_skpd(html, bidur_sipd){
+	if(typeof bidang_urusan == 'undefined'){
+		window.bidang_urusan = {};
+		html.map(function(i, b){
+			var bidur_fmis = get_text_bidur(jQuery(b).text());
+			bidang_urusan[jQuery(b).attr('value')] = bidur_fmis;
+		});
+	}
 	if(!bidur_sipd || bidur_sipd == ''){
 		return '';
 	}else{
 		bidur_sipd = get_text_bidur(bidur_sipd);
 		var id_bidur = '';
-		html.map(function(i, b){
-			var bidur_fmis = get_text_bidur(jQuery(b).text());
-			if(bidur_sipd == bidur_fmis){
-				id_bidur = jQuery(b).attr('value');
+		for(var id in bidang_urusan){
+			if(bidur_sipd == bidang_urusan[id]){
+				id_bidur = id;
 			}
-		});
+		}
 		return id_bidur;
 	}
 }
