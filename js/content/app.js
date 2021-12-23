@@ -20,7 +20,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-ssh-sipd">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SSH SIPD'
     +'</button>';
-	jQuery('#golongan .btn-outline-dark').after(btn);
+	jQuery('#golongan .btn-outline-dark').parent().append(btn);
 	jQuery('#singkron-ssh-sipd').on('click', function(){
 		jQuery('#wrap-loading').show();
 		var data = {
@@ -48,7 +48,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-rekening">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Rekening'
     +'</button>';
-	jQuery('#rekening a[title="Tambah Rekening"]').after(btn);
+	jQuery('#rekening a[title="Tambah Rekening"]').parent().append(btn);
 	jQuery('#delete-all-rekening').on('click', function(){
 		var code_item = jQuery('input[name="code_item"]').val();
 		delete_all_rekening(code_item);
@@ -58,7 +58,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-item">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Item SSH'
     +'</button>';
-	jQuery('#item a[title="Tambah Item"]').after(btn);
+	jQuery('#item a[title="Tambah Item"]').parent().append(btn);
 	jQuery('#delete-all-item').on('click', function(){
 		var code_subkelompok = jQuery('input[name="code_subkelompok"]').val();
 		delete_all_item(code_subkelompok);
@@ -68,7 +68,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-subkelompok">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Sub Kelompok SSH'
     +'</button>';
-	jQuery('#subkelompok a[title="Tambah Sub Kelompok"]').after(btn);
+	jQuery('#subkelompok a[title="Tambah Sub Kelompok"]').parent().append(btn);
 	jQuery('#delete-all-subkelompok').on('click', function(){
 		var code_kelompok = jQuery('input[name="code_kelompok"]').val();
 		delete_all_subkelompok(code_kelompok);
@@ -78,7 +78,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-kelompok">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Kelompok SSH'
     +'</button>';
-	jQuery('#kelompok a[title="Tambah Kelompok"]').after(btn);
+	jQuery('#kelompok a[title="Tambah Kelompok"]').parent().append(btn);
 	jQuery('#delete-all-kelompok').on('click', function(){
 		var code_golongan = jQuery('input[name="code_golongan"]').val();
 		delete_all_kelompok(code_golongan);
@@ -88,7 +88,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-golongan">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Golongan SSH'
     +'</button>';
-	jQuery('#singkron-ssh-sipd').after(btn);
+	jQuery('#singkron-ssh-sipd').parent().append(btn);
 	jQuery('#delete-all-golongan').on('click', function(){
 		delete_all_golongan();
 	});
@@ -97,7 +97,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-tarif">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH'
     +'</button>';
-    jQuery('a[title="Edit Nilai Tarif Item"]').after(btn);
+    jQuery('a[title="Edit Nilai Tarif Item"]').parent().append(btn);
     jQuery('#delete-all-tarif').on('click', function(){
 		var subkelompok_code = jQuery('input[name="code_subkelompok"]').val();
 		var code_perkada = jQuery('input[name="code_perkada"]').val();
@@ -108,7 +108,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-tarif-sub-kelompok">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH Sub Kelompok'
     +'</button>';
-    jQuery('a[title="Tambah Sub Kelompok"]').after(btn);
+    jQuery('a[title="Tambah Sub Kelompok"]').parent().append(btn);
     jQuery('#delete-all-tarif-sub-kelompok').on('click', function(){
 		var kelompok_code = jQuery('input[name="code_kelompok"]').val();
 		var code_perkada = jQuery('input[name="code_perkada"]').val();
@@ -119,7 +119,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-all-tarif-kelompok">'
         +'<i class="fa fa-trash fa-fw"></i> Delete All Tarif SSH Kelompok'
     +'</button>';
-    jQuery('a[title="Tambah Kelompok"]').after(btn);
+    jQuery('a[title="Tambah Kelompok"]').parent().append(btn);
     jQuery('#delete-all-tarif-kelompok').on('click', function(){
 		var golongan_code = jQuery('input[name="code_golongan"]').val();
 		var code_perkada = jQuery('input[name="code_perkada"]').val();
@@ -139,8 +139,11 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-skpd">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SKPD SIPD'
+    +'</button>'
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-skpd">'
+        +'<i class="fa fa-trash-alt fa-fw"></i> Hapus All SKPD & Struktur Organisasi'
     +'</button>';
-    jQuery('a[title="Tambah SKPD"]').after(btn);
+    jQuery('a[title="Tambah SKPD"]').parent().append(btn);
     jQuery('#singkron-skpd').on('click', function(){
     	jQuery("#wrap-loading").show();
 		var data = {
@@ -163,12 +166,19 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 		    console.log('responeMessage', response);
 		});
     });
+    jQuery('#delete-skpd').on('click', function(){
+    	var url_tambah_skpd = jQuery('a[title="Tambah SKPD"]').attr('href');
+    	delete_skpd_fmis(url_tambah_skpd);
+    });
 
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-skpd-all">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi All SKPD SIPD'
+    +'</button>'
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 3px;" id="delete-skpd-all">'
+        +'<i class="fa fa-trash-alt fa-fw"></i> Hapus All SKPD & Struktur Organisasi'
     +'</button>';
-    jQuery('#bidang .p-2 > h4').after(btn);
+    jQuery('#bidang .p-2 > h4').parent().append(btn);
     jQuery('#singkron-skpd-all').on('click', function(){
     	jQuery("#wrap-loading").show();
 		var data = {
@@ -190,6 +200,9 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 		chrome.runtime.sendMessage(data, function(response) {
 		    console.log('responeMessage', response);
 		});
+    });
+    jQuery('#delete-skpd-all').on('click', function(){
+    	delete_skpd_all_fmis();
     });
 }
 

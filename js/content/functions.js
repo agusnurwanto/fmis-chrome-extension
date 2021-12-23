@@ -31,7 +31,10 @@ function relayAjax(options, retries=20, delay=10000, timeout=90000){
     jQuery.ajax(options)
     .fail(function(jqXHR, exception){
     	// console.log('jqXHR, exception', jqXHR, exception);
-    	if(jqXHR.status != '0'){
+    	if(
+    		jqXHR.status != '0' 
+    		&& jqXHR.status != '503'
+    	){
     		if(jqXHR.responseJSON){
     			options.success(jqXHR.responseJSON);
     		}else{
@@ -2057,4 +2060,285 @@ function get_text_bidur(text){
 	text.shift();
 	text = text.join(' ');
 	return text;
+}
+
+function delete_skpd_all_fmis(){
+	if(confirm('Apakah anda yakin untuk menghapus semua SKPD di semua Bidang Urusan?')){
+		jQuery('#wrap-loading').show();
+		var sendData = [];
+		jQuery('#bidang li[data-type="bidang"]').map(function(i, b){
+			sendData.push(new Promise(function(resolve_reduce2, reject_reduce2){
+				var code_bidur = jQuery(b).attr('data-code');
+				var url_tambah_skpd = config.fmis_url+'/parameter/unit-organisasi/form?code='+code_bidur+'&table=skpd'
+				delete_skpd_fmis(url_tambah_skpd, function(){
+					resolve_reduce2();
+				});
+	        }));
+	    });
+	    Promise.all(sendData)
+		.then(function(val_all){
+			jQuery('#wrap-loading').hide();
+			alert('Berhasil hapus All SKPD!');
+		});
+	}
+}
+
+function delete_skpd_fmis(url_tambah_skpd, cb){
+	if(
+		url_tambah_skpd == ''
+	){
+		alert('Url tambah SKPD tidak ditemukan!');
+	}else{
+		if(
+			typeof cb == 'function'
+			|| confirm('Apakah anda yakin untuk menghapus data SKPD dari Urusan Bidang ini?')
+		){
+			if(typeof cb != 'function'){
+				jQuery('#wrap-loading').show();
+			}
+			var code_bidang = url_tambah_skpd.split('code=')[1].split('&')[0];
+			relayAjax({
+				url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_bidang+'&table=skpd',
+				success: function(skpd){
+					var _leng = 1;
+					var _data_all = [];
+					var _data = [];
+					skpd.data.map(function(unit, i){
+						_data.push(unit);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					});
+					if(_data.length > 0){
+						_data_all.push(_data);
+					}
+
+					var last = _data_all.length - 1;
+					_data_all.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var sendData = current_data.map(function(skpd, i){
+			        				return new Promise(function(resolve_reduce2, reject_reduce2){
+			        					delete_unit_fmis(skpd.code, function(){
+				        					var url_form = skpd.action.split('href=\"')[2].split('\"')[0];
+				        					url_form = jQuery('<textarea />').html(url_form).text();
+						        			relayAjax({
+												url: url_form+'&action=delete',
+												success: function(form_delete){
+													console.log('Hapus SKPD '+skpd.nmskpd);
+													var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+													relayAjax({
+														url: url_delete,
+														type: "post",
+											            data: {
+											                _token: _token,
+											                _method: 'DELETE'
+											            },
+														success: function(res){
+															resolve_reduce2(res);
+														}
+													});
+												}
+											});
+						        		});
+					                });
+				                });
+				                Promise.all(sendData)
+								.then(function(val_all){
+									resolve_reduce(nextData);
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(_data_all[last]))
+			        .then(function(data_last){
+			        	if(typeof cb != 'function'){
+							run_script("initUnitTable(2);");
+							alert('Berhasil hapus SKPD!');
+							jQuery('#wrap-loading').hide();
+						}else{
+							cb();
+						}
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	}
+}
+
+function delete_unit_fmis(code_skpd, cb){
+	relayAjax({
+		url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_skpd+'&table=unit',
+		success: function(units){
+			var last = units.data.length - 1;
+			units.data.reduce(function(sequence, nextData){
+	            return sequence.then(function(unit){
+	        		return new Promise(function(resolve_reduce, reject_reduce){
+	        			delete_so_subunit_fmis(unit.code, function(){
+        					var url_form = unit.action.split('href=\"')[2].split('\"')[0];
+        					url_form = jQuery('<textarea />').html(url_form).text();
+		        			relayAjax({
+								url: url_form+'&action=delete',
+								success: function(form_delete){
+									console.log('Hapus Unit '+unit.nmunit);
+									var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+									relayAjax({
+										url: url_delete,
+										type: "post",
+							            data: {
+							                _token: _token,
+							                _method: 'DELETE'
+							            },
+										success: function(res){
+											resolve_reduce(nextData);
+										}
+									});
+								}
+							});
+		        		});
+	                })
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(units.data[last]))
+	        .then(function(data_last){
+				cb();
+	        })
+	        .catch(function(e){
+	            console.log(e);
+	        });
+		}
+	});
+}
+
+function delete_so_subunit_fmis(code_unit, cb){
+	relayAjax({
+		url: config.fmis_url+'/parameter/unit-organisasi/form?code='+code_unit+'&table=subunit&action=create',
+		success: function(form_edit){
+			var form = jQuery(form_edit.form);
+			var idunit = form.find('input[name="idunit"]').val();
+			relayAjax({
+				url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_unit+'&table=subunit',
+				success: function(subunits){
+					var last = subunits.data.length - 1;
+					subunits.data.reduce(function(sequence, nextData){
+			            return sequence.then(function(sub_unit){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+		    					var url_form = sub_unit.action.split('href=\"')[2].split('\"')[0];
+		    					url_form = jQuery('<textarea />').html(url_form).text();
+			        			relayAjax({
+									url: url_form+'&action=delete',
+									success: function(form_delete){
+										console.log('Hapus Sub Unit '+sub_unit.nmsubunit);
+										var url_delete = form_delete.form.split('action=\"')[1].split('\"')[0];
+										relayAjax({
+											url: url_delete,
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'DELETE'
+								            },
+											success: function(res){
+												resolve_reduce(nextData);
+											}
+										});
+									}
+								});
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(subunits.data[last]))
+			        .then(function(data_last){
+						relayAjax({
+							url: config.fmis_url+'/parameter/struktur-organisasi/chart?idunit='+idunit,
+							success: function(so){
+								var sendData = [];
+								if(so && so.struktur && so.struktur.children){
+									// hapus children so level 1
+									sendData = so.struktur.children.map(function(b, i){
+										return new Promise(function(resolve, reduce){
+											relayAjax({
+												url: config.fmis_url+'/parameter/struktur-organisasi/form?idso='+b.idso+'&idunit='+idunit+'&action=delete',
+												success: function(form_create){
+													console.log('Hapus Struktur Organisasi '+b.title);
+													var url_save = form_create.form.split('action=\"')[1].split('\"')[0];
+													relayAjax({
+														url: url_save,
+														type: "post",
+											            data: {
+											                _token: _token,
+											                _method: 'DELETE'
+											            },
+														success: function(res){
+															resolve(res);
+														}
+													});
+												}
+											});
+										});
+									});
+								}else{
+									console.log('so tak punya children', so);
+								}
+								Promise.all(sendData)
+								.then(function(val_all){
+									if(so && so.struktur && so.struktur.idso){
+										// hapus master so
+										relayAjax({
+											url: config.fmis_url+'/parameter/struktur-organisasi/form?idso='+so.struktur.idso+'&idunit='+idunit+'&action=delete',
+											success: function(form_create){
+												console.log('Hapus Struktur Organisasi '+so.struktur.title);
+												var url_save = form_create.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_save,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'DELETE'
+										            },
+													success: function(res){
+														cb();
+													}
+												});
+											}
+										});
+									}else{
+										console.log('so tak punya struktur', so);
+										cb();
+									}
+								});
+							}
+						});
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			        });
+				}
+			});
+		}
+	});
 }
