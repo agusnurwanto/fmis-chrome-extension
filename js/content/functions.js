@@ -334,7 +334,7 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
 									url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+data_ssh[_gol_id].data[kelompok_id].code+'&gol_id='+_gol_id+'&kelompok_id='+kelompok_id,
 									success: function(subkelompok){
 										var __gol_id = this.url.split('&gol_id=')[1].split('&')[0];
-										var _kelompok_id = this.url.split('&kelompok_id=')[1];
+										var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
 										var no_urut_subkelompok = 0;
 										for(var subkelompok_id in data_ssh[__gol_id].data[_kelompok_id].data){
 											var nama_subkelompok = data_ssh[__gol_id].data[_kelompok_id].data[subkelompok_id].nama;
