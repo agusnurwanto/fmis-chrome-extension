@@ -34,6 +34,7 @@ function relayAjax(options, retries=20, delay=10000, timeout=90000){
     	if(
     		jqXHR.status != '0' 
     		&& jqXHR.status != '503'
+    		&& jqXHR.status != '500'
     	){
     		if(jqXHR.responseJSON){
     			options.success(jqXHR.responseJSON);
@@ -525,7 +526,7 @@ function singkronisasi_ssh_item(data_ssh){
 	}
 	Promise.all(sendData)
 	.then(function(val_all){
-		var _leng = 50;
+		var _leng = 1;
 		var _data_all = [];
 		var _data = [];
 		data_all.map(function(ssh, i){
@@ -549,7 +550,7 @@ function singkronisasi_ssh_item(data_ssh){
 								return resolve_reduce2();
 							};
 							ssh.error = function(e) {
-								console.log(e);
+								console.log('ERROR insert ssh', e, ssh.data);
 								return resolve_reduce2();
 							};
 		                	jQuery.ajax(ssh);
@@ -585,6 +586,7 @@ function singkronisasi_ssh_item(data_ssh){
 }
 function singkronisasi_ssh_rekening(data_ssh){
 	var sendData = [];
+	var sendDataSub = [];
 	for(var gol_id in data_ssh){
 		var nama_golongan = data_ssh[gol_id].nama;
 		if(data_ssh[gol_id].code){
@@ -592,54 +594,111 @@ function singkronisasi_ssh_rekening(data_ssh){
 				if(data_ssh[gol_id].data[kelompok_id].code){
 					for(var subkelompok_id in data_ssh[gol_id].data[kelompok_id].data){
 						if(data_ssh[gol_id].data[kelompok_id].data[subkelompok_id].code){
-							sendData.push(new Promise(function(resolve, reject){
-								relayAjax({
-									url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/datatable?code='+data_ssh[gol_id].data[kelompok_id].data[subkelompok_id].code+'&gol_id='+gol_id+'&kelompok_id='+kelompok_id+'&subkelompok_id='+subkelompok_id,
-									success: function(item){
-										var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
-										var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
-										var _subkelompok_id = this.url.split('&subkelompok_id=')[1].split('&')[0];
-										var sendDataSub = [];
-										for(var item_id in data_ssh[_gol_id].data[_kelompok_id].data[_subkelompok_id].data){
-											var nama_item = data_ssh[_gol_id].data[_kelompok_id].data[_subkelompok_id].data[item_id].nama;
-											var kode_item = false;
-											item.data.map(function(b, i){
-												if(b.uraian == nama_item){
-													kode_item = b.action.split('code="')[1].split('"')[0];
+							sendData.push({
+								param: {
+									code: data_ssh[gol_id].data[kelompok_id].data[subkelompok_id].code,
+									gol_id: gol_id,
+									kelompok_id: kelompok_id,
+									subkelompok_id: subkelompok_id,
+									subkelompok: data_ssh[gol_id].data[kelompok_id].data[subkelompok_id]
+								},
+								cb: function(ret, ret_cb){
+									relayAjax({
+										url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/datatable?code='+ret.code+'&gol_id='+ret.gol_id+'&kelompok_id='+ret.kelompok_id+'&subkelompok_id='+ret.subkelompok_id,
+										success: function(item){
+											var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
+											var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
+											var _subkelompok_id = this.url.split('&subkelompok_id=')[1].split('&')[0];
+											for(var item_id in ret.subkelompok.data){
+												var nama_item = ret.subkelompok.data[item_id].nama;
+												var kode_item = false;
+												item.data.map(function(b, i){
+													if(b.uraian == nama_item){
+														kode_item = b.action.split('code="')[1].split('"')[0];
+													}
+												});
+												if(kode_item != false){
+													ret.subkelompok.data[item_id].code = kode_item;
+													sendDataSub.push({
+														param: {
+															data: ret.subkelompok.data[item_id]
+														},
+														cb: function(ret2, ret_cb2){
+															set_rekening_ssh(ret2.data).then(function(){
+																ret_cb2();
+															});
+														}
+													});
 												}
-											});
-											if(kode_item != false){
-												data_ssh[_gol_id].data[_kelompok_id].data[_subkelompok_id].data[item_id].code = kode_item;
-												sendDataSub.push(set_rekening_ssh(data_ssh[_gol_id].data[_kelompok_id].data[_subkelompok_id].data[item_id]));
 											}
+											ret_cb();
 										}
-										Promise.all(sendDataSub)
-										.then(function(val_all){
-											resolve();
-									    })
-									    .catch(function(err){
-									        console.log('err', err);
-											alert('Ada kesalahan sistem!');
-											jQuery('#wrap-loading').hide();
-									    });
-									}
-								});
-							}));
+									});
+								}
+							});
 						}
 					}
 				}
 			}
 		}
 	}
-	Promise.all(sendData)
-	.then(function(val_all){
-		jQuery('#wrap-loading').hide();
-		alert('Berhasil singkron SSH dari SIPD!');
+	reduce_promise(sendData, function(val_all){
+		reduce_promise(sendDataSub, function(val_all){
+			jQuery('#wrap-loading').hide();
+			alert('Berhasil singkron SSH dari SIPD!');
+	    });
+    }, 50);
+}
+
+function reduce_promise(data_all, cb, _leng){
+	if(!_leng){
+		_leng = 10;
+	}
+	var _data_all = [];
+	var _data = [];
+	data_all.map(function(ssh, i){
+		_data.push(ssh);
+		if((i+1)%_leng == 0){
+			_data_all.push(_data);
+			_data = [];
+		}
+	});
+	if(_data.length > 0){
+		_data_all.push(_data);
+	}
+
+	var last = _data_all.length - 1;
+	_data_all.reduce(function(sequence, nextData){
+        return sequence.then(function(current_data){
+    		return new Promise(function(resolve_reduce, reject_reduce){
+				var sendData = current_data.map(function(data, i){
+    				return new Promise(function(resolve_reduce2, reject_reduce2){
+    					// console.log('data', data);
+		    			data.cb(data.param, function(){
+							resolve_reduce2();
+						});
+	                });
+                });
+                Promise.all(sendData)
+				.then(function(val_all){
+					resolve_reduce(nextData);
+				});
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        })
+        .catch(function(e){
+            console.log(e);
+            return Promise.resolve(nextData);
+        });
+    }, Promise.resolve(_data_all[last]))
+    .then(function(data_last){
+		cb();
     })
-    .catch(function(err){
-        console.log('err', err);
-		alert('Ada kesalahan sistem!');
-		jQuery('#wrap-loading').hide();
+    .catch(function(e){
+        console.log(e);
     });
 }
 
@@ -782,7 +841,7 @@ function intervalSession(no){
 			url: config.fmis_url + '/dashboard',
 			success: function(html){
 				no++;
-				console.log('Interval session per 60s ke '+no);
+				// console.log('Interval session per 60s ke '+no);
 				setTimeout(function(){
 					intervalSession(no);
 				}, 60000);
