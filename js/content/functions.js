@@ -231,8 +231,8 @@ function singkronisasi_ssh_kelompok(data_ssh){
 						relayAjax({
 							url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/datatable?code='+data_ssh[gol_id].code+'&gol_id='+gol_id,
 							success: function(kelompok){
-								var _gol_id = this.url.split('&gol_id=')[1];
-								// console.log('gol_id', _gol_id);
+								var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
+								// console.log('gol_id', _gol_id, data_ssh[_gol_id]);
 								var no_urut_kelompok = 0;
 								for(var kelompok_id in data_ssh[_gol_id].data){
 									var nama_kelompok = data_ssh[_gol_id].data[kelompok_id].nama;
@@ -317,7 +317,7 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
 					url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/datatable?code='+data_ssh[gol_id].code+'&gol_id='+gol_id,
 					success: function(kelompok){
 						// console.log('gol_id', _gol_id);
-						var _gol_id = this.url.split('&gol_id=')[1];
+						var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
 						var sendDataSub = [];
 						for(var kelompok_id in data_ssh[_gol_id].data){
 							var nama_kelompok = data_ssh[_gol_id].data[kelompok_id].nama;

@@ -22,26 +22,28 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
     +'</button>';
 	jQuery('#golongan .btn-outline-dark').parent().append(btn);
 	jQuery('#singkron-ssh-sipd').on('click', function(){
-		jQuery('#wrap-loading').show();
-		var data = {
-		    message:{
-		        type: "get-url",
-		        content: {
-				    url: config.url_server_lokal,
-				    type: 'post',
-				    data: { 
-						action: 'get_ssh',
-						tahun_anggaran: config.tahun_anggaran,
-						api_key: config.api_key
-					},
-	    			return: true,
-	    			continue: 'get_ssh'
-				}
-		    }
-		};
-		chrome.runtime.sendMessage(data, function(response) {
-		    console.log('responeMessage', response);
-		});
+    	if(confirm('Apakah anda yakin untuk melakukan singkronisasi data Struktur SSH dari WP-SIPD ke FMIS?')){
+			jQuery('#wrap-loading').show();
+			var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_ssh',
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true,
+		    			continue: 'get_ssh'
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+		}
 	});
 
 	var btn = ''
@@ -145,26 +147,28 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
     +'</button>';
     jQuery('a[title="Tambah SKPD"]').parent().append(btn);
     jQuery('#singkron-skpd').on('click', function(){
-    	jQuery("#wrap-loading").show();
-		var data = {
-		    message:{
-		        type: "get-url",
-		        content: {
-				    url: config.url_server_lokal,
-				    type: 'post',
-				    data: { 
-						action: 'get_skpd',
-						run: 'singkron_skpd_sipd',
-						tahun_anggaran: config.tahun_anggaran,
-						api_key: config.api_key
-					},
-	    			return: true
-				}
-		    }
-		};
-		chrome.runtime.sendMessage(data, function(response) {
-		    console.log('responeMessage', response);
-		});
+    	if(confirm('Apakah anda yakin untuk melakukan singkronisasi data SKPD dari WP-SIPD ke FMIS?')){
+	    	jQuery("#wrap-loading").show();
+			var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_skpd',
+							run: 'singkron_skpd_sipd',
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+		}
     });
     jQuery('#delete-skpd').on('click', function(){
     	var url_tambah_skpd = jQuery('a[title="Tambah SKPD"]').attr('href');
@@ -207,23 +211,25 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 }
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
-	jQuery("#wrap-loading").show();
-	var data = {
-	    message:{
-	        type: "get-url",
-	        content: {
-			    url: config.url_server_lokal,
-			    type: 'post',
-			    data: { 
-					action: 'get_ssh',
-					tahun_anggaran: config.tahun_anggaran,
-					api_key: config.api_key
-				},
-    			return: true
-			}
-	    }
-	};
-	chrome.runtime.sendMessage(data, function(response) {
-	    console.log('responeMessage', response);
-	});
+    if(confirm('Apakah anda yakin untuk melakukan singkronisasi data tarif SSH dari WP-SIPD ke FMIS?')){
+		jQuery("#wrap-loading").show();
+		var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'get_ssh',
+						tahun_anggaran: config.tahun_anggaran,
+						api_key: config.api_key
+					},
+	    			return: true
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
+	}
 });
