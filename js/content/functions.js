@@ -184,30 +184,69 @@ function singkronisasi_ssh_tarif(data_ssh){
 				var uraian_item = b.kode_standar_harga+' '+b.id_standar_harga+' '+b.nama_standar_harga;
 				all_ssh[uraian_item] = b;
 			});
-			var data_post = {
-                _token: _token,
-                _method: 'PUT',
-                nilai: {}
-            };
-            data_post[idssh_fmis] = {};
+            var no = 0;
+            var _leng = 100;
+            var _data_all = [];
+			var _data = [];
 			items.data.map(function(b, i){
 				if(all_ssh[b.uraian]){
-					var id_fmis = b.nilai.split('idperkadatarif[')[1].split(']')[0];
-					data_post.nilai[id_fmis] = all_ssh[b.uraian].harga;
-					data_post[idssh_fmis][id_fmis] = id_fmis;
+					_data.push(b);
+					if((i+1)%_leng == 0){
+						_data_all.push(_data);
+						_data = [];
+					}
 				}
 			});
-			// return console.log('data_post', data_post);
-			relayAjax({
-				url: url_save_form,
-				type: "post",
-	            data: data_post,
-				success: function(items){
-					jQuery('#modal .btn.btn-secondary.ml-1').click();
-					alert('Berhasil singkroniasi tarif SSH!');
-					jQuery('#wrap-loading').hide();
-				}
-			});
+			if(_data.length > 0){
+				_data_all.push(_data);
+			}
+			var last = _data_all.length - 1;
+			_data_all.reduce(function(sequence, nextData){
+	            return sequence.then(function(current_data){
+	        		return new Promise(function(resolve_reduce, reject_reduce){
+						var data_post = {
+			                _token: _token,
+			                _method: 'PUT',
+			                'table-referensi_length': 10,
+			                nilai: {},
+			                idperkadatarif: {}
+			            };
+			            data_post[idssh_fmis] = {};
+	        			current_data.map(function(b, i){
+							var id_fmis = b.nilai.split('idperkadatarif[')[1].split(']')[0];
+							data_post.nilai[id_fmis] = all_ssh[b.uraian].harga+',00';
+							data_post.idperkadatarif[id_fmis] = '';
+							data_post[idssh_fmis][id_fmis] = id_fmis;
+							no++;
+	        			});
+				        // console.log('data_post', no, data_post);
+						relayAjax({
+							url: url_save_form,
+							type: "post",
+				            data: data_post,
+							success: function(items){
+								resolve_reduce(nextData);
+							}
+						});
+	        		})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(_data_all[last]))
+	        .then(function(data_last){
+				jQuery('#modal .btn.btn-secondary.ml-1').click();
+				alert('Berhasil singkroniasi tarif SSH!');
+				jQuery('#wrap-loading').hide();
+	        })
+	        .catch(function(e){
+	            console.log(e);
+	        });
 		}
 	});
 }
