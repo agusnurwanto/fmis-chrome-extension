@@ -208,6 +208,36 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
     jQuery('#delete-skpd-all').on('click', function(){
     	delete_skpd_all_fmis();
     });
+}else if(current_url.indexOf('/manajemen-user/user') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-user">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi User SIPD'
+    +'</button>';
+    jQuery('a.btn-sm[title="Tambah Pengguna"]').parent().append(btn);
+    jQuery('#singkron-user').on('click', function(){
+    	if(confirm('Apakah anda yakin untuk menggenerate data user FMIS dari SIPD?')){
+			jQuery('#wrap-loading').show();
+			var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_skpd',
+							run: 'singkronisasi_user_sipd',
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+		}
+    });
 }
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){

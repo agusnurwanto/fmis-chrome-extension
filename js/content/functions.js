@@ -2440,3 +2440,243 @@ function delete_so_subunit_fmis(code_unit, cb){
 		}
 	});
 }
+
+function getUnitFmis(){
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/manajemen-user/user/form?action=create',
+			success: function(form_tambah){
+				var sendData = [];
+				var unit = {};
+				jQuery(form_tambah.form).find('#idunit option').map(function(i, b){
+					var id = jQuery(b).attr('value');
+					if(id == ''){
+						return;
+					}
+					var name = jQuery(b).text();
+					unit[name] = {
+						id: id,
+						sub_unit: {}
+					};
+					sendData.push({
+						param: {
+							id: id,
+							name: name
+						},
+						cb: function(param, ret_cb){
+							relayAjax({
+								url: config.fmis_url+'/manajemen-user/user/subunit?idunit='+param.id,
+								success: function(data_fmis){
+									for(var id_sub in data_fmis.subunit){
+										if(id_sub != ''){
+											unit[param.name].sub_unit[data_fmis.subunit[id_sub]] = {
+												id: id_sub,
+												name: data_fmis.subunit[id_sub]
+											};
+										}
+									}
+									ret_cb();
+								}
+							});
+						}
+					});
+				});
+				reduce_promise(sendData, function(val_all){
+					resolve(unit);
+			    }, 5);
+			}
+		});
+	});
+}
+
+function singkronisasi_user_sipd(data_skpd){
+	var pass = prompt('Masukan password default untuk user dari SIPD!');
+	relayAjax({
+		url: config.fmis_url+'/manajemen-user/user/datatable',
+		success: function(users){
+			getUnitFmis().then(function(unit_fmis){
+				var sendData = [];
+				data_skpd.map(function(skpd, i){
+					users.data.map(function(u, n){
+						var username = u.kduser.slice(0, -1);
+						if(skpd.nipkepala == username){
+							var last = u.kduser.charAt(u.kduser.length-1);
+							if(last == 'p'){
+								skpd.user_fmis_p = u;
+							}else if(last == 'k'){
+								skpd.user_fmis_k = u;
+							}
+						}
+					});
+					skpd.idunit_fmis = false;
+					skpd.idsubunit_fmis = false;
+					for(var unit_f in unit_fmis){
+						for(var sub_unit_f in unit_fmis[unit_f].sub_unit){
+							if(skpd.nama_skpd == sub_unit_f){
+								skpd.idsubunit_fmis = unit_fmis[unit_f].sub_unit[sub_unit_f].id;
+								skpd.idunit_fmis = unit_fmis[unit_f].id;
+							}
+						}
+					}
+					// return console.log('data_skpd', skpd);
+					sendData.push({
+						param: {
+							skpd: skpd
+						},
+						cb: function(data, ret_cb){
+							if(
+								!data.skpd.idunit_fmis
+								|| !data.skpd.idsubunit_fmis
+							){
+								console.log('idunit atau idsubunit tidak ditemukan', data.skpd);
+								return ret_cb();
+							}
+							var sendDataSub = [];
+							if(data.skpd.user_fmis_p){
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										var url_form = data.skpd.user_fmis_p.action.split('href=\"')[1].split('\"')[0];
+										relayAjax({
+											url: url_form+'?action=edit',
+											success: function(form_update){
+												var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_update,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'PUT',
+										                kduser: data.skpd.nipkepala+'p',
+										                nmuser: (data.skpd.namakepala).substring(0, 50),
+										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50),
+										                level: 'operator',
+										                status: 1,
+										                idunit: data.skpd.idunit_fmis,
+										                idsubunit: data.skpd.idsubunit_fmis,
+										                idgroup: [3], // Perencanaan PD
+										                tahun: [config.tahun_anggaran],
+										            },
+													success: function(res){
+														ret_cb2();
+													}
+												});
+											}
+										});
+									}
+								});
+							}else{
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										relayAjax({
+											url: config.fmis_url+'/manajemen-user/user/store',
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'POST',
+								                kduser: data.skpd.nipkepala+'p',
+								                nmuser: (data.skpd.namakepala).substring(0, 50),
+								                pwd: pass,
+								                pwd_confirmation: pass,
+								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50),
+								                level: 'operator',
+								                status: 1,
+								                idunit: data.skpd.idunit_fmis,
+								                idsubunit: data.skpd.idsubunit_fmis,
+								                idgroup: [3], // Perencanaan PD
+								                tahun: [config.tahun_anggaran],
+								            },
+											success: function(res){
+												ret_cb2();
+											}
+										});
+									}
+								});
+							}
+							if(data.skpd.user_fmis_k){
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										var url_form = data.skpd.user_fmis_k.action.split('href=\"')[1].split('\"')[0];
+										relayAjax({
+											url: url_form+'?action=edit',
+											success: function(form_update){
+												var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_update,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'PUT',
+										                kduser: data.skpd.nipkepala+'k',
+										                nmuser: (data.skpd.namakepala).substring(0, 50),
+										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50),
+										                level: 'operator',
+										                status: 1,
+										                idunit: data.skpd.idunit_fmis,
+										                idsubunit: data.skpd.idsubunit_fmis,
+								                		idgroup: [5], // Anggaran PD
+										                tahun: [config.tahun_anggaran],
+										            },
+													success: function(res){
+														ret_cb2();
+													}
+												});
+											}
+										});
+									}
+								});
+							}else{
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										relayAjax({
+											url: config.fmis_url+'/manajemen-user/user/store',
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'POST',
+								                kduser: data.skpd.nipkepala+'k',
+								                nmuser: (data.skpd.namakepala).substring(0, 50),
+								                pwd: pass,
+								                pwd_confirmation: pass,
+								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50),
+								                level: 'operator',
+								                status: 1,
+								                idunit: data.skpd.idunit_fmis,
+								                idsubunit: data.skpd.idsubunit_fmis,
+								                idgroup: [5], // Anggaran PD
+								                tahun: [config.tahun_anggaran],
+								            },
+											success: function(res){
+												ret_cb2();
+											}
+										});
+									}
+								});
+							}
+
+							reduce_promise(sendDataSub, function(val_all){
+								ret_cb();
+						    }, 5);
+						}
+					});
+				});
+
+				reduce_promise(sendData, function(val_all){
+					jQuery('#wrap-loading').hide();
+					alert('Berhasil generate user dari SIPD!');
+			    }, 5);
+			});
+		}
+	});
+}

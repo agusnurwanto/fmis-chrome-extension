@@ -18,6 +18,7 @@ Semoga bermanfaat
 ### Fitur:
 - Singkronisasi data SSH dari SIPD ke FMIS
 - Singkronisasi data SKPD dari SIPD ke FMIS
+- Singkronisasi data User SKPD dari SIPD ke FMIS
 
 ### Pengembangan berikutnya:
 - Melengkapi dokumentasi penggunaan di halaman wiki
@@ -26,5 +27,5 @@ Semoga bermanfaat
 ### Video tutorial
 - ...
 
-### Istilah di Aplikasi Penatausahaan
-- ...
+### Catatan
+- Informasi terkait progres pengembangan aplikasi dan cara pakainya bisa cek di https://smkasiyahhomeschooling.blogspot.com/2021/12/fmis-chrome-extension-untuk-integrasi.html
