@@ -16,7 +16,7 @@ Semoga bermanfaat
 - Demikian dan salam semangat :blush:
 
 ### Fitur:
-- Singkronisasi data SSH dari SIPD ke FMIS
+- Singkronisasi data SSH, SBU, HSPK dan ASB dari SIPD ke FMIS
 - Singkronisasi data SKPD dari SIPD ke FMIS
 - Singkronisasi data User SKPD dari SIPD ke FMIS
 

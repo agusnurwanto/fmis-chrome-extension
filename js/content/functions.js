@@ -108,7 +108,12 @@ function singkronisasi_ssh(options){
 					for(var gol_id in data_ssh){
 						var nama_golongan = data_ssh[gol_id].nama;
 						var jns_golongan = data_ssh[gol_id].jenis;
-						if(jns_golongan == 1){
+						if(
+							jns_golongan == 1
+							|| jns_golongan == 2
+							|| jns_golongan == 3
+							|| jns_golongan == 4
+						){
 							var jns_ssh = 1;
 						}else{
 							continue;
@@ -775,7 +780,7 @@ function set_rekening_ssh(options){
 						success: function(detail_ssh){
 							var url_save = detail_ssh.form.split('action=\"')[1].split('\"')[0];
 							// simpan rekening baru
-							jQuery.ajax({
+							relayAjax({
 								url: url_save,
 								type: "post",
 					            data: data_post,
@@ -802,25 +807,30 @@ function getTahun(){
 }
 
 function getIdSatuan(satuan, force, val_cb){
-	satuan = satuan.toLowerCase().trim();
+	satuan = jQuery('<textarea />').html(satuan.toLowerCase().trim()).text().substring(0, 50);
+	var singkatan_sipd = satuan.substring(0, 30);
 	return new Promise(function(resolve, reject){
 		getSatuan({ force: force }).then(function(satuan_fmis){
 			var id_satuan = 0;
 			satuan_fmis.map(function(b, i){
 				var uraian = jQuery('<textarea />').html(b.uraian.toLowerCase().trim()).text();
-				if(satuan == uraian){
+				var singkatan = jQuery('<textarea />').html(b.singkatan.toLowerCase().trim()).text();
+				if(
+					singkatan_sipd == singkatan
+					|| satuan == uraian
+				){
 					id_satuan = b.action.split('data-id=\"')[1].split('"')[0]
 				}
 			});
 			if(id_satuan == 0){
 				jQuery.ajax({
-					url: config.fmis_url + '/parameter/satuan',
+					url: config.fmis_url + '/parameter/satuan/store',
 					type: "post",
 		            data: {
 		                _token: _token,
 		                _method: 'POST',
 		                uraian: satuan,
-		                singkatan: satuan
+		                singkatan: singkatan_sipd
 		            },
 					success: function(data){
 						getIdSatuan(satuan, 1, val_cb).then(function(val_cb){
