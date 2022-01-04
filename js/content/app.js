@@ -245,6 +245,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
     if(confirm('Apakah anda yakin untuk melakukan singkronisasi data tarif SSH dari WP-SIPD ke FMIS?')){
 		jQuery("#wrap-loading").show();
+		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB', 1);
 		var data = {
 		    message:{
 		        type: "get-url",
@@ -253,6 +254,7 @@ jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
 				    type: 'post',
 				    data: { 
 						action: 'get_ssh',
+						kelompok: idkelompok,
 						tahun_anggaran: config.tahun_anggaran,
 						api_key: config.api_key
 					},
