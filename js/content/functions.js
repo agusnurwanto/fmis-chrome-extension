@@ -501,7 +501,7 @@ function singkronisasi_ssh_item(data_ssh){
 													var no_urut_item = 0;
 													var sendDataSatuan = [];
 													for(var item_id in data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data){
-														var nama_item = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].nama;
+														var nama_item = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].nama.substring(0, 250);
 														var cek = false;
 														item.data.map(function(b, i){
 															if(b.uraian == nama_item){
@@ -806,15 +806,22 @@ function getTahun(){
 	return jQuery('.nav-link button.waves-light.dropdown-toggle strong').text();
 }
 
+function replace_string(text){
+	text = jQuery('<textarea />').html(text.toLowerCase().trim()).text();
+	text = text.replace(/³/g, '3');
+	text = text.replace(/²/g, '2');
+	return text;
+}
+
 function getIdSatuan(satuan, force, val_cb){
-	satuan = jQuery('<textarea />').html(satuan.toLowerCase().trim()).text().substring(0, 50);
+	satuan = replace_string(satuan).substring(0, 50);
 	var singkatan_sipd = satuan.substring(0, 30);
 	return new Promise(function(resolve, reject){
 		getSatuan({ force: force }).then(function(satuan_fmis){
 			var id_satuan = 0;
 			satuan_fmis.map(function(b, i){
-				var uraian = jQuery('<textarea />').html(b.uraian.toLowerCase().trim()).text();
-				var singkatan = jQuery('<textarea />').html(b.singkatan.toLowerCase().trim()).text();
+				var uraian = replace_string(b.uraian);
+				var singkatan = replace_string(b.singkatan);
 				if(
 					singkatan_sipd == singkatan
 					|| satuan == uraian
