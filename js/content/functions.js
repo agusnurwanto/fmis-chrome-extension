@@ -42,7 +42,7 @@ function relayAjax(options, retries=20, delay=10000, timeout=90000){
     			options.success(jqXHR.responseText);
     		}
     	}else if (retries > 0) {
-            console.log('Koneksi error. Coba lagi '+retries);
+            console.log('Koneksi error. Coba lagi '+retries, options);
             setTimeout(function(){ 
                 relayAjax(options, --retries, delay, timeout);
             },delay);
@@ -382,10 +382,10 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
 										var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
 										var no_urut_subkelompok = 0;
 										for(var subkelompok_id in data_ssh[__gol_id].data[_kelompok_id].data){
-											var nama_subkelompok = data_ssh[__gol_id].data[_kelompok_id].data[subkelompok_id].nama;
+											var nama_subkelompok = replace_string(data_ssh[__gol_id].data[_kelompok_id].data[subkelompok_id].nama, true);
 											var cek = false;
 											subkelompok.data.map(function(b, i){
-												if(b.uraian == nama_subkelompok){
+												if(replace_string(b.uraian, true) == nama_subkelompok){
 													cek = true;
 												}
 												if(no_urut_subkelompok < +b.kdurut){
@@ -485,7 +485,7 @@ function singkronisasi_ssh_item(data_ssh){
 									var nama_subkelompok = data_ssh[_gol_id].data[_kelompok_id].data[subkelompok_id].nama;
 									var kode_subkelompok = '';
 									subkelompok.data.map(function(b, i){
-										if(b.uraian == nama_subkelompok){
+										if(replace_string(b.uraian, true) == nama_subkelompok){
 											kode_subkelompok = b.action.split('code="')[1].split('"')[0];
 										}
 									});
@@ -501,10 +501,10 @@ function singkronisasi_ssh_item(data_ssh){
 													var no_urut_item = 0;
 													var sendDataSatuan = [];
 													for(var item_id in data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data){
-														var nama_item = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].nama.substring(0, 250);
+														var nama_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].nama, true).substring(0, 250);
 														var cek = false;
 														item.data.map(function(b, i){
-															if(b.uraian == nama_item){
+															if(replace_string(b.uraian, true) == nama_item){
 																cek = true;
 															}
 															if(no_urut_item < +b.kdurut){
@@ -513,7 +513,7 @@ function singkronisasi_ssh_item(data_ssh){
 														});
 														if(cek == false){
 															no_urut_item++;
-															var keterangan_item = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.spek;
+															var keterangan_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.spek, true);
 															var satuan_asli = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.satuan.toLowerCase().trim();
 															if(satuan_asli == ''){
 																satuan_asli = 'kosong';
@@ -756,6 +756,7 @@ function set_rekening_ssh(options){
 	                'table-rekening-ref_length': 10,
 	                kdrek: []
 	            };
+	            var rek_sipd_detail = false;
 	            var tahun = getTahun();
 				options.data.rek_belanja.map(function(rek, i){
 					var rek_sipd = [];
@@ -771,6 +772,7 @@ function set_rekening_ssh(options){
 					});
 					if(cek == false){
 						data_post.kdrek.push(tahun+'.'+rek_sipd);
+						rek_sipd_detail = rek;
 					}
 				});
 				if(data_post.kdrek.length >= 1){
@@ -788,7 +790,7 @@ function set_rekening_ssh(options){
 					            	resolve2();
 					            },
 					            error: function(e){
-					            	console.log(e);
+					            	console.log(e, this.data, rek_sipd_detail);
 					            	resolve2();
 					            }
 							});
@@ -806,8 +808,12 @@ function getTahun(){
 	return jQuery('.nav-link button.waves-light.dropdown-toggle strong').text();
 }
 
-function replace_string(text){
-	text = jQuery('<textarea />').html(text.toLowerCase().trim()).text();
+function replace_string(text, no_lowercase=false){
+	if(no_lowercase){
+		text = jQuery('<textarea />').html(text.trim()).text();
+	}else{
+		text = jQuery('<textarea />').html(text.toLowerCase().trim()).text();	
+	}
 	text = text.replace(/³/g, '3');
 	text = text.replace(/²/g, '2');
 	return text;
