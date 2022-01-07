@@ -14,7 +14,7 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 	console.log('request', request);
 	var type = request.message.type;
 	if(type == 'get-url'){
-		jQuery.ajax({
+		relayAjax({
 		    url: request.message.content.url,
 		    type: request.message.content.type,
 		    data: request.message.content.data,
@@ -22,7 +22,10 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 		    success:function(ret){
 		    	if(request.message.content.return){
 		    		// jika continue tidak kosong maka data akan dikirim secara terpisah agar terhindar dari limit makasimal
-		    		if(request.message.content.continue){
+		    		if(
+		    			request.message.content.continue
+		    			&& ret.data.length >= 1
+		    		){
 		    			var ret_temp = ret;
 		    			var _length = ret.data.length;
 		    			ret.data.map(function(b, i){
@@ -43,7 +46,7 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 					     	}else{
 					     		sendMessageTabActive(options);
 					     	}
-		    			})
+		    			});
 		    		}else{
 				     	var options = {
 				     		type: 'response-fecth-url',

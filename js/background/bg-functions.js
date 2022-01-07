@@ -119,3 +119,18 @@ function sendMessageTabActive(data, cb, nodebug){
         });
     }
 }
+
+function relayAjax(options, retries=20, delay=10000, timeout=90000){
+    options.timeout = timeout;
+    jQuery.ajax(options)
+    .fail(function(){
+        if (retries > 0) {
+            console.log('Koneksi error. Coba lagi '+retries);
+            setTimeout(function(){ 
+                relayAjax(options, --retries, delay, timeout);
+            },delay);
+        } else {
+            alert('Capek. Sudah dicoba berkali-kali error terus. Maaf, berhenti mencoba.');
+        }
+    });
+}

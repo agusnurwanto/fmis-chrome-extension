@@ -16,6 +16,9 @@ if(jQuery('#wrap-loading').length == 0){
 }
 var current_url = window.location.href;
 if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
+	getMasterRek().then(function(rek){
+		console.log('rek', rek);
+	});
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-ssh-sipd">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SSH SIPD'

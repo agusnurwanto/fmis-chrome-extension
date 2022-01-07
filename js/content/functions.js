@@ -570,7 +570,7 @@ function singkronisasi_ssh_item(data_ssh){
 	}
 	Promise.all(sendData)
 	.then(function(val_all){
-		var _leng = 1;
+		var _leng = 10;
 		var _data_all = [];
 		var _data = [];
 		data_all.map(function(ssh, i){
@@ -694,7 +694,7 @@ function singkronisasi_ssh_rekening(data_ssh){
     }, 50);
 }
 
-function reduce_promise(data_all, cb, _leng){
+function reduce_promise(data_all, cb, _leng=false){
 	if(!_leng){
 		_leng = 10;
 	}
@@ -756,51 +756,83 @@ function set_rekening_ssh(options){
 	                'table-rekening-ref_length': 10,
 	                kdrek: []
 	            };
-	            var rek_sipd_detail = false;
-	            var tahun = getTahun();
-				options.data.rek_belanja.map(function(rek, i){
-					var rek_sipd = [];
-					rek.kode_akun.split('.').map(function(b, n){
-						rek_sipd.push(+b);
-					});
-					rek_sipd = rek_sipd.join('.');
-					var cek = false;
-					rekening.data.map(function(b, n){
-						if(rek_sipd == b.kdrek){
-							cek = true;
+	            getMasterRek().then(function(rek_master){
+		            var rek_sipd_detail = [];
+		            var tahun = getTahun();
+					options.data.rek_belanja.map(function(rek, i){
+						var rek_sipd = [];
+						rek.kode_akun.split('.').map(function(b, n){
+							rek_sipd.push(+b);
+						});
+						rek_sipd = rek_sipd.join('.');
+						var cek = false;
+						rekening.data.map(function(b, n){
+							if(rek_sipd == b.kdrek){
+								cek = true;
+							}
+						});
+						if(cek == false){
+							if(rek_master[rek_sipd]){
+								data_post.kdrek.push(tahun+'.'+rek_sipd);
+								rek_sipd_detail.push(rek);
+							}else{
+								console.warn('Rekening SIPD tidak ada di master FMIS', rek);
+							}
 						}
 					});
-					if(cek == false){
-						data_post.kdrek.push(tahun+'.'+rek_sipd);
-						rek_sipd_detail = rek;
+					if(data_post.kdrek.length >= 1){
+						// get code from generate form
+						relayAjax({
+							url: config.fmis_url+'/parameter/ssh/struktur-ssh/rekening/form?action=create&code='+options.code,
+							success: function(detail_ssh){
+								var url_save = detail_ssh.form.split('action=\"')[1].split('\"')[0];
+								// simpan rekening baru
+								relayAjax({
+									url: url_save,
+									type: "post",
+						            data: data_post,
+						            success: function(res){
+						            	resolve2();
+						            },
+						            error: function(e){
+						            	console.log(e, this.data, rek_sipd_detail);
+						            	resolve2();
+						            }
+								});
+							}
+						});
+					}else{
+						resolve2();
 					}
 				});
-				if(data_post.kdrek.length >= 1){
-					// get code from generate form
-					relayAjax({
-						url: config.fmis_url+'/parameter/ssh/struktur-ssh/rekening/form?action=create&code='+options.code,
-						success: function(detail_ssh){
-							var url_save = detail_ssh.form.split('action=\"')[1].split('\"')[0];
-							// simpan rekening baru
-							relayAjax({
-								url: url_save,
-								type: "post",
-					            data: data_post,
-					            success: function(res){
-					            	resolve2();
-					            },
-					            error: function(e){
-					            	console.log(e, this.data, rek_sipd_detail);
-					            	resolve2();
-					            }
-							});
-						}
-					});
-				}else{
-					resolve2();
-				}
 			}
 		});
+	});
+}
+
+function getMasterRek() {
+	return new Promise(function(resolve, reject){
+		if(typeof rekening_master != 'undefined'){
+			resolve(rekening_master);
+		}else{
+			relayAjax({
+				url: config.fmis_url+'/parameter/rekening/datatable-rekening',
+				type: "post",
+	            data: {
+	                _token: _token,
+	                kdrek1: '4,5,6',
+	                exclude_table: 'ref_ssh_rekening',
+	                tahun: config.tahun_anggaran
+	            },
+				success: function(rek){
+					window.rekening_master = {};
+					rek.data.map(function(b, i){
+						rekening_master[b.kdrek] = b;
+					});
+					resolve(rekening_master);
+				}
+			});
+		}
 	});
 }
 
