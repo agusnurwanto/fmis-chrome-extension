@@ -25,7 +25,7 @@ function capitalizeFirstLetter(string) {
   	return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-function relayAjax(options, retries=20, delay=10000, timeout=90000){
+function relayAjax(options, retries=20, delay=5000, timeout=90000){
 	options.timeout = timeout;
 	options.cache = false;
     jQuery.ajax(options)
@@ -43,9 +43,10 @@ function relayAjax(options, retries=20, delay=10000, timeout=90000){
     		}
     	}else if (retries > 0) {
             console.log('Koneksi error. Coba lagi '+retries, options);
+            var new_delay = Math.random() * (delay/1000);
             setTimeout(function(){ 
                 relayAjax(options, --retries, delay, timeout);
-            },delay);
+            }, new_delay * 1000);
         } else {
             alert('Capek. Sudah dicoba berkali-kali error terus. Maaf, berhenti mencoba.');
         }
@@ -59,6 +60,10 @@ function singkronisasi_ssh(options){
 	}else{
 		getSatuan({ force: 1 });
 		var data_ssh = {};
+		window.ssh_all_length = options.data.length;
+		window.ssh_golongan_all_length = 0;
+		window.ssh_kelompok_all_length = 0;
+		window.ssh_sub_kelompok_all_length = 0;
 		options.data.map(function(b, i){
 			var rek = b.kode_kel_standar_harga.split('.');
 			var golongan = rek[0]+'.'+rek[1]+'.'+rek[2]+'.'+rek[3]+'.'+rek[4];
@@ -71,6 +76,7 @@ function singkronisasi_ssh(options){
 					jenis: b.kelompok,
 					data: {}
 				}
+				ssh_golongan_all_length++;
 			}
 			if(!data_ssh[golongan].data[kelompok]){
 				data_ssh[golongan].data[kelompok] = {
@@ -78,6 +84,7 @@ function singkronisasi_ssh(options){
 					jenis: b.kelompok,
 					data: {}
 				}
+				ssh_kelompok_all_length++;
 			}
 			if(!data_ssh[golongan].data[kelompok].data[sub_kelompok]){
 				data_ssh[golongan].data[kelompok].data[sub_kelompok] = {
@@ -85,6 +92,7 @@ function singkronisasi_ssh(options){
 					jenis: b.kelompok,
 					data: {}
 				}
+				ssh_sub_kelompok_all_length++;
 			}
 			data_ssh[golongan].data[kelompok].data[sub_kelompok].data[item_ssh] = {
 				nama: item_ssh+' '+b.id_standar_harga+' '+b.nama_standar_harga,
@@ -141,16 +149,20 @@ function singkronisasi_ssh(options){
 							});
 						}
 					}
+					jQuery('#persen-loading').attr('persen', 0);
 					var last = data_all.length - 1;
 					data_all.reduce(function(sequence, nextData){
 	                    return sequence.then(function(current_data){
 	                		return new Promise(function(resolve_reduce, reject_reduce){
 			                	current_data.success = function(data){
+			                		var c_persen = +jQuery('#persen-loading').attr('persen');
+	                				c_persen++;
+									jQuery('#persen-loading').attr('persen', c_persen);
+									jQuery('#persen-loading').html(((c_persen/data_all.length)*100).toFixed(2)+'% SAVE GOLONGAN'+'<br>'+current_data.data.uraian);
 									return resolve_reduce(nextData);
 								};
 								current_data.error = function(e) {
 									console.log(e);
-									return resolve_reduce(nextData);
 								};
 			                	relayAjax(current_data);
 			                })
@@ -177,6 +189,15 @@ function singkronisasi_ssh(options){
 	}
 }
 
+function get_id_ssh(text){
+	var _text = text.split(' ');
+	var ret = text;
+	if(_text[1]){
+		ret = _text[0]+' '+_text[1];
+	}
+	return ret;
+}
+
 function singkronisasi_ssh_tarif(data_ssh){
 	var url_save_form = jQuery('#form').attr('action');
 	var form_code = url_save_form.split('/save/')[1];
@@ -186,29 +207,39 @@ function singkronisasi_ssh_tarif(data_ssh){
 		success: function(items){
 			var all_ssh = {};
 			data_ssh.map(function(b, i){
-				var uraian_item = b.kode_standar_harga+' '+b.id_standar_harga+' '+b.nama_standar_harga;
-				all_ssh[uraian_item] = b;
+				var id_ssh = b.kode_standar_harga+' '+b.id_standar_harga;
+				all_ssh[id_ssh] = b;
 			});
+			console.log(all_ssh);
             var no = 0;
             var _leng = 100;
             var _data_all = [];
 			var _data = [];
 			items.data.map(function(b, i){
-				if(all_ssh[b.uraian]){
+				var id_ssh = get_id_ssh(b.uraian);
+				if(all_ssh[id_ssh]){
+					b.harga = all_ssh[id_ssh].harga;
 					_data.push(b);
 					if((i+1)%_leng == 0){
 						_data_all.push(_data);
 						_data = [];
 					}
+				}else{
+					console.log('Uraian item SSH tidak ditemukan!', b.uraian);
 				}
 			});
 			if(_data.length > 0){
 				_data_all.push(_data);
 			}
+			jQuery('#persen-loading').attr('persen', 0);
 			var last = _data_all.length - 1;
 			_data_all.reduce(function(sequence, nextData){
 	            return sequence.then(function(current_data){
 	        		return new Promise(function(resolve_reduce, reject_reduce){
+						var c_persen = +jQuery('#persen-loading').attr('persen');
+        				c_persen++;
+						jQuery('#persen-loading').attr('persen', c_persen);
+						jQuery('#persen-loading').html(((c_persen/_data_all.length)*100).toFixed(2)+'%'+'<br>SET TARIF ITEM SSH');
 						var data_post = {
 			                _token: _token,
 			                _method: 'PUT',
@@ -219,7 +250,7 @@ function singkronisasi_ssh_tarif(data_ssh){
 			            data_post[idssh_fmis] = {};
 	        			current_data.map(function(b, i){
 							var id_fmis = b.nilai.split('idperkadatarif[')[1].split(']')[0];
-							data_post.nilai[id_fmis] = all_ssh[b.uraian].harga+',00';
+							data_post.nilai[id_fmis] = b.harga+',00';
 							data_post.idperkadatarif[id_fmis] = '';
 							data_post[idssh_fmis][id_fmis] = id_fmis;
 							no++;
@@ -246,8 +277,11 @@ function singkronisasi_ssh_tarif(data_ssh){
 	        }, Promise.resolve(_data_all[last]))
 	        .then(function(data_last){
 				jQuery('#modal .btn.btn-secondary.ml-1').click();
-				alert('Berhasil singkroniasi tarif SSH!');
 				jQuery('#wrap-loading').hide();
+				jQuery('#persen-loading').html('');
+				jQuery('#persen-loading').attr('persen', '');
+				jQuery('#persen-loading').attr('total', '');
+				alert('Berhasil singkroniasi tarif SSH!');
 	        })
 	        .catch(function(e){
 	            console.log(e);
@@ -279,6 +313,7 @@ function singkronisasi_ssh_kelompok(data_ssh){
 								var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
 								// console.log('gol_id', _gol_id, data_ssh[_gol_id]);
 								var no_urut_kelompok = 0;
+								jQuery('#persen-loading').html('LOADING...<br>GET KELOMPOK DARI GOLONGAN '+data_ssh[_gol_id].nama);
 								for(var kelompok_id in data_ssh[_gol_id].data){
 									var nama_kelompok = data_ssh[_gol_id].data[kelompok_id].nama;
 									var cek = false;
@@ -312,16 +347,20 @@ function singkronisasi_ssh_kelompok(data_ssh){
 			Promise.all(sendData)
         	.then(function(val_all){
 				// console.log('data_all kelompok', data_all);
+				jQuery('#persen-loading').attr('persen', 0);
 				var last = data_all.length - 1;
 				data_all.reduce(function(sequence, nextData){
 	                return sequence.then(function(current_data){
 	            		return new Promise(function(resolve_reduce, reject_reduce){
 		                	current_data.success = function(data){
+		                		var c_persen = +jQuery('#persen-loading').attr('persen');
+							    c_persen++;
+								jQuery('#persen-loading').attr('persen', c_persen);
+								jQuery('#persen-loading').html(((c_persen/data_all.length)*100).toFixed(2)+'% SAVE KELOMPOK'+'<br>'+current_data.data.uraian);
 								return resolve_reduce(nextData);
 							};
 							current_data.error = function(e) {
-								console.log(e);
-								return resolve_reduce(nextData);
+								console.log('Error save kelompok', e, this.data);
 							};
 		                	relayAjax(current_data);
 		                })
@@ -380,6 +419,7 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
 									success: function(subkelompok){
 										var __gol_id = this.url.split('&gol_id=')[1].split('&')[0];
 										var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
+										jQuery('#persen-loading').html('LOADING...<br>GET SUB KELOMPOK DARI KELOMPOK '+data_ssh[__gol_id].data[_kelompok_id].nama);
 										var no_urut_subkelompok = 0;
 										for(var subkelompok_id in data_ssh[__gol_id].data[_kelompok_id].data){
 											var nama_subkelompok = replace_string(data_ssh[__gol_id].data[_kelompok_id].data[subkelompok_id].nama, true);
@@ -428,16 +468,20 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
 	Promise.all(sendData)
 	.then(function(val_all){
 		// console.log('data_all kelompok', data_all);
+		jQuery('#persen-loading').attr('persen', 0);
 		var last = data_all.length - 1;
 		data_all.reduce(function(sequence, nextData){
             return sequence.then(function(current_data){
         		return new Promise(function(resolve_reduce, reject_reduce){
                 	current_data.success = function(data){
+                		var c_persen = +jQuery('#persen-loading').attr('persen');
+					    c_persen++;
+						jQuery('#persen-loading').attr('persen', c_persen);
+						jQuery('#persen-loading').html(((c_persen/data_all.length)*100).toFixed(2)+'% SAVE SUB KELOMPOK'+'<br>'+current_data.data.uraian);
 						return resolve_reduce(nextData);
 					};
 					current_data.error = function(e) {
-						console.log(e);
-						return resolve_reduce(nextData);
+						console.log('Error insert sub kelompok', e, this.data);
 					};
                 	relayAjax(current_data);
                 })
@@ -500,11 +544,14 @@ function singkronisasi_ssh_item(data_ssh){
 													var __subkelompok_id = this.url.split('&subkelompok_id=')[1].split('&')[0];
 													var no_urut_item = 0;
 													var sendDataSatuan = [];
+													jQuery('#persen-loading').html('LOADING...<br>GET ITEM SSH DARI SUB KELOMPOK '+data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].nama);
 													for(var item_id in data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data){
-														var nama_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].nama, true).substring(0, 250);
+														var nama_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].nama, true).substring(0, 250).trim();
 														var cek = false;
 														item.data.map(function(b, i){
-															if(replace_string(b.uraian, true) == nama_item){
+															var id_ssh_fmis = get_id_ssh(b.uraian);
+															var id_ssh_sipd = get_id_ssh(nama_item);
+															if(id_ssh_fmis == id_ssh_sipd){
 																cek = true;
 															}
 															if(no_urut_item < +b.kdurut){
@@ -570,7 +617,7 @@ function singkronisasi_ssh_item(data_ssh){
 	}
 	Promise.all(sendData)
 	.then(function(val_all){
-		var _leng = 10;
+		var _leng = 5;
 		var _data_all = [];
 		var _data = [];
 		data_all.map(function(ssh, i){
@@ -584,20 +631,24 @@ function singkronisasi_ssh_item(data_ssh){
 			_data_all.push(_data);
 		}
 
+		jQuery('#persen-loading').attr('persen', 0);
 		var last = _data_all.length - 1;
 		_data_all.reduce(function(sequence, nextData){
             return sequence.then(function(current_data){
         		return new Promise(function(resolve_reduce, reject_reduce){
         			var sendData = current_data.map(function(ssh, i){
         				return new Promise(function(resolve_reduce2, reject_reduce2){
+	                		var c_persen = +jQuery('#persen-loading').attr('persen');
+            				c_persen++;
+							jQuery('#persen-loading').attr('persen', c_persen);
+							jQuery('#persen-loading').html(((c_persen/data_all.length)*100).toFixed(2)+'% SAVE ITEM SSH'+'<br>'+ssh.data.uraian);
 		                	ssh.success = function(data){
 								return resolve_reduce2();
 							};
 							ssh.error = function(e) {
 								console.log('ERROR insert ssh', e, ssh.data);
-								return resolve_reduce2();
 							};
-		                	jQuery.ajax(ssh);
+		                	relayAjax(ssh);
 		                });
 	                });
 	                Promise.all(sendData)
@@ -628,9 +679,11 @@ function singkronisasi_ssh_item(data_ssh){
 		jQuery('#wrap-loading').hide();
     });
 }
+
 function singkronisasi_ssh_rekening(data_ssh){
 	var sendData = [];
 	var sendDataSub = [];
+	jQuery('#persen-loading').attr('persen', 0);
 	for(var gol_id in data_ssh){
 		var nama_golongan = data_ssh[gol_id].nama;
 		if(data_ssh[gol_id].code){
@@ -657,7 +710,9 @@ function singkronisasi_ssh_rekening(data_ssh){
 												var nama_item = ret.subkelompok.data[item_id].nama;
 												var kode_item = false;
 												item.data.map(function(b, i){
-													if(b.uraian == nama_item){
+													var id_ssh_fmis = get_id_ssh(b.uraian);
+													var id_ssh_sipd = get_id_ssh(nama_item);
+													if(id_ssh_fmis == id_ssh_sipd){
 														kode_item = b.action.split('code="')[1].split('"')[0];
 													}
 												});
@@ -669,10 +724,16 @@ function singkronisasi_ssh_rekening(data_ssh){
 														},
 														cb: function(ret2, ret_cb2){
 															set_rekening_ssh(ret2.data).then(function(){
+																var c_persen = +jQuery('#persen-loading').attr('persen');
+								                				c_persen++;
+																jQuery('#persen-loading').attr('persen', c_persen);
+																jQuery('#persen-loading').html(((c_persen/ssh_all_length)*100).toFixed(2)+'% SET REKENING ITEM SSH'+'<br>'+ret2.data.nama);
 																ret_cb2();
 															});
 														}
 													});
+												}else{
+													console.log('Item SSH SIPD tidak ditemukan di FMIS untuk proses SET REKENING SSH ',nama_item);
 												}
 											}
 											ret_cb();
@@ -689,8 +750,12 @@ function singkronisasi_ssh_rekening(data_ssh){
 	reduce_promise(sendData, function(val_all){
 		reduce_promise(sendDataSub, function(val_all){
 			jQuery('#wrap-loading').hide();
+			jQuery('#persen-loading').html('');
+			jQuery('#persen-loading').attr('persen', '');
+			jQuery('#persen-loading').attr('total', '');
+			console.log('Berhasil singkron SSH dari SIPD!');
 			alert('Berhasil singkron SSH dari SIPD!');
-	    });
+	    }, 5);
     }, 50);
 }
 
@@ -795,8 +860,7 @@ function set_rekening_ssh(options){
 						            	resolve2();
 						            },
 						            error: function(e){
-						            	console.log(e, this.data, rek_sipd_detail);
-						            	resolve2();
+						            	console.log('Error set rekening SSH', e, this.data, rek_sipd_detail);
 						            }
 								});
 							}
@@ -840,23 +904,27 @@ function getTahun(){
 	return jQuery('.nav-link button.waves-light.dropdown-toggle strong').text();
 }
 
-function replace_string(text, no_lowercase=false){
+function replace_string(text, no_lowercase=false, no_replace=false){
 	if(no_lowercase){
 		text = jQuery('<textarea />').html(text.trim()).text();
 	}else{
 		text = jQuery('<textarea />').html(text.toLowerCase().trim()).text();	
 	}
-	text = text.replace(/³/g, '3');
-	text = text.replace(/²/g, '2');
-	return text;
+	if(!no_replace){
+		text = text.replace(/³/g, '3');
+		text = text.replace(/²/g, '2');
+		text = text.replace(/'/g, '`');
+	}
+	return text.trim();
 }
 
 function getIdSatuan(satuan, force, val_cb){
-	satuan = replace_string(satuan).substring(0, 50);
-	var singkatan_sipd = satuan.substring(0, 30);
+	satuan = replace_string(satuan).substring(0, 50).trim();
+	var singkatan_sipd = satuan.substring(0, 30).trim();
 	return new Promise(function(resolve, reject){
 		getSatuan({ force: force }).then(function(satuan_fmis){
 			var id_satuan = 0;
+			var uraian_satuan = '';
 			satuan_fmis.map(function(b, i){
 				var uraian = replace_string(b.uraian);
 				var singkatan = replace_string(b.singkatan);
@@ -864,11 +932,19 @@ function getIdSatuan(satuan, force, val_cb){
 					singkatan_sipd == singkatan
 					|| satuan == uraian
 				){
-					id_satuan = b.action.split('data-id=\"')[1].split('"')[0]
+					id_satuan = b.action.split('data-id=\"')[1].split('"')[0];
+					uraian_satuan = replace_string(b.uraian, false, true)+' ('+replace_string(b.singkatan, false, true)+')';
 				}
 			});
-			if(id_satuan == 0){
-				jQuery.ajax({
+			if(
+				id_satuan == 0
+				&& force == false
+			){
+				getIdSatuan(satuan, 1, val_cb).then(function(val_cb){
+					resolve(val_cb);
+				});
+			}else if(id_satuan == 0){
+				relayAjax({
 					url: config.fmis_url + '/parameter/satuan/store',
 					type: "post",
 		            data: {
@@ -883,7 +959,7 @@ function getIdSatuan(satuan, force, val_cb){
 						});
 					},
 					error: function(e){
-						console.log(e);
+						console.log(e, this.data);
 						getIdSatuan(satuan, 1, val_cb).then(function(val_cb){
 							resolve(val_cb);
 						});
@@ -891,6 +967,7 @@ function getIdSatuan(satuan, force, val_cb){
 				});
 			}else{
 				val_cb.data.idsatuan = id_satuan;
+				val_cb.data.uraian_satuan = uraian_satuan;
 				resolve(val_cb);
 			}
 		});
@@ -2605,8 +2682,8 @@ function singkronisasi_user_sipd(data_skpd){
 										                _token: _token,
 										                _method: 'PUT',
 										                kduser: data.skpd.nipkepala+'p',
-										                nmuser: (data.skpd.namakepala).substring(0, 50),
-										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50),
+										                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
 										                level: 'operator',
 										                status: 1,
 										                idunit: data.skpd.idunit_fmis,
@@ -2635,10 +2712,10 @@ function singkronisasi_user_sipd(data_skpd){
 								                _token: _token,
 								                _method: 'POST',
 								                kduser: data.skpd.nipkepala+'p',
-								                nmuser: (data.skpd.namakepala).substring(0, 50),
+								                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
 								                pwd: pass,
 								                pwd_confirmation: pass,
-								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50),
+								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
 								                level: 'operator',
 								                status: 1,
 								                idunit: data.skpd.idunit_fmis,
@@ -2671,8 +2748,8 @@ function singkronisasi_user_sipd(data_skpd){
 										                _token: _token,
 										                _method: 'PUT',
 										                kduser: data.skpd.nipkepala+'k',
-										                nmuser: (data.skpd.namakepala).substring(0, 50),
-										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50),
+										                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
 										                level: 'operator',
 										                status: 1,
 										                idunit: data.skpd.idunit_fmis,
@@ -2701,10 +2778,10 @@ function singkronisasi_user_sipd(data_skpd){
 								                _token: _token,
 								                _method: 'POST',
 								                kduser: data.skpd.nipkepala+'k',
-								                nmuser: (data.skpd.namakepala).substring(0, 50),
+								                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
 								                pwd: pass,
 								                pwd_confirmation: pass,
-								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50),
+								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
 								                level: 'operator',
 								                status: 1,
 								                idunit: data.skpd.idunit_fmis,

@@ -26,8 +26,10 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	jQuery('#golongan .btn-outline-dark').parent().append(btn);
 	jQuery('#singkron-ssh-sipd').on('click', function(){
     	if(confirm('Apakah anda yakin untuk melakukan singkronisasi data Struktur SSH dari WP-SIPD ke FMIS?')){
-			jQuery('#wrap-loading').show();
 			var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB', 1);
+			jQuery('#wrap-loading').show();
+			jQuery('#persen-loading').attr('persen', 0);
+			jQuery('#persen-loading').html('LOADING...<br>GET STRUKTUR STANDAR HARGA DARI WP-SIPD');
 			var data = {
 			    message:{
 			        type: "get-url",
@@ -247,8 +249,10 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
     if(confirm('Apakah anda yakin untuk melakukan singkronisasi data tarif SSH dari WP-SIPD ke FMIS?')){
-		jQuery("#wrap-loading").show();
 		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB', 1);
+		jQuery("#wrap-loading").show();
+		jQuery('#persen-loading').attr('persen', 0);
+		jQuery('#persen-loading').html('LOADING...<br>GET STRUKTUR STANDAR HARGA DARI WP-SIPD');
 		var data = {
 		    message:{
 		        type: "get-url",
