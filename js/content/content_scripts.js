@@ -38,6 +38,8 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			hide_loading = false;
 			if(res.run == 'singkronisasi_user_sipd'){
     			singkronisasi_user_sipd(res.data);
+			}else if(res.run == 'singkronisasi_bidur_skpd_rpjm'){
+		    	singkronisasi_bidur_skpd_rpjm(res.data);
 			}else{
 				var bidur = {};
 				jQuery('li[data-type="bidang"]').map(function(i, b){ 

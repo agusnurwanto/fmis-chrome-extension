@@ -2812,3 +2812,157 @@ function singkronisasi_user_sipd(data_skpd){
 		}
 	});
 }
+
+function singkronisasi_bidur_skpd_rpjm(data_skpd){
+	var code_bidang = jQuery('#program-urbid a.btn-sm[title="Tambah Urusan"]').attr('href').split('code=')[1].split('&')[0];
+	// get bidang urusan
+	relayAjax({
+		url: config.fmis_url+'/perencanaan-lima-tahunan/rpjmd-murni/datatable?code='+code_bidang+'&table=program-urbid',
+		success: function(bidur){
+			var sendData1 = [];
+			bidur.data.map(function(bb, ii){
+				sendData1.push(new Promise(function(resolve, reduce){
+					// get skpd pelaksana per bidang urusan
+					relayAjax({
+						url: config.fmis_url+'/perencanaan-lima-tahunan/rpjmd-murni/datatable?code='+bb.code+'&table=program-pelaksana',
+						success: function(skpd_pelaksana){
+							bidur.data[ii].skpd_pelaksana = skpd_pelaksana.data;
+							resolve();
+						}
+					});
+				}));
+			});
+			Promise.all(sendData1)
+    		.then(function(val_all){
+				var url = jQuery('#program-urbid a.btn-sm[title="Tambah Urusan"]').attr('href');
+				// get form tambah bidang urusan
+				relayAjax({
+					url: url+'&action=create',
+					success: function(detail_form){
+						var url_save_form = detail_form.form.split('action=\"')[1].split('\"')[0];
+						var form = jQuery(detail_form.form);
+						var urut = form.find('input[name="kdurut"]').val();
+						var idbidkewenangan = form.find('input[name="idbidkewenangan"]').val();
+		                var idrpjmdprogram = form.find('input[name="idrpjmdprogram"]').val();
+						var urusan_all = {};
+						var bidang_all = {};
+						var sendData = [];
+						form.find('#idurusan option').map(function(i, b){
+							var id_urusan = jQuery(b).attr('value');
+							if(id_urusan != ''){
+								var nama_urusan = jQuery(b).text().split(' ');
+								nama_urusan.shift();
+								nama_urusan = nama_urusan.join(' ');
+								urusan_all[nama_urusan] = { 
+									id: id_urusan,
+									bidang: {} 
+								};
+								sendData.push(new Promise(function(resolve, reduce){
+									// get master all bidang by id urusan
+									relayAjax({
+										url: config.fmis_url+'/parameter/unit-organisasi/select-bidang/'+id_urusan+'?nama_urusan='+nama_urusan+'&id_urusan='+id_urusan,
+										success: function(bidang){
+											var nama_urusan = replace_string(this.url.split('nama_urusan=')[1].split('&')[0], true, true);
+											var id_urusan = this.url.split('id_urusan=')[1].split('&')[0];
+											for( var bb in bidang.bidang){
+												if(bb != ''){
+													var nama_bidang = bidang.bidang[bb].split(' ');
+													nama_bidang.shift();
+													nama_bidang = nama_bidang.join(' ');
+													urusan_all[nama_urusan].bidang[bb] = nama_bidang;
+													bidang_all[nama_bidang] = {
+														id_bidang: bb,
+														nama_bidang: nama_bidang,
+														id_urusan: id_urusan,
+														nama_urusan: nama_urusan
+													};
+												}
+											}
+											resolve();
+										}
+									});
+								}));
+							}
+						});
+						Promise.all(sendData)
+	        			.then(function(val_all){
+							getUnitFmis().then(function(unit_fmis){
+								// console.log('unit_fmis, bidur, data_skpd', unit_fmis, bidur, data_skpd);
+								window.data_bidur_skpd = [];
+								var pilih_bidur = '';
+								data_skpd.map(function(b, i){
+									if(
+										b.isskpd == 1
+										&& unit_fmis[b.nama_skpd]
+									){
+										var cek_exist = false;
+										var cek_exist_skpd = false;
+										var nama_bidang_sipd = b.bidur1.split(' ');
+										nama_bidang_sipd.shift();
+										nama_bidang_sipd = nama_bidang_sipd.join(' ');
+										bidur.data.map(function(bb, ii){
+											if(bb.bidang.nmbidang == nama_bidang_sipd){
+												cek_exist = true;
+											}
+											bb.skpd_pelaksana.map(function(bbb, iii){
+												if(bbb.skpd.kdskpd == b.id_skpd){
+													cek_exist_skpd = true;
+												}
+											});
+										});
+										if(
+											(
+												!cek_exist
+												|| !cek_exist_skpd
+											)
+											&& bidang_all[nama_bidang_sipd]
+										){
+											var data_bidur = {
+												urusan: bidang_all[nama_bidang_sipd].id_urusan,
+												bidang: bidang_all[nama_bidang_sipd].id_bidang,
+												nama_bidang: nama_bidang_sipd,
+												id_skpd: b.id_skpd,
+												id_skpd_fmis: unit_fmis[b.nama_skpd].id,
+												skpd: b,
+												bidur_exist: false
+											};
+											if(cek_exist){
+												data_bidur.bidur_exist = true
+											}
+											data_bidur_skpd.push(data_bidur);
+											pilih_bidur += ''
+												+'<tr>'
+													+'<td><input type="checkbox" value="'+b.id_skpd+'"></td>'
+													+'<td>'+b.bidur1+'</td>'
+													+'<td>'+b.nama_skpd+'</td>'
+												+'</tr>';
+										}else if(!bidang_all[nama_bidang_sipd]){
+											console.log('Bidang SIPD tidak ditemukan', nama_bidang_sipd, bidang_all);
+										}
+									}
+								});
+								console.log('data_bidur_skpd', data_bidur_skpd);
+								if(data_bidur_skpd.length >= 1){
+									run_script('jQuery("#konfirmasi-bidur-skpd").DataTable().destroy();');
+									jQuery('#konfirmasi-bidur-skpd tbody').html(pilih_bidur);
+									var table = jQuery('#konfirmasi-bidur-skpd');
+									table.attr('data-urut', urut);
+									table.attr('data-idbidkewenangan', idbidkewenangan);
+									table.attr('data-idrpjmdprogram', idrpjmdprogram);
+									table.attr('data-url-save', url_save_form);
+									table.attr('data-code-bidang', code_bidang);
+									run_script('jQuery("#konfirmasi-bidur-skpd").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]]});');
+									run_script('jQuery("#mod-konfirmasi-bidur-skpd").modal("show")');
+								}else{
+									run_script("initRpjmdTableDetail('program-urbid', 'table-program-urbid', '"+code_bidang+"')");
+									alert('Berhasil singkroniasi bidang urusan dan SKPD di RPJMD');
+								}
+								jQuery('#wrap-loading').hide();
+							});
+						});
+					}
+				});
+			});
+		}
+	});
+}
