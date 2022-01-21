@@ -2966,3 +2966,23 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 		}
 	});
 }
+
+function singkronisasi_program(sub_keg){
+
+}
+
+function get_id_skpd_fmis(idrkpdrenja){
+	return new Promise(function(resolve, reject){
+		if(typeof id_skpd_fmis_global == 'undefined'){
+			relayAjax({
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/create/'+idrkpdrenja,
+				success: function(form_tambah){
+					window.id_skpd_fmis_global = jQuery(form_tambah).find('select[name="idsubunit"] option').eq(1).attr('value');
+					resolve(id_skpd_fmis_global);
+				}
+			});
+		}else{
+			resolve(id_skpd_fmis_global);
+		}
+	});
+}

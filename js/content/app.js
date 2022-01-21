@@ -218,7 +218,10 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 }else if(current_url.indexOf('/manajemen-user/user') != -1){
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-user">'
-        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi User SIPD'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi User SIPD dari WP-SIPD'
+    +'</button>'
+	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 3px;" id="singkron-skpd">'
+        +'<i class="fa fa-cloud-download-alt fa-fw"></i> Mapping SKPD FMIS ke WP-SIPD'
     +'</button>';
     jQuery('a.btn-sm[title="Tambah Pengguna"]').parent().append(btn);
     jQuery('#singkron-user').on('click', function(){
@@ -242,6 +245,32 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 			};
 			chrome.runtime.sendMessage(data, function(response) {
 			    console.log('responeMessage', response);
+			});
+		}
+    });
+    jQuery('#singkron-skpd').on('click', function(){
+    	if(confirm('Apakah anda yakin untuk singkronisasi mapping SKPD dari FMIS ke WP-SIPD?')){
+			jQuery('#wrap-loading').show();
+			getUnitFmis().then(function(unit_fmis){
+				var data = {
+				    message:{
+				        type: "get-url",
+				        content: {
+						    url: config.url_server_lokal,
+						    type: 'post',
+						    data: { 
+								action: 'mapping_skpd_fmis',
+								tahun_anggaran: config.tahun_anggaran,
+								data: unit_fmis,
+								api_key: config.api_key
+							},
+			    			return: true
+						}
+				    }
+				};
+				chrome.runtime.sendMessage(data, function(response) {
+				    console.log('responeMessage', response);
+				});
 			});
 		}
     });
@@ -448,6 +477,86 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 			};
 			chrome.runtime.sendMessage(data, function(response) {
 			    console.log('responeMessage', response);
+			});
+		}
+    });
+}else if(current_url.indexOf('/perencanaan-tahunan/renja-murni') != -1){
+	console.log('Halaman RENJA Murni');
+	var modal_sub_keg = ''
+		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
+	        +'<div class="modal-dialog modal-lg" role="document">'
+	            +'<div class="modal-content">'
+	                +'<div class="modal-header bgpanel-theme" style="background: #8997bd;">'
+	                    +'<h4 class="modal-title text-white" id="">Sinkronisasi Program RENJA</h4>'
+	                    +'<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"><i class="mdi mdi-close-circle"></i></span></button>'
+	                +'</div>'
+	                +'<div class="modal-body">'
+	                	+''
+	                  	+'<table class="table table-hover table-striped" id="konfirmasi-program">'
+	                      	+'<thead>'
+	                        	+'<tr style="background: #8997bd;">'
+	                          		+'<th class="text-white"><input type="checkbox" id="modal_cek_all"></th>'
+	                          		+'<th class="text-white" width="400">Bidang Urusan</th>'
+	                          		+'<th class="text-white" width"300">Nama SKPD</th>'
+	                        	+'</tr>'
+	                      	+'</thead>'
+	                      	+'<tbody></tbody>'
+	                  	+'</table>'
+	                +'</div>'
+	                +'<div class="modal-footer">'
+	                    +'<button type="button" class="btn btn-success" id="singkron_program_modal">Sinkronisasi</button>'
+	                    +'<button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>'
+	                +'</div>'
+	            +'</div>'
+	        +'</div>'
+	    +'</div>';
+	jQuery('body').append(modal_sub_keg);
+	jQuery('#modal_cek_all').on('click', function(){
+		var cek = jQuery(this).is(':checked');
+		jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').prop('checked', cek);
+	});
+	jQuery('#mod-konfirmasi-program').on('click', function(){
+		alert('belum selesai');
+	});
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="float: right;" id="singkron-program">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Program WP-SIPD'
+    +'</button>';
+    jQuery('.card-header.bg-light').prepend(btn);
+    jQuery('#singkron-program').on('click', function(){
+    	if(confirm('Apakah anda yakin untuk mengsingkronkan data program RENJA dari WP-SIPD?')){
+			jQuery('#wrap-loading').show();
+			relayAjax({
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni',
+				success: function(renja){
+					if(renja.data.length >= 1){
+						get_id_skpd_fmis(renja.data[0].idrkpdrenja).then(function(id_skpd_fmis){
+							var data = {
+							    message:{
+							        type: "get-url",
+							        content: {
+									    url: config.url_server_lokal,
+									    type: 'post',
+									    data: { 
+											action: 'get_sub_keg',
+											run: 'singkronisasi_program',
+											tahun_anggaran: config.tahun_anggaran,
+											id_skpd_fmis: id_skpd_fmis,
+											api_key: config.api_key
+										},
+						    			return: true
+									}
+							    }
+							};
+							chrome.runtime.sendMessage(data, function(response) {
+							    console.log('responeMessage', response);
+							});
+						});
+					}else{
+						jQuery('#wrap-loading').hide();
+						alert('Dokumen RENJA belum dibuat!');
+					}
+				}
 			});
 		}
     });

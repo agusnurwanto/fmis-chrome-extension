@@ -33,6 +33,12 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			hide_loading = false;
 			singkronisasi_ssh(res);
+		}else if(res.action == 'get_sub_keg'){
+			_alert = false;
+			hide_loading = false;
+			if(res.run == 'singkronisasi_program'){
+				singkronisasi_program(res.data);
+			}
 		}else if(res.action == 'get_skpd'){
 			_alert = false;
 			hide_loading = false;
