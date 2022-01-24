@@ -538,6 +538,8 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 				if(confirm('Apakah anda yakin untuk mengsingkronkan data program RENJA dari WP-SIPD?')){
 					jQuery('#wrap-loading').show();
 					var sub_kegiatan_filter_program = [];
+					var sub_kegiatan_filter_kegiatan = [];
+					var sub_kegiatan_filter_sub_kegiatan = [];
 					var id_sasaran = jQuery('a.btn-sm[title="Tambah Program"]').attr('href').split('/').pop();
 					new Promise(function(resolve, reject){
 						get_master_prog_fmis(id_sasaran)
@@ -618,10 +620,119 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 						});
 					})
 					.then(function(){
+						return new Promise(function(resolve, reject){
+							if(sub_kegiatan_filter_program.length >= 1){
+								// get all program fmis
+								relayAjax({
+									url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/data/'+id_sasaran,
+									success: function(program_exist){
+										if(program_exist.data.length >= 1){
+											var last = program_exist.data.length - 1;
+											program_exist.data.reduce(function(sequence, nextData){
+									            return sequence.then(function(current_data){
+									        		return new Promise(function(resolve_reduce, reject_reduce){
+														cek_insert_kegiatan_fmis(current_data, sub_kegiatan_filter_program)
+														.then(function(filter_kegiatan){
+															filter_kegiatan.map(function(b, i){
+																sub_kegiatan_filter_kegiatan.push(b);
+															});
+															resolve_reduce(nextData);
+														})
+													})
+									                .catch(function(e){
+									                    console.log(e);
+									                    return Promise.resolve(nextData);
+									                });
+									            })
+									            .catch(function(e){
+									                console.log(e);
+									                return Promise.resolve(nextData);
+									            });
+									        }, Promise.resolve(program_exist.data[last]))
+									        .then(function(data_last){
+									        	resolve();
+									        });
+										}else{
+											console.log('program_exist kosong', program_exist.data);
+											resolve();
+										}
+									}
+								});
+							}else{
+								console.log('sub_kegiatan_filter_program kosong', sub_kegiatan_filter_program);
+								resolve();
+							}
+						});
+					})
+					.then(function(){
+						return new Promise(function(resolve, reject){
+							if(sub_kegiatan_filter_kegiatan.length >= 1){
+								var last = sub_kegiatan_filter_kegiatan.length - 1;
+								sub_kegiatan_filter_kegiatan.reduce(function(sequence, nextData){
+						            return sequence.then(function(current_data){
+						        		return new Promise(function(resolve_reduce, reject_reduce){
+											// get all kegiatan by id program
+											relayAjax({
+												url: config.fmis_url+'/perencanaan-tahunan/renja-murni/kegiatan/data/'+current_data.program_fmis.idrkpdrenjaprogram,
+												success: function(kegiatan_exist){
+													if(kegiatan_exist.data.length >= 1){
+														var last2 = kegiatan_exist.data.length - 1;
+														kegiatan_exist.data.reduce(function(sequence2, nextData2){
+												            return sequence2.then(function(current_data2){
+												        		return new Promise(function(resolve_reduce2, reject_reduce2){
+																	cek_insert_sub_kegiatan_fmis(current_data2, sub_kegiatan_filter_kegiatan)
+																	.then(function(filter_subkegiatan){
+																		filter_subkegiatan.map(function(b, i){
+																			sub_kegiatan_filter_sub_kegiatan.push(b);
+																		});
+																		resolve_reduce2(nextData2);
+																	})
+																})
+												                .catch(function(e){
+												                    console.log(e);
+												                    return Promise.resolve(nextData2);
+												                });
+												            })
+												            .catch(function(e){
+												                console.log(e);
+												                return Promise.resolve(nextData2);
+												            });
+												        }, Promise.resolve(kegiatan_exist.data[last2]))
+												        .then(function(data_last){
+												        	resolve_reduce(nextData);
+												        });
+													}else{
+														console.log('kegiatan_exist kosong', kegiatan_exist.data);
+														resolve_reduce(nextData);
+													}
+												}
+											});
+										})
+						                .catch(function(e){
+						                    console.log(e);
+						                    return Promise.resolve(nextData);
+						                });
+						            })
+						            .catch(function(e){
+						                console.log(e);
+						                return Promise.resolve(nextData);
+						            });
+						        }, Promise.resolve(sub_kegiatan_filter_kegiatan[last]))
+						        .then(function(data_last){
+						        	resolve();
+						        });
+							}else{
+								console.log('sub_kegiatan_filter_kegiatan kosong', sub_kegiatan_filter_kegiatan);
+								resolve();
+							}
+						});
+					})
+					.then(function(){
+						alert('Berhasil singkroniasi data program, kegiatan dan sub kegiatan dari WP-SIPD!');
 						run_script("tableProgram.ajax.reload(null, false)");
 						run_script('jQuery("#mod-konfirmasi-program").modal("hide")');
 						jQuery('#wrap-loading').hide();
-						console.log('sub_kegiatan_filter_program', sub_kegiatan_filter_program);
+						console.log('sub_kegiatan_filter_program, sub_kegiatan_filter_kegiatan, sub_kegiatan_filter_sub_kegiatan', sub_kegiatan_filter_program, sub_kegiatan_filter_kegiatan, sub_kegiatan_filter_sub_kegiatan);
 					});
 				}
 			}else{
