@@ -28,20 +28,20 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 	if(request.type == 'response-fecth-url'){
 		var res = request.data;
 		var _alert = true;
-		var hide_loading = true;
+		var cek_hide_loading = true;
 		if(res.action == 'get_ssh'){
 			_alert = false;
-			hide_loading = false;
+			cek_hide_loading = false;
 			singkronisasi_ssh(res);
 		}else if(res.action == 'get_sub_keg'){
 			_alert = false;
-			hide_loading = false;
+			cek_hide_loading = false;
 			if(res.run == 'singkronisasi_program'){
 				singkronisasi_program(res.data);
 			}
 		}else if(res.action == 'get_skpd'){
 			_alert = false;
-			hide_loading = false;
+			cek_hide_loading = false;
 			if(res.run == 'singkronisasi_user_sipd'){
     			singkronisasi_user_sipd(res.data);
 			}else if(res.run == 'singkronisasi_bidur_skpd_rpjm'){
@@ -82,11 +82,8 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 				}
 			}
 		}
-		if(hide_loading){
-			jQuery('#wrap-loading').hide();
-			jQuery('#persen-loading').html('');
-			jQuery('#persen-loading').attr('persen', '');
-			jQuery('#persen-loading').attr('total', '');
+		if(cek_hide_loading){
+			hide_loading();
 		}
 		if(_alert){
 			alert(res.message);
