@@ -523,7 +523,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 		var table = jQuery('#konfirmasi-program');
 		var idkegiatan = table.attr('data-singkron-rka');
 		if(idkegiatan != ''){
-			singkronisasi_rka_modal();
+			singkronisasi_rka_modal(idkegiatan);
 		}else{
 			singkronisasi_program_modal();
 		}

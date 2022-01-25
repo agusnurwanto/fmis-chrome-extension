@@ -33,6 +33,11 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			singkronisasi_ssh(res);
+		}else if(res.action == 'get_sub_keg_rka'){
+			_alert = false;
+			cek_hide_loading = false;
+			// resolve get rka
+			lanjut_singkron_rka(res.data);
 		}else if(res.action == 'get_sub_keg'){
 			_alert = false;
 			cek_hide_loading = false;
