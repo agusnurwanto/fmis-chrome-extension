@@ -38,6 +38,8 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			cek_hide_loading = false;
 			if(res.run == 'singkronisasi_program'){
 				singkronisasi_program(res.data);
+			}else if(res.run == 'singkronisasi_rka'){
+				singkronisasi_rka(res.data);
 			}
 		}else if(res.action == 'get_skpd'){
 			_alert = false;
