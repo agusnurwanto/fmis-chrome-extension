@@ -26,7 +26,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	jQuery('#golongan .btn-outline-dark').parent().append(btn);
 	jQuery('#singkron-ssh-sipd').on('click', function(){
     	if(confirm('Apakah anda yakin untuk melakukan singkronisasi data Struktur SSH dari WP-SIPD ke FMIS?')){
-			var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB', 1);
+			var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 9=RKA', 1);
 			show_loading();
 			jQuery('#persen-loading').attr('persen', 0);
 			pesan_loading('GET STRUKTUR STANDAR HARGA DARI WP-SIPD', true);
@@ -215,6 +215,35 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
     jQuery('#delete-skpd-all').on('click', function(){
     	delete_skpd_all_fmis();
     });
+}else if(current_url.indexOf('/parameter/simda-ng/sumber-dana') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-sumber-dana">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Sumber Dana FMIS dengan WP-SIPD'
+    +'</button>';
+    jQuery('a.btn-sm[title="Tambah Sumber Dana"]').parent().append(btn);
+    jQuery('#singkron-sumber-dana').on('click', function(){
+    	if(confirm('Apakah anda yakin untuk mengsingkronkan data Sumber Dana FMIS dengan WP-SIPD?')){
+			show_loading();
+			var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_sumber_dana',
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+		}
+    });
 }else if(current_url.indexOf('/manajemen-user/user') != -1){
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-user">'
@@ -309,147 +338,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 		jQuery('#konfirmasi-bidur-skpd tbody tr input[type="checkbox"]').prop('checked', cek);
 	});
 	jQuery('#singkron_bidur_skpd_modal').on('click', function(){
-		var skpd_selected = [];
-		jQuery('#konfirmasi-bidur-skpd tbody tr input[type="checkbox"]').map(function(i, b){
-			var cek = jQuery(b).is(':checked');
-			if(cek){
-				var id_skpd = jQuery(b).attr('value');
-				data_bidur_skpd.map(function(bb, ii){
-					if(bb.id_skpd == id_skpd){
-						skpd_selected.push(bb);
-					}
-				});
-			}
-		});
-		if(skpd_selected.length >= 1){
-			console.log('skpd_selected', skpd_selected);
-			show_loading();
-			var table = jQuery('#konfirmasi-bidur-skpd');
-			var code_bidang = table.attr('data-code-bidang');
-			var urut = table.attr('data-urut');
-			var data_post = {
-                _token: _token,
-                idbidkewenangan: table.attr('data-idbidkewenangan'),
-                idrpjmdprogram: table.attr('data-idrpjmdprogram')
-            };
-            var bidur_save = {};
-            var last = skpd_selected.length - 1;
-			skpd_selected.reduce(function(sequence, nextData){
-	            return sequence.then(function(bidur){
-	        		return new Promise(function(resolve_reduce, reject_reduce){
-	        			if(!bidur_save[bidur.urusan+'.'+bidur.bidang]){
-	        				bidur_save[bidur.urusan+'.'+bidur.bidang] = [];
-	        				bidur_save[bidur.urusan+'.'+bidur.bidang].push(bidur);
-	        				if(!bidur.bidur_exist){
-		        				data_post.kdurut = urut;
-		        				urut++;
-		        				data_post.idurusan = bidur.urusan;
-		        				data_post.idbidang = bidur.bidang;
-		        				// save bidang urusan
-								relayAjax({
-									url: table.attr('data-url-save'),
-									type: "post",
-						            data: data_post,
-						            success: function(res){
-						            	resolve_reduce(nextData);
-						            },
-						            error: function(e){
-						            	console.log('Error save bidang urusan!', e, this.data);
-						            }
-								});
-							}else{
-						        resolve_reduce(nextData);
-							}
-						}else{
-	        				bidur_save[bidur.urusan+'.'+bidur.bidang].push(bidur);
-							resolve_reduce(nextData);
-						}
-	                })
-	                .catch(function(e){
-	                    console.log(e);
-	                    return Promise.resolve(nextData);
-	                });
-	            })
-	            .catch(function(e){
-	                console.log(e);
-	                return Promise.resolve(nextData);
-	            });
-	        }, Promise.resolve(skpd_selected[last]))
-	        .then(function(data_last){
-	        	// get all bidang urusan
-	        	relayAjax({
-					url: config.fmis_url+'/perencanaan-lima-tahunan/rpjmd-murni/datatable?code='+code_bidang+'&table=program-urbid',
-					success: function(bidur){
-						var sendData1 = [];
-			            var last = bidur.data.length - 1;
-						bidur.data.reduce(function(sequence, nextData){
-				            return sequence.then(function(current_data){
-				        		return new Promise(function(resolve_reduce, reject_reduce){
-				        			var code_bidang_pelaksana = false;
-				        			var id_skpd_fmis = [];
-									skpd_selected.map(function(bb, ii){
-										if(bb.nama_bidang == current_data.bidang.nmbidang){
-											code_bidang_pelaksana = current_data.code;
-											id_skpd_fmis.push(bb.id_skpd_fmis);
-										}
-									});
-									if(code_bidang_pelaksana){
-										// get form tambah data skpd pelaksana
-							        	relayAjax({
-											url: config.fmis_url+'/perencanaan-lima-tahunan/rpjmd-murni/form?table=program-pelaksana&code='+code_bidang_pelaksana+'&action=create',
-											success: function(form_tambah){
-												var url_save_form = form_tambah.form.split('action=\"')[1].split('\"')[0];
-												var form = jQuery(form_tambah.form);
-												var data_post = {
-									                _token: _token,
-									                kdurut: form.find('#kdurut').val(),
-									                idbidkewenangan: form.find('input[name="idbidkewenangan"]').val(),
-									                idskpdpelaksana: form.find('input[name="idskpdpelaksana"]').val(),
-									                DataTables_Table_0_length: 10,
-									                idskpd: id_skpd_fmis
-									            };
-									            // simpan skpd pelaksana
-												relayAjax({
-													url: url_save_form,
-													type: "post",
-										            data: data_post,
-										            success: function(res){
-										            	resolve_reduce(nextData);
-										            },
-										            error: function(e){
-										            	console.log('Error save SKPD pelaksana!', e, this.data);
-										            }
-												});
-											}
-										});
-									}else{
-										console.log('Bidang urusan tidak ditemukan untuk SKPD yang dipilih!', current_data, skpd_selected);
-										resolve_reduce(nextData);
-									}
-				                })
-				                .catch(function(e){
-				                    console.log(e);
-				                    return Promise.resolve(nextData);
-				                });
-				            })
-				            .catch(function(e){
-				                console.log(e);
-				                return Promise.resolve(nextData);
-				            });
-				        }, Promise.resolve(bidur.data[last]))
-				        .then(function(data_last){
-				        	console.log('bidur_save', bidur_save);
-							run_script('jQuery("#mod-konfirmasi-bidur-skpd").modal("hide")');
-							run_script("initRpjmdTableDetail('program-urbid', 'table-program-urbid','"+ code_bidang+"');");
-				        	hide_loading();
-							alert('Berhasil singkroniasi bidang urusan dan SKPD di RPJMD');
-						});
-					}
-				});
-	        });
-		}else{
-			alert("Pilih SKPD dulu!");
-		}
+    	singkronisasi_bidur_skpd_rpjm_modal();
 	});
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-skpd-rpjm">'
@@ -618,7 +507,7 @@ if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
     if(confirm('Apakah anda yakin untuk melakukan singkronisasi data tarif SSH dari WP-SIPD ke FMIS?')){
-		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB', 1);
+		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 9=RKA', 1);
 		show_loading();
 		jQuery('#persen-loading').attr('persen', 0);
 		pesan_loading('GET STRUKTUR STANDAR HARGA DARI WP-SIPD', true);

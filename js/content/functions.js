@@ -50,6 +50,37 @@ function capitalizeFirstLetter(string) {
 function relayAjax(options, retries=20, delay=5000, timeout=90000){
 	options.timeout = timeout;
 	options.cache = false;
+	if(options.length){
+		var start = options.url.split('start=');
+		if(start.length >= 2){
+			start = +(start[1].split('&')[0]);
+		}else{
+			options.url += '&start=0';
+			start = 0;
+			options.all_data = [];
+			options.success2 = options.success;
+		}
+		var _length = options.url.split('length=');
+		if(_length.length <= 1){
+			options.url += '&length='+options.length;
+		}
+		pesan_loading('GET DATATABLE start='+start, true);
+		options.success = function(items){
+			items.data.map(function(b, i){
+				options.all_data.push(b);
+			});
+			if(options.all_data.length >= items.recordsTotal){
+				items.data = options.all_data;
+				options.success2(items);
+			}else{
+				var newstart = options.all_data.length - 1;
+				options.url = options.url.replace('&start='+start, '&start='+newstart);
+				setTimeout(function(){
+	                relayAjax(options);
+	            }, 1000);
+			}
+		};
+	}
     jQuery.ajax(options)
     .fail(function(jqXHR, exception){
     	// console.log('jqXHR, exception', jqXHR, exception);
@@ -87,11 +118,25 @@ function singkronisasi_ssh(options){
 		window.ssh_kelompok_all_length = 0;
 		window.ssh_sub_kelompok_all_length = 0;
 		options.data.map(function(b, i){
-			var rek = b.kode_kel_standar_harga.split('.');
-			var golongan = rek[0]+'.'+rek[1]+'.'+rek[2]+'.'+rek[3]+'.'+rek[4];
-			var kelompok = golongan+'.'+rek[5];
-			var sub_kelompok = b.kode_kel_standar_harga;
-			var item_ssh = b.kode_standar_harga;
+			if(
+				options.type == 'dari_rka'
+				|| b.kelompok == 9
+			){
+				var golongan = b.kode_gol_standar_harga;
+				var kelompok = b.kode_kel_standar_harga;
+				var sub_kelompok = b.nama_sub_kel_standar_harga;
+				var nama_subkelompok = b.nama_sub_kel_standar_harga;
+				var item_ssh = b.nama_standar_harga;
+				var nama_item = b.nama_standar_harga;
+			}else{
+				var rek = b.kode_kel_standar_harga.split('.');
+				var golongan = rek[0]+'.'+rek[1]+'.'+rek[2]+'.'+rek[3]+'.'+rek[4];
+				var kelompok = golongan+'.'+rek[5];
+				var nama_subkelompok = b.kode_kel_standar_harga+' '+b.nama_kel_standar_harga;
+				var item_ssh = b.kode_standar_harga;
+				var nama_item = item_ssh+' '+b.id_standar_harga+' '+b.nama_standar_harga;
+				var sub_kelompok = b.kode_kel_standar_harga;
+			}
 			if(!data_ssh[golongan]){
 				data_ssh[golongan] = {
 					nama: golongan,
@@ -110,14 +155,14 @@ function singkronisasi_ssh(options){
 			}
 			if(!data_ssh[golongan].data[kelompok].data[sub_kelompok]){
 				data_ssh[golongan].data[kelompok].data[sub_kelompok] = {
-					nama: sub_kelompok+' '+b.nama_kel_standar_harga,
+					nama: nama_subkelompok,
 					jenis: b.kelompok,
 					data: {}
 				}
 				ssh_sub_kelompok_all_length++;
 			}
 			data_ssh[golongan].data[kelompok].data[sub_kelompok].data[item_ssh] = {
-				nama: item_ssh+' '+b.id_standar_harga+' '+b.nama_standar_harga,
+				nama: nama_item,
 				jenis: b.kelompok,
 				data: b
 			}
@@ -130,88 +175,94 @@ function singkronisasi_ssh(options){
 		){
 			singkronisasi_ssh_tarif(options.data);
 		}else{
-			relayAjax({
-				url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
-				success: function(golongan){
-					var data_all = [];
-					var no_urut_golongan = 0;
-					for(var gol_id in data_ssh){
-						var nama_golongan = data_ssh[gol_id].nama;
-						var jns_golongan = data_ssh[gol_id].jenis;
-						if(
-							jns_golongan == 1
-							|| jns_golongan == 2
-							|| jns_golongan == 3
-							|| jns_golongan == 4
-						){
-							var jns_ssh = 1;
-						}else{
-							continue;
-						}
-						var cek = false;
-						golongan.data.map(function(b, i){
-							if(b.uraian == nama_golongan){
-								cek = true;
+			return new Promise(function(resolve, reject){
+				relayAjax({
+					url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
+					success: function(golongan){
+						var data_all = [];
+						var no_urut_golongan = 0;
+						for(var gol_id in data_ssh){
+							var nama_golongan = data_ssh[gol_id].nama;
+							var jns_golongan = data_ssh[gol_id].jenis;
+							if(
+								jns_golongan == 1
+								|| jns_golongan == 2
+								|| jns_golongan == 3
+								|| jns_golongan == 4
+								|| jns_golongan == 9
+							){
+								var jns_ssh = 1;
+							}else{
+								continue;
 							}
-							if(no_urut_golongan < +b.kdurut){
-								no_urut_golongan = +b.kdurut;
-							}
-						});
-						if(cek == false){
-							no_urut_golongan++;
-							data_all.push({
-								url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/save',
-					            type: "post",
-					            data: {
-					                _token: _token,
-					                kdurut: no_urut_golongan,
-					                jns_ssh: jns_ssh,
-					                uraian: nama_golongan
-					            }
+							var cek = false;
+							golongan.data.map(function(b, i){
+								if(b.uraian == nama_golongan){
+									cek = true;
+								}
+								if(no_urut_golongan < +b.kdurut){
+									no_urut_golongan = +b.kdurut;
+								}
 							});
+							if(cek == false){
+								no_urut_golongan++;
+								data_all.push({
+									url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/save',
+						            type: "post",
+						            data: {
+						                _token: _token,
+						                kdurut: no_urut_golongan,
+						                jns_ssh: jns_ssh,
+						                uraian: nama_golongan
+						            }
+								});
+							}
 						}
+						jQuery('#persen-loading').attr('persen', 0);
+						var last = data_all.length - 1;
+						data_all.reduce(function(sequence, nextData){
+		                    return sequence.then(function(current_data){
+		                		return new Promise(function(resolve_reduce, reject_reduce){
+				                	current_data.success = function(data){
+				                		var c_persen = +jQuery('#persen-loading').attr('persen');
+		                				c_persen++;
+										jQuery('#persen-loading').attr('persen', c_persen);
+										pesan_loading(((c_persen/data_all.length)*100).toFixed(2)+'% SAVE GOLONGAN'+'<br>'+current_data.data.uraian);
+										return resolve_reduce(nextData);
+									};
+									current_data.error = function(e) {
+										console.log(e);
+									};
+				                	relayAjax(current_data);
+				                })
+		                        .catch(function(e){
+		                            console.log(e);
+		                            return Promise.resolve(nextData);
+		                        });
+		                    })
+		                    .catch(function(e){
+		                        console.log(e);
+		                        return Promise.resolve(nextData);
+		                    });
+		                }, Promise.resolve(data_all[last]))
+		                .then(function(data_last){
+		                	if(options.type != 'dari_rka'){
+		            			run_script("initDatatable('golongan');");
+		            		}
+							singkronisasi_ssh_kelompok(data_ssh, resolve, options);
+		                })
+		                .catch(function(e){
+		                    console.log(e);
+		                });	
 					}
-					jQuery('#persen-loading').attr('persen', 0);
-					var last = data_all.length - 1;
-					data_all.reduce(function(sequence, nextData){
-	                    return sequence.then(function(current_data){
-	                		return new Promise(function(resolve_reduce, reject_reduce){
-			                	current_data.success = function(data){
-			                		var c_persen = +jQuery('#persen-loading').attr('persen');
-	                				c_persen++;
-									jQuery('#persen-loading').attr('persen', c_persen);
-									pesan_loading(((c_persen/data_all.length)*100).toFixed(2)+'% SAVE GOLONGAN'+'<br>'+current_data.data.uraian);
-									return resolve_reduce(nextData);
-								};
-								current_data.error = function(e) {
-									console.log(e);
-								};
-			                	relayAjax(current_data);
-			                })
-	                        .catch(function(e){
-	                            console.log(e);
-	                            return Promise.resolve(nextData);
-	                        });
-	                    })
-	                    .catch(function(e){
-	                        console.log(e);
-	                        return Promise.resolve(nextData);
-	                    });
-	                }, Promise.resolve(data_all[last]))
-	                .then(function(data_last){
-	            		run_script("initDatatable('golongan');");
-						singkronisasi_ssh_kelompok(data_ssh);
-	                })
-	                .catch(function(e){
-	                    console.log(e);
-	                });	
-				}
+				});
 			});
 		}
 	}
 }
 
 function get_id_ssh(text){
+	return replace_string(text, true, true);
 	var _text = text.split(' ');
 	var ret = text;
 	if(_text[1]){
@@ -220,99 +271,113 @@ function get_id_ssh(text){
 	return ret;
 }
 
-function singkronisasi_ssh_tarif(data_ssh){
-	var url_save_form = jQuery('#form').attr('action');
-	var form_code = url_save_form.split('/save/')[1];
-	var idssh_fmis = jQuery('#form .form-referensi > label').attr('for');
-	relayAjax({
-		url: config.fmis_url+'/parameter/ssh/perkada-ssh/datatable-ref?code='+form_code+'&action=add',
-		success: function(items){
-			var all_ssh = {};
-			data_ssh.map(function(b, i){
-				var id_ssh = b.kode_standar_harga+' '+b.id_standar_harga;
-				all_ssh[id_ssh] = b;
-			});
-			console.log(all_ssh);
-            var no = 0;
-            var _leng = 100;
-            var _data_all = [];
-			var _data = [];
-			items.data.map(function(b, i){
-				var id_ssh = get_id_ssh(b.uraian);
-				if(all_ssh[id_ssh]){
-					b.harga = all_ssh[id_ssh].harga;
-					_data.push(b);
-					if((i+1)%_leng == 0){
-						_data_all.push(_data);
-						_data = [];
-					}
-				}else{
-					console.log('Uraian item SSH tidak ditemukan!', b.uraian);
-				}
-			});
-			if(_data.length > 0){
-				_data_all.push(_data);
-			}
-			jQuery('#persen-loading').attr('persen', 0);
-			var last = _data_all.length - 1;
-			_data_all.reduce(function(sequence, nextData){
-	            return sequence.then(function(current_data){
-	        		return new Promise(function(resolve_reduce, reject_reduce){
-						var c_persen = +jQuery('#persen-loading').attr('persen');
-        				c_persen++;
-						jQuery('#persen-loading').attr('persen', c_persen);
-						pesan_loading(((c_persen/_data_all.length)*100).toFixed(2)+'%'+'<br>SET TARIF ITEM SSH');
-						var data_post = {
-			                _token: _token,
-			                _method: 'PUT',
-			                'table-referensi_length': 10,
-			                nilai: {},
-			                idperkadatarif: {}
-			            };
-			            data_post[idssh_fmis] = {};
-	        			current_data.map(function(b, i){
-							var id_fmis = b.nilai.split('idperkadatarif[')[1].split(']')[0];
-							data_post.nilai[id_fmis] = b.harga+',00';
-							data_post.idperkadatarif[id_fmis] = '';
-							data_post[idssh_fmis][id_fmis] = id_fmis;
-							no++;
-	        			});
-				        // console.log('data_post', no, data_post);
-						relayAjax({
-							url: url_save_form,
-							type: "post",
-				            data: data_post,
-							success: function(items){
-								resolve_reduce(nextData);
-							}
-						});
-	        		})
-	                .catch(function(e){
-	                    console.log(e);
-	                    return Promise.resolve(nextData);
-	                });
-	            })
-	            .catch(function(e){
-	                console.log(e);
-	                return Promise.resolve(nextData);
-	            });
-	        }, Promise.resolve(_data_all[last]))
-	        .then(function(data_last){
-				jQuery('#modal .btn.btn-secondary.ml-1').click();
-				hide_loading();
-				pesan_loading('');
-				jQuery('#persen-loading').attr('persen', '');
-				jQuery('#persen-loading').attr('total', '');
-				alert('Berhasil singkroniasi tarif SSH!');
-	        })
-	        .catch(function(e){
-	            console.log(e);
-	        });
+function singkronisasi_ssh_tarif(data_ssh, cb, options){
+	var url_save_form = '';
+	var form_code = '';
+	var idssh_fmis = '';
+	new Promise(function(resolve, reject){
+		if(typeof cb == 'function'){
+			console.log('BELUM SELESAI');
+		}else{
+			url_save_form = jQuery('#form').attr('action');
+			form_code = url_save_form.split('/save/')[1];
+			idssh_fmis = jQuery('#form .form-referensi > label').attr('for');
+			resolve();
 		}
+	}).then(function(){
+		pesan_loading('GET DATA STRUKTUR SSH FMIS', true);
+		relayAjax({
+			url: config.fmis_url+'/parameter/ssh/perkada-ssh/datatable-ref?code='+form_code+'&action=add',
+			length: 5000,
+			success: function(items){
+				var all_ssh = {};
+				data_ssh.map(function(b, i){
+					if(b.kelompok == 9){
+						var id_ssh = get_id_ssh(b.nama_standar_harga);
+					}else{
+						var id_ssh = get_id_ssh(b.kode_standar_harga+' '+b.id_standar_harga+' '+b.nama_standar_harga);
+					}
+					all_ssh[id_ssh] = b;
+				});
+				console.log(all_ssh);
+	            var no = 0;
+	            var _leng = 100;
+	            var _data_all = [];
+				var _data = [];
+				items.data.map(function(b, i){
+					var id_ssh = get_id_ssh(b.uraian);
+					if(all_ssh[id_ssh]){
+						b.harga = all_ssh[id_ssh].harga;
+						_data.push(b);
+						if((i+1)%_leng == 0){
+							_data_all.push(_data);
+							_data = [];
+						}
+					}else{
+						console.log('Uraian item SSH tidak ditemukan!', b.uraian);
+					}
+				});
+				if(_data.length > 0){
+					_data_all.push(_data);
+				}
+				jQuery('#persen-loading').attr('persen', 0);
+				var last = _data_all.length - 1;
+				_data_all.reduce(function(sequence, nextData){
+		            return sequence.then(function(current_data){
+		        		return new Promise(function(resolve_reduce, reject_reduce){
+							var c_persen = +jQuery('#persen-loading').attr('persen');
+	        				c_persen++;
+							jQuery('#persen-loading').attr('persen', c_persen);
+							pesan_loading(((c_persen/_data_all.length)*100).toFixed(2)+'%'+'<br>SET TARIF ITEM SSH');
+							var data_post = {
+				                _token: _token,
+				                _method: 'PUT',
+				                'table-referensi_length': 10,
+				                nilai: {},
+				                idperkadatarif: {}
+				            };
+				            data_post[idssh_fmis] = {};
+		        			current_data.map(function(b, i){
+								var id_fmis = b.nilai.split('idperkadatarif[')[1].split(']')[0];
+								data_post.nilai[id_fmis] = b.harga+',00';
+								data_post.idperkadatarif[id_fmis] = '';
+								data_post[idssh_fmis][id_fmis] = id_fmis;
+								no++;
+		        			});
+					        // console.log('data_post', no, data_post);
+							relayAjax({
+								url: url_save_form,
+								type: "post",
+					            data: data_post,
+								success: function(items){
+									resolve_reduce(nextData);
+								}
+							});
+		        		})
+		                .catch(function(e){
+		                    console.log(e);
+		                    return Promise.resolve(nextData);
+		                });
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData);
+		            });
+		        }, Promise.resolve(_data_all[last]))
+		        .then(function(data_last){
+					jQuery('#modal .btn.btn-secondary.ml-1').click();
+					hide_loading();
+					alert('Berhasil singkroniasi tarif SSH!');
+		        })
+		        .catch(function(e){
+		            console.log(e);
+		        });
+			}
+		});
 	});
 }
 
-function singkronisasi_ssh_kelompok(data_ssh){
+function singkronisasi_ssh_kelompok(data_ssh, cb, options){
 	relayAjax({
 		url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
 		success: function(golongan){
@@ -397,7 +462,7 @@ function singkronisasi_ssh_kelompok(data_ssh){
 	                });
 	            }, Promise.resolve(data_all[last]))
 	            .then(function(data_last){
-	            	singkronisasi_ssh_sub_kelompok(data_ssh);
+	            	singkronisasi_ssh_sub_kelompok(data_ssh, cb, options);
 	            })
 	            .catch(function(e){
 	                console.log(e);
@@ -412,7 +477,7 @@ function singkronisasi_ssh_kelompok(data_ssh){
 	})
 }
 
-function singkronisasi_ssh_sub_kelompok(data_ssh){
+function singkronisasi_ssh_sub_kelompok(data_ssh, cb, options){
 	var data_all = [];
 	var sendData = [];
 	for(var gol_id in data_ssh){
@@ -438,6 +503,7 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
 								sendDataSub.push(new Promise(function(resolve2, reject2){
 								relayAjax({
 									url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+data_ssh[_gol_id].data[kelompok_id].code+'&gol_id='+_gol_id+'&kelompok_id='+kelompok_id,
+									length: 1000,
 									success: function(subkelompok){
 										var __gol_id = this.url.split('&gol_id=')[1].split('&')[0];
 										var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
@@ -518,7 +584,7 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
             });
         }, Promise.resolve(data_all[last]))
         .then(function(data_last){
-			singkronisasi_ssh_item(data_ssh);
+			singkronisasi_ssh_item(data_ssh, cb, options);
         })
         .catch(function(e){
             console.log(e);
@@ -531,7 +597,7 @@ function singkronisasi_ssh_sub_kelompok(data_ssh){
     });
 }
 
-function singkronisasi_ssh_item(data_ssh){
+function singkronisasi_ssh_item(data_ssh, cb, options){
 	var data_all = [];
 	var sendData = [];
 	for(var gol_id in data_ssh){
@@ -542,6 +608,7 @@ function singkronisasi_ssh_item(data_ssh){
 					sendData.push(new Promise(function(resolve, reject){
 						relayAjax({
 							url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+data_ssh[gol_id].data[kelompok_id].code+'&gol_id='+gol_id+'&kelompok_id='+kelompok_id,
+							length: 1000,
 							success: function(subkelompok){
 								// console.log('gol_id', _gol_id);
 								var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
@@ -560,6 +627,7 @@ function singkronisasi_ssh_item(data_ssh){
 										sendDataSub.push(new Promise(function(resolve2, reject2){
 											relayAjax({
 												url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/datatable?code='+kode_subkelompok+'&gol_id='+_gol_id+'&kelompok_id='+_kelompok_id+'&subkelompok_id='+subkelompok_id,
+												length: 1000,
 												success: function(item){
 													var __gol_id = this.url.split('&gol_id=')[1].split('&')[0];
 													var __kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
@@ -582,7 +650,7 @@ function singkronisasi_ssh_item(data_ssh){
 														});
 														if(cek == false){
 															no_urut_item++;
-															var keterangan_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.spek, true);
+															var keterangan_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.spek, true).substring(0, 250).trim();;
 															var satuan_asli = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.satuan.toLowerCase().trim();
 															if(satuan_asli == ''){
 																satuan_asli = 'kosong';
@@ -689,7 +757,7 @@ function singkronisasi_ssh_item(data_ssh){
             });
         }, Promise.resolve(_data_all[last]))
         .then(function(data_last){
-			singkronisasi_ssh_rekening(data_ssh);
+			singkronisasi_ssh_rekening(data_ssh, cb, options);
         })
         .catch(function(e){
             console.log(e);
@@ -702,7 +770,7 @@ function singkronisasi_ssh_item(data_ssh){
     });
 }
 
-function singkronisasi_ssh_rekening(data_ssh){
+function singkronisasi_ssh_rekening(data_ssh, cb, options){
 	var sendData = [];
 	var sendDataSub = [];
 	jQuery('#persen-loading').attr('persen', 0);
@@ -771,12 +839,17 @@ function singkronisasi_ssh_rekening(data_ssh){
 	}
 	reduce_promise(sendData, function(val_all){
 		reduce_promise(sendDataSub, function(val_all){
-			hide_loading();
-			pesan_loading('');
-			jQuery('#persen-loading').attr('persen', '');
-			jQuery('#persen-loading').attr('total', '');
-			console.log('Berhasil singkron SSH dari SIPD!');
-			alert('Berhasil singkron SSH dari SIPD!');
+			if(options.type == 'dari_rka'){
+				cb();
+				// singkronisasi_ssh_tarif(options.data, cb, options);
+			}else{
+				hide_loading();
+				pesan_loading('');
+				jQuery('#persen-loading').attr('persen', '');
+				jQuery('#persen-loading').attr('total', '');
+				console.log('Berhasil singkron SSH dari SIPD!');
+				alert('Berhasil singkron SSH dari SIPD!');
+			}
 	    }, 5);
     }, 50);
 }
@@ -941,7 +1014,6 @@ function replace_string(text, no_lowercase=false, no_replace=false){
 }
 
 function getIdSatuan(satuan, force, val_cb){
-	pesan_loading('GET ID SATUAN '+satuan, true);
 	satuan = replace_string(satuan).substring(0, 50).trim();
 	var singkatan_sipd = satuan.substring(0, 30).trim();
 	return new Promise(function(resolve, reject){
@@ -3551,6 +3623,7 @@ function get_rka_sipd(kode_sbl){
 
 function singkronisasi_rka_modal(idkegiatan){
 	show_loading();
+	window.ssh_not_found_global = [];
 	var sub_kegiatan = [];
 	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
 		var cek = jQuery(b).is(':checked');
@@ -3572,18 +3645,34 @@ function singkronisasi_rka_modal(idkegiatan){
 					pesan_loading('GET DATA RKA DI WP-SIPD UNTUK IDSUBKEGIATAN = '+current_data.sub_keg_fmis.idrkpdrenjasubkegiatan+', kode_sbl = '+current_data.kode_sbl, true);
 					get_rka_sipd(current_data.kode_sbl)
 					.then(function(rka_sipd){
-						pesan_loading('GET AKTIVITAS EXISTING DARI IDSUBKEGIATAN = '+current_data.sub_keg_fmis.idrkpdrenjasubkegiatan, true);
-						// get all aktivitas dan insert jika belum ada
-						relayAjax({
-							url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/data/'+current_data.sub_keg_fmis.idrkpdrenjasubkegiatan,
-							success: function(aktivitas_exist){
-								current_data.aktivitas = aktivitas_exist.data;
-								cek_insert_aktivitas_fmis(rka_sipd, current_data)
-								.then(function(){
-									resolve_reduce(nextData);
-								});
-							}
-						});
+						new Promise(function(resolve, reject){
+							pesan_loading('GET AKTIVITAS EXISTING DARI IDSUBKEGIATAN = '+current_data.sub_keg_fmis.idrkpdrenjasubkegiatan, true);
+							// get all aktivitas dan insert jika belum ada
+							relayAjax({
+								url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/data/'+current_data.sub_keg_fmis.idrkpdrenjasubkegiatan,
+								success: function(aktivitas_exist){
+									current_data.aktivitas = aktivitas_exist.data;
+									cek_insert_aktivitas_fmis(rka_sipd, current_data)
+									.then(function(){
+										resolve();
+									});
+								}
+							});
+						})
+						.then(function(){
+							pesan_loading('GET AKTIVITAS EXISTING DARI IDSUBKEGIATAN = '+current_data.sub_keg_fmis.idrkpdrenjasubkegiatan+' UNTUK SINGKRON RKA', true);
+							// get all aktivitas hasil dari insert sebelumnya
+							relayAjax({
+								url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/data/'+current_data.sub_keg_fmis.idrkpdrenjasubkegiatan,
+								success: function(aktivitas_exist){
+									current_data.aktivitas = aktivitas_exist.data;
+									cek_insert_rka_fmis(rka_sipd, current_data)
+									.then(function(){
+										resolve_reduce(nextData);
+									});
+								}
+							});
+						})
 					});
         		})
                 .catch(function(e){
@@ -3597,6 +3686,11 @@ function singkronisasi_rka_modal(idkegiatan){
             });
         }, Promise.resolve(sub_kegiatan[last]))
         .then(function(data_last){
+        	if(ssh_not_found_global.length >= 1){
+        		var pesan_ssh = 'Data SSH tidak ditemukan dari PERKADA SSH { '+ssh_not_found_global.join('; ')+' }';
+        		alert(pesan_ssh);
+        		console.log(pesan_ssh);
+        	}
         	alert('Berhasil singkroniasi data RKA sub kegiatan dari WP-SIPD!');
 			run_script('jQuery("#mod-konfirmasi-program").modal("hide")');
 			hide_loading();
@@ -3628,6 +3722,246 @@ function get_master_sumberdana(idsubkegiatan){
 			resolve(master_sumberdana_global[idsubkegiatan]);
 		}
 	});
+}
+
+function get_rka_aktivitas(idrkpdrenjaaktivitas){
+	pesan_loading('GET RKA EXISTING DARI AKTIVITAS = '+idrkpdrenjaaktivitas, true);
+	return new Promise(function(resolve, reject){
+		if(typeof master_aktivitas_global == 'undefined'){
+			window.master_aktivitas_global = {};
+		}
+		if(typeof master_aktivitas_global[idrkpdrenjaaktivitas] == 'undefined'){
+			relayAjax({
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/data/'+idrkpdrenjaaktivitas,
+				success: function(rka){
+					master_aktivitas_global[idrkpdrenjaaktivitas] = rka.data;
+					resolve(master_aktivitas_global[idrkpdrenjaaktivitas]);
+				},
+				error: function(e){
+					console.log('Error get RKA existing dari aktivitas', idrkpdrenjaaktivitas);
+				}
+			});
+		}else{
+			resolve(master_aktivitas_global[idrkpdrenjaaktivitas]);
+		}
+	});
+}
+
+function get_id_ssh_rka_lama(rka){
+	pesan_loading('GET DATA SSH "'+rka.nama_komponen+'" HARGA "'+rka.harga_satuan+'"', true);
+	return new Promise(function(resolve, reject){
+		var unik_rincian = (rka.harga_satuan+' '+rka.satuan+' '+rka.nama_komponen).substring(0, 250).trim();
+		if(typeof master_ssh_rka_global == 'undefined'){
+			window.master_ssh_rka_global = {};
+		}
+		if(typeof master_ssh_rka_global[unik_rincian] == 'undefined'){
+			singkronisasi_ssh({
+				status: 'success',
+				type: 'dari_rka',
+				data: [{
+					kode_standar_harga: config.tahun_anggaran,
+					nama_standar_harga: unik_rincian,
+					spek: rka.spek_komponen,
+					satuan: rka.satuan,
+					kelompok: 1,
+					harga: rka.harga_satuan,
+					kode_kel_standar_harga: config.tahun_anggaran,
+					nama_kel_standar_harga: rka.nama_komponen,
+					rek_belanja: [{
+						kode_akun: rka.kode_akun,
+						nama_akun: rka.nama_akun
+					}]
+				}]
+			})
+			.then(function(ssh){
+				console.log('Cari dan insert tarif data jika belum ada!');
+			})
+			.then(function(ssh){
+				master_ssh_rka_global[unik_rincian] = ssh;
+				resolve(master_ssh_rka_global[unik_rincian]);
+			});
+		}else{
+			resolve(master_ssh_rka_global[unik_rincian]);
+		}
+	});
+}
+
+function get_id_ssh_rka(rka, idrkpdrenjaaktivitas){
+	pesan_loading('GET DATA SSH "'+rka.nama_komponen+'" HARGA "'+rka.harga_satuan+'"', true);
+	return new Promise(function(resolve, reject){
+		var unik_rincian = (rka.harga_satuan+' '+rka.satuan+' '+rka.nama_komponen).substring(0, 250).trim();
+		if(typeof master_ssh_rka_global == 'undefined'){
+			window.master_ssh_rka_global = {};
+		}
+		if(typeof master_ssh_rka_global[unik_rincian] == 'undefined'){
+			var unik_rincian_search = unik_rincian.split('[')[0];
+			relayAjax({
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/datassh4/'+idrkpdrenjaaktivitas+'?idrkpdrenjaaktivitas='+idrkpdrenjaaktivitas+'&draw=1&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=kdurut&columns%5B1%5D%5Bname%5D=kdurut&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=uraian&columns%5B2%5D%5Bname%5D=uraian&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=satuan&columns%5B3%5D%5Bname%5D=satuan&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=true&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=nilai&columns%5B4%5D%5Bname%5D=nilai&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=true&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B5%5D%5Bdata%5D=spesifikasi&columns%5B5%5D%5Bname%5D=spesifikasi&columns%5B5%5D%5Bsearchable%5D=true&columns%5B5%5D%5Borderable%5D=true&columns%5B5%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B5%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=10&search%5Bvalue%5D='+unik_rincian_search+'&search%5Bregex%5D=false',
+				success: function(ssh){
+					if(ssh.data.length == 0){
+						console.log('Item SSH tidak ditemukan', unik_rincian, rka);
+						resolve(false);
+					}else{
+						var data_ssh = ssh.data[0];
+						relayAjax({
+							url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/pilih-rekening/'+data_ssh.idssh_4+'?idrkpdrenjaaktivitas='+idrkpdrenjaaktivitas+'&draw=1&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=kode&columns%5B1%5D%5Bname%5D=kode&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=nmrek6&columns%5B2%5D%5Bname%5D=nmrek6&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=nilai&columns%5B3%5D%5Bname%5D=nilai&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=true&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=5000&search%5Bvalue%5D=&search%5Bregex%5D=false',
+							success: function(rekening){
+								var rek_sipd = [];
+								rka.kode_akun.split('.').map(function(b, n){
+									rek_sipd.push(+b);
+								});
+								rek_sipd = rek_sipd.join('.');
+								var cek_rek = false;
+								rekening.data.map(function(b, i){
+									if(rek_sipd == b.kode){
+										data_ssh.nama_akun = b.nmrek6;
+									    data_ssh.harga = b.nilai;
+									    data_ssh.kdrek1 = b.kdrek1;
+									    data_ssh.kdrek2 = b.kdrek2;
+									    data_ssh.kdrek3 = b.kdrek3;
+									    data_ssh.kdrek4 = b.kdrek4;
+									    data_ssh.kdrek5 = b.kdrek5;
+									    data_ssh.kdrek6 = b.kdrek6;
+									    data_ssh.uraian = b.uraian + '/' + b.nmrek6;
+									    data_ssh.satuan = b.idsatuan;
+									    data_ssh.uraian_satuan = b.satuan;
+									    cek_rek = true;
+									}
+								});
+								if(cek_rek){
+									master_ssh_rka_global[unik_rincian] = data_ssh;
+									resolve(master_ssh_rka_global[unik_rincian]);
+								}else{
+									console.log('Rekening tidak ditemukan untuk SSH', unik_rincian, rka, data_ssh);
+									resolve(false);
+								}
+							}
+						});
+					}
+				},
+				error: function(e){
+					console.log('Error get RKA existing dari aktivitas', idrkpdrenjaaktivitas);
+				}
+			});
+		}else{
+			resolve(master_ssh_rka_global[unik_rincian]);
+		}
+	});
+}
+
+function cek_insert_rka_fmis(rka_sipd, sub_keg){
+	return new Promise(function(resolve, reject){
+		var last1 = sub_keg.aktivitas.length - 1;
+		sub_keg.aktivitas.reduce(function(sequence, nextData){
+            return sequence.then(function(aktivitas){
+        		return new Promise(function(resolve_reduce, reject_reduce){
+        			get_rka_aktivitas(aktivitas.idrkpdrenjaaktivitas)
+					.then(function(data_rka){
+						var last = rka_sipd.length - 1;
+						var kdurut = 0;
+						console.log('cek dan insert RKA', rka_sipd);
+						rka_sipd.reduce(function(sequence2, nextData2){
+				            return sequence2.then(function(current_data){
+				        		return new Promise(function(resolve_reduce2, reject_reduce2){
+				        			var nama_aktivitas = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
+			        				if(nama_aktivitas == aktivitas.uraian){
+			        					var nama_rincian = replace_string(current_data.nama_komponen+' | '+current_data.spek_komponen, false, false).substring(0, 500).trim();
+			        					var cek_exist = false;
+										data_rka.map(function(b, i){
+											var uraian_belanja = replace_string(b.uraian_belanja, false, false);
+											if(uraian_belanja == nama_rincian){
+												cek_exist = true;
+											}
+											if(kdurut <= +b.kdurut){
+												kdurut = +b.kdurut;
+											}
+										});
+										if(!cek_exist){
+											current_data.nama_rincian = nama_rincian;
+											get_id_ssh_rka(current_data, aktivitas.idrkpdrenjaaktivitas)
+											.then(function(ssh){
+												if(ssh){
+													kdurut++;
+							        				var data_post = {
+							        					_token: _token,
+							        					idsumberdana : aktivitas.idsumberdana1,
+							        					kdurut : kdurut,
+							        					idsatuanindikator : '',
+							        					idssh_4 : ssh.idssh_4,
+							        					kdrek1 : ssh.kdrek1,
+							        					kdrek2 : ssh.kdrek2,
+							        					kdrek3 : ssh.kdrek3,
+							        					kdrek4 : ssh.kdrek4,
+							        					kdrek5 : ssh.kdrek5,
+							        					kdrek6 : ssh.kdrek6,
+							        					uraian_idssh_4 : ssh.uraian,
+							        					uraian_belanja : nama_rincian,
+							        					idsatuan1 : ssh.idsatuan,
+							        					volume_1 : current_data.volume1,
+							        					uraian_satuan1 : ssh.uraian_satuan,
+							        					idsatuan2 : '',
+							        					volume_2 : '',
+							        					uraian_satuan2 : '',
+							        					idsatuan3 : '',
+							        					volume_3 : '',
+							        					uraian_satuan3 : '',
+							        					harga : ssh.harga,
+							        				}
+							        				pesan_loading('SIMPAN RINCIAN "'+ssh.uraian+'" AKTIVITAS "'+aktivitas.uraian+'" SUBKEGIATAN "'+sub_keg.nama_sub_giat+'"', true);
+						        					relayAjax({
+														url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/create/'+aktivitas.idrkpdrenjaaktivitas,
+														type: "post",
+											            data: data_post,
+											            success: function(res){
+											            	resolve_reduce2(nextData2);
+											            },
+											            error: function(e){
+											            	console.log('Error save aktivitas!', e, this.data);
+											            }
+													});
+												}else{
+													var unik_rincian = (current_data.harga_satuan+' '+current_data.satuan+' '+current_data.nama_komponen).substring(0, 250).trim();
+													ssh_not_found_global.push(unik_rincian);
+													resolve_reduce2(nextData2);
+												}
+					        				});
+				        				}else{
+				        					console.log('Item belanja "'+nama_rincian+'" sudah ada!');
+			        						resolve_reduce2(nextData2);
+				        				}
+			        				}else{
+			        					resolve_reduce2(nextData2);
+			        				}
+				        		})
+				                .catch(function(e){
+				                    console.log(e);
+				                    return Promise.resolve(nextData2);
+				                });
+				            })
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData2);
+				            });
+				        }, Promise.resolve(rka_sipd[last]))
+				        .then(function(data_last){
+				        	resolve_reduce(nextData);
+				        });
+					});
+        		})
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(sub_keg.aktivitas[last1]))
+        .then(function(data_last){
+        	resolve();
+        });
+    });
 }
 
 function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
@@ -3962,4 +4296,193 @@ function singkronisasi_program_modal(){
 	}else{
 		alert('Pilih program RKPD dulu!');
 	}
+}
+
+function singkronisasi_bidur_skpd_rpjm_modal(){
+	var skpd_selected = [];
+	jQuery('#konfirmasi-bidur-skpd tbody tr input[type="checkbox"]').map(function(i, b){
+		var cek = jQuery(b).is(':checked');
+		if(cek){
+			var id_skpd = jQuery(b).attr('value');
+			data_bidur_skpd.map(function(bb, ii){
+				if(bb.id_skpd == id_skpd){
+					skpd_selected.push(bb);
+				}
+			});
+		}
+	});
+	if(skpd_selected.length >= 1){
+		console.log('skpd_selected', skpd_selected);
+		show_loading();
+		var table = jQuery('#konfirmasi-bidur-skpd');
+		var code_bidang = table.attr('data-code-bidang');
+		var urut = table.attr('data-urut');
+		var data_post = {
+            _token: _token,
+            idbidkewenangan: table.attr('data-idbidkewenangan'),
+            idrpjmdprogram: table.attr('data-idrpjmdprogram')
+        };
+        var bidur_save = {};
+        var last = skpd_selected.length - 1;
+		skpd_selected.reduce(function(sequence, nextData){
+            return sequence.then(function(bidur){
+        		return new Promise(function(resolve_reduce, reject_reduce){
+        			if(!bidur_save[bidur.urusan+'.'+bidur.bidang]){
+        				bidur_save[bidur.urusan+'.'+bidur.bidang] = [];
+        				bidur_save[bidur.urusan+'.'+bidur.bidang].push(bidur);
+        				if(!bidur.bidur_exist){
+	        				data_post.kdurut = urut;
+	        				urut++;
+	        				data_post.idurusan = bidur.urusan;
+	        				data_post.idbidang = bidur.bidang;
+	        				// save bidang urusan
+							relayAjax({
+								url: table.attr('data-url-save'),
+								type: "post",
+					            data: data_post,
+					            success: function(res){
+					            	resolve_reduce(nextData);
+					            },
+					            error: function(e){
+					            	console.log('Error save bidang urusan!', e, this.data);
+					            }
+							});
+						}else{
+					        resolve_reduce(nextData);
+						}
+					}else{
+        				bidur_save[bidur.urusan+'.'+bidur.bidang].push(bidur);
+						resolve_reduce(nextData);
+					}
+                })
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(skpd_selected[last]))
+        .then(function(data_last){
+        	// get all bidang urusan
+        	relayAjax({
+				url: config.fmis_url+'/perencanaan-lima-tahunan/rpjmd-murni/datatable?code='+code_bidang+'&table=program-urbid',
+				success: function(bidur){
+					var sendData1 = [];
+		            var last = bidur.data.length - 1;
+					bidur.data.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			var code_bidang_pelaksana = false;
+			        			var id_skpd_fmis = [];
+								skpd_selected.map(function(bb, ii){
+									if(bb.nama_bidang == current_data.bidang.nmbidang){
+										code_bidang_pelaksana = current_data.code;
+										id_skpd_fmis.push(bb.id_skpd_fmis);
+									}
+								});
+								if(code_bidang_pelaksana){
+									// get form tambah data skpd pelaksana
+						        	relayAjax({
+										url: config.fmis_url+'/perencanaan-lima-tahunan/rpjmd-murni/form?table=program-pelaksana&code='+code_bidang_pelaksana+'&action=create',
+										success: function(form_tambah){
+											var url_save_form = form_tambah.form.split('action=\"')[1].split('\"')[0];
+											var form = jQuery(form_tambah.form);
+											var data_post = {
+								                _token: _token,
+								                kdurut: form.find('#kdurut').val(),
+								                idbidkewenangan: form.find('input[name="idbidkewenangan"]').val(),
+								                idskpdpelaksana: form.find('input[name="idskpdpelaksana"]').val(),
+								                DataTables_Table_0_length: 10,
+								                idskpd: id_skpd_fmis
+								            };
+								            // simpan skpd pelaksana
+											relayAjax({
+												url: url_save_form,
+												type: "post",
+									            data: data_post,
+									            success: function(res){
+									            	resolve_reduce(nextData);
+									            },
+									            error: function(e){
+									            	console.log('Error save SKPD pelaksana!', e, this.data);
+									            }
+											});
+										}
+									});
+								}else{
+									console.log('Bidang urusan tidak ditemukan untuk SKPD yang dipilih!', current_data, skpd_selected);
+									resolve_reduce(nextData);
+								}
+			                })
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(bidur.data[last]))
+			        .then(function(data_last){
+			        	console.log('bidur_save', bidur_save);
+						run_script('jQuery("#mod-konfirmasi-bidur-skpd").modal("hide")');
+						run_script("initRpjmdTableDetail('program-urbid', 'table-program-urbid','"+ code_bidang+"');");
+			        	hide_loading();
+						alert('Berhasil singkroniasi bidang urusan dan SKPD di RPJMD');
+					});
+				}
+			});
+        });
+	}else{
+		alert("Pilih SKPD dulu!");
+	}
+}
+
+function singkronisasi_sumberdana(sd_sipd){
+	pesan_loading('GET MASTER SUMBER DANA FMIS', true);
+	// get all sumber dana fmis
+	relayAjax({
+		url: config.fmis_url+'/parameter/simda-ng/sumber-dana/datatable',
+		success: function(sd_fmis){
+			var sd_belum_ada = {};
+			var nama_sd_belum_ada = [];
+			var last = sd_sipd.length - 1;
+			sd_sipd.reduce(function(sequence, nextData){
+	            return sequence.then(function(current_data){
+	        		return new Promise(function(resolve_reduce, reject_reduce){
+	        			var check_exist = false;
+	        			var nama_sd_sipd = current_data.nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
+	        			sd_fmis.data.map(function(b, i){
+	        				if(nama_sd_sipd == b.uraian){
+	        					check_exist = true;
+	        				}
+	        			});
+	        			if(!check_exist){
+	        				sd_belum_ada[nama_sd_sipd] = current_data;
+	        				nama_sd_belum_ada.push(nama_sd_sipd);
+	        			}
+	        			resolve_reduce(nextData);
+	        		})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(sd_sipd[last]))
+	        .then(function(data_last){
+	        	console.log('sd_belum_ada', sd_belum_ada, nama_sd_belum_ada);
+	        	console.log('Pengembangan selanjutnya akan dibuat mapping sumber dana di tabel data_sumber_dana WP-SIPD. Sementara dipending dulu, lanjut ke singkron RKA!');
+	        	hide_loading();
+				alert('Nama sumber dana yang ada di WP-SIPD tapi belum ada di FMIS '+nama_sd_belum_ada.length+' dari total '+sd_sipd.length+' sumberdana! '+nama_sd_belum_ada.join(', '));
+			});
+		}
+	});
 }
