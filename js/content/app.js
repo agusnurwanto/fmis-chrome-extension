@@ -15,7 +15,39 @@ if(jQuery('#wrap-loading').length == 0){
 	jQuery('body').prepend(loading);
 }
 var current_url = window.location.href;
-if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
+if(current_url.indexOf('parameter/rekening') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" id="mapping-rek-sipd">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Mapping Data Rekening ke WP-SIPD'
+    +'</button>';
+	jQuery('a.btn-outline-dark[title="Salin Data Tahun Sebelumnya"]').parent().append(btn);
+	jQuery('#mapping-rek-sipd').on('click', function(){
+		show_loading();
+		pesan_loading('GET DATA REKENING FMIS', true);
+		getMasterRek(5).then(function(rek){
+			pesan_loading('SEND MAPPING DATA REKENING KE WP-SIPD', true);
+			var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'mapping_rek_fmis',
+							rek: rek,
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+		});
+	});
+}else if(current_url.indexOf('parameter/ssh/struktur-ssh') != -1){
 	getMasterRek().then(function(rek){
 		console.log('rek', rek);
 	});

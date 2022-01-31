@@ -969,26 +969,30 @@ function set_rekening_ssh(options){
 	});
 }
 
-function getMasterRek() {
+function getMasterRek(kdrek1 = '4,5,6') {
 	return new Promise(function(resolve, reject){
-		if(typeof rekening_master != 'undefined'){
-			resolve(rekening_master);
+		if(typeof rekening_master == 'undefined'){
+			window.rekening_master = {};
+		}
+
+		if(rekening_master[kdrek1]){
+			resolve(rekening_master[kdrek1]);
 		}else{
 			relayAjax({
 				url: config.fmis_url+'/parameter/rekening/datatable-rekening',
 				type: "post",
 	            data: {
 	                _token: _token,
-	                kdrek1: '4,5,6',
+	                kdrek1: kdrek1,
 	                exclude_table: 'ref_ssh_rekening',
 	                tahun: config.tahun_anggaran
 	            },
 				success: function(rek){
-					window.rekening_master = {};
+					rekening_master[kdrek1] = {};
 					rek.data.map(function(b, i){
-						rekening_master[b.kdrek] = b;
+						rekening_master[kdrek1][b.kdrek] = b;
 					});
-					resolve(rekening_master);
+					resolve(rekening_master[kdrek1]);
 				}
 			});
 		}
@@ -4534,4 +4538,21 @@ function singkronisasi_sumberdana(sd_sipd){
 			});
 		}
 	});
+}
+
+function mapping_rek_fmis(rek){
+	var size = Object.keys(rek.data_rek).length;
+	if(size >= 1){
+		var data_rek = [];
+		var jml = 0;
+		for(var i in rek.data_rek){
+			jml++;
+			data_rek.push(i+' '+rek.data_rek[i].nama_akun);
+		}
+		var pesan = "Rekening yang tidak ada di FMIS ada = "+jml+". "+data_rek.join(', ');
+		alert(pesan);
+		console.log(pesan, rek.data_rek);
+	}
+	alert(rek.message);
+	hide_loading();
 }

@@ -33,6 +33,10 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			singkronisasi_ssh(res);
+		}else if(res.action == 'mapping_rek_fmis'){
+			_alert = false;
+			cek_hide_loading = false;
+			mapping_rek_fmis(res);
 		}else if(res.action == 'get_sumber_dana'){
 			_alert = false;
 			cek_hide_loading = false;
