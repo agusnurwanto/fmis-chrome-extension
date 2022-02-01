@@ -4495,48 +4495,37 @@ function singkronisasi_bidur_skpd_rpjm_modal(){
 	}
 }
 
-function singkronisasi_sumberdana(sd_sipd){
-	pesan_loading('GET MASTER SUMBER DANA FMIS', true);
-	// get all sumber dana fmis
-	relayAjax({
-		url: config.fmis_url+'/parameter/simda-ng/sumber-dana/datatable',
-		success: function(sd_fmis){
-			var sd_belum_ada = {};
-			var nama_sd_belum_ada = [];
-			var last = sd_sipd.length - 1;
-			sd_sipd.reduce(function(sequence, nextData){
-	            return sequence.then(function(current_data){
-	        		return new Promise(function(resolve_reduce, reject_reduce){
-	        			var check_exist = false;
-	        			var nama_sd_sipd = current_data.nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
-	        			sd_fmis.data.map(function(b, i){
-	        				if(nama_sd_sipd == b.uraian){
-	        					check_exist = true;
-	        				}
-	        			});
-	        			if(!check_exist){
-	        				sd_belum_ada[nama_sd_sipd] = current_data;
-	        				nama_sd_belum_ada.push(nama_sd_sipd);
-	        			}
-	        			resolve_reduce(nextData);
-	        		})
-	                .catch(function(e){
-	                    console.log(e);
-	                    return Promise.resolve(nextData);
-	                });
-	            })
-	            .catch(function(e){
-	                console.log(e);
-	                return Promise.resolve(nextData);
-	            });
-	        }, Promise.resolve(sd_sipd[last]))
-	        .then(function(data_last){
-	        	console.log('sd_belum_ada', sd_belum_ada, nama_sd_belum_ada);
-	        	console.log('Pengembangan selanjutnya akan dibuat mapping sumber dana di tabel data_sumber_dana WP-SIPD. Sementara dipending dulu, lanjut ke singkron RKA!');
-	        	hide_loading();
-				alert('Nama sumber dana yang ada di WP-SIPD tapi belum ada di FMIS '+nama_sd_belum_ada.length+' dari total '+sd_sipd.length+' sumberdana! '+nama_sd_belum_ada.join(', '));
-			});
-		}
+function singkronisasi_sumberdana(res){
+	var sd_sipd = res.data;
+	var sd_belum_ada = {};
+	var nama_sd_belum_ada = [];
+	var sd_sipd_new = [];
+	for(var i in sd_sipd){
+		sd_sipd_new.push(sd_sipd[i]);
+	}
+	var last = sd_sipd_new.length - 1;
+	sd_sipd_new.reduce(function(sequence, nextData){
+        return sequence.then(function(current_data){
+    		return new Promise(function(resolve_reduce, reject_reduce){
+    			var nama_sd_sipd = current_data.nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
+				sd_belum_ada[nama_sd_sipd] = current_data;
+				nama_sd_belum_ada.push(nama_sd_sipd);
+    			resolve_reduce(nextData);
+    		})
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        })
+        .catch(function(e){
+            console.log(e);
+            return Promise.resolve(nextData);
+        });
+    }, Promise.resolve(sd_sipd_new[last]))
+    .then(function(data_last){
+    	console.log('sd_belum_ada', sd_belum_ada, nama_sd_belum_ada);
+    	hide_loading();
+		alert('Nama sumber dana yang ada di WP-SIPD tapi belum ada di FMIS '+nama_sd_belum_ada.length+' dari total '+res.total+' sumberdana! '+nama_sd_belum_ada.join(', '));
 	});
 }
 

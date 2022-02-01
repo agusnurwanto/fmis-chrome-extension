@@ -40,7 +40,7 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 		}else if(res.action == 'get_sumber_dana'){
 			_alert = false;
 			cek_hide_loading = false;
-			singkronisasi_sumberdana(res.data);
+			singkronisasi_sumberdana(res);
 		}else if(res.action == 'get_sub_keg_rka'){
 			_alert = false;
 			cek_hide_loading = false;

@@ -250,31 +250,37 @@ if(current_url.indexOf('parameter/rekening') != -1){
 }else if(current_url.indexOf('/parameter/simda-ng/sumber-dana') != -1){
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-sumber-dana">'
-        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Sumber Dana FMIS dengan WP-SIPD'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Mapping Data Sumber Dana ke WP-SIPD'
     +'</button>';
     jQuery('a.btn-sm[title="Tambah Sumber Dana"]').parent().append(btn);
     jQuery('#singkron-sumber-dana').on('click', function(){
-    	if(confirm('Apakah anda yakin untuk mengsingkronkan data Sumber Dana FMIS dengan WP-SIPD?')){
-			show_loading();
-			var data = {
-			    message:{
-			        type: "get-url",
-			        content: {
-					    url: config.url_server_lokal,
-					    type: 'post',
-					    data: { 
-							action: 'get_sumber_dana',
-							tahun_anggaran: config.tahun_anggaran,
-							api_key: config.api_key
-						},
-		    			return: true
-					}
-			    }
-			};
-			chrome.runtime.sendMessage(data, function(response) {
-			    console.log('responeMessage', response);
-			});
-		}
+		show_loading();
+		pesan_loading('GET MASTER SUMBER DANA FMIS', true);
+		// get all sumber dana fmis
+		relayAjax({
+			url: config.fmis_url+'/parameter/simda-ng/sumber-dana/datatable',
+			success: function(sd_fmis){
+				var data = {
+				    message:{
+				        type: "get-url",
+				        content: {
+						    url: config.url_server_lokal,
+						    type: 'post',
+						    data: { 
+								action: 'get_sumber_dana',
+								tahun_anggaran: config.tahun_anggaran,
+								sumber_dana: sd_fmis.data,
+								api_key: config.api_key
+							},
+			    			return: true
+						}
+				    }
+				};
+				chrome.runtime.sendMessage(data, function(response) {
+				    console.log('responeMessage', response);
+				});
+			}
+		});
     });
 }else if(current_url.indexOf('/manajemen-user/user') != -1){
 	var btn = ''
