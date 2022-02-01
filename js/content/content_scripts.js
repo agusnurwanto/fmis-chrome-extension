@@ -64,13 +64,19 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			}else{
 				var bidur = {};
 				jQuery('li[data-type="bidang"]').map(function(i, b){ 
-					bidur[jQuery(b).attr('data-info')] = jQuery(b).attr('data-code');
+					bidur[jQuery(b).attr('data-info').split(' - ')[0]] = jQuery(b).attr('data-code');
 				});
 				var data_skpd = [];
 				res.data.map(function(b, i){
+					if(!b.bidur1){
+						return;
+					}
 					var bidur_sipd = b.bidur1.split(' ');
-					bidur_sipd.shift();
-					bidur_sipd = bidur_sipd.join(' ');
+					bidur_sipd = bidur_sipd.shift();
+					bidur_sipd = bidur_sipd.split('.').map(function(b, i){
+						return +b;
+					});
+					bidur_sipd = bidur_sipd.join('.');
 					if(bidur[bidur_sipd]){
 						b.code = bidur[bidur_sipd];
 					}
@@ -89,11 +95,16 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 					}
 					data_skpd.push(b);
 				});
-				if(res.run == 'singkron_skpd_sipd'){
-					var url_tambah_skpd = jQuery('a[title="Tambah SKPD"]').attr('href');
-			    	singkron_skpd_sipd(url_tambah_skpd, data_skpd);
-				}else if(res.run == 'singkron_skpd_sipd_all'){
-			    	singkron_skpd_sipd_all(data_skpd);
+				if(data_skpd.length == 0){
+					cek_hide_loading = true;
+					alert('Data Profile SKPD atau master sub kegiatan SIPD belum disingkronkan!');
+				}else{
+					if(res.run == 'singkron_skpd_sipd'){
+						var url_tambah_skpd = jQuery('a[title="Tambah SKPD"]').attr('href');
+				    	singkron_skpd_sipd(url_tambah_skpd, data_skpd);
+					}else if(res.run == 'singkron_skpd_sipd_all'){
+				    	singkron_skpd_sipd_all(data_skpd);
+					}
 				}
 			}
 		}
