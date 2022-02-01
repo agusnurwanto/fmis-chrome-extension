@@ -4495,6 +4495,36 @@ function singkronisasi_bidur_skpd_rpjm_modal(){
 	}
 }
 
+function mapping_sumberdana(){
+	pesan_loading('GET MASTER SUMBER DANA FMIS', true);
+	// get all sumber dana fmis
+	relayAjax({
+		url: config.fmis_url+'/parameter/simda-ng/sumber-dana/datatable',
+		success: function(sd_fmis){
+			window.sd_fmis_global = sd_fmis.data;
+			var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_sumber_dana',
+							tahun_anggaran: config.tahun_anggaran,
+							sumber_dana: sd_fmis.data,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+		}
+	});
+}
+
 function singkronisasi_sumberdana(res){
 	var sd_sipd = res.data;
 	var sd_belum_ada = {};
@@ -4503,6 +4533,10 @@ function singkronisasi_sumberdana(res){
 	for(var i in sd_sipd){
 		sd_sipd_new.push(sd_sipd[i]);
 	}
+	var sd_fmis = {};
+	sd_fmis_global.map(function(b, i){
+		sd_fmis[b.kode_sumber_dana] = b;
+	});
 	var last = sd_sipd_new.length - 1;
 	sd_sipd_new.reduce(function(sequence, nextData){
         return sequence.then(function(current_data){
@@ -4510,7 +4544,70 @@ function singkronisasi_sumberdana(res){
     			var nama_sd_sipd = current_data.nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
 				sd_belum_ada[nama_sd_sipd] = current_data;
 				nama_sd_belum_ada.push(nama_sd_sipd);
-    			resolve_reduce(nextData);
+				var kdsd1 = '';
+				var kdsd2 = '';
+				var kdsd3 = '';
+				var kdsd4 = '';
+				var kdsd5 = '';
+				var kdsd6 = '';
+				var kdsd = current_data.kode_dana.split('.');
+				if(kdsd[0]){
+					kdsd1 = kdsd[0];
+				}
+				if(kdsd[1]){
+					kdsd2 = kdsd[1];
+				}
+				if(kdsd[2]){
+					kdsd3 = kdsd[2];
+				}
+				if(kdsd[3]){
+					kdsd4 = kdsd[3];
+				}
+				if(kdsd[4]){
+					kdsd5 = kdsd[4];
+				}
+				if(kdsd[5]){
+					kdsd6 = kdsd[5];
+				}
+				var data_post = {
+					_token: _token,
+					kdsd1: kdsd1,
+					kdsd2: kdsd2,
+					kdsd3: kdsd3,
+					kdsd4: kdsd4,
+					kdsd5: kdsd5,
+					kdsd6: kdsd6,
+					uraian_rekening: '4.2.1.1.2 - Dana Transfer Umum-Dana Alokasi Umum (DAU)',
+					kdrek: '4.2.1.1.2',
+					uraian: nama_sd_sipd,
+					kategori: 2
+				};
+				var kd_sipd = [];
+				kdsd.map(function(b, i){
+					kd_sipd.push(+b);
+				});
+				kd_sipd = kd_sipd.join('.');
+				if(sd_fmis[kd_sipd] || kdsd3==''){
+					data_post['kdsd1'] = 1;
+            		data_post['kdsd2'] = 1;
+            		data_post['kdsd3'] = 1;
+            		data_post['kdsd4'] = 1;
+            		data_post['kdsd5'] = 1;
+            		data_post['kdsd6'] = current_data.id_dana;
+				}
+				pesan_loading('SIMPAN SUMBER DANA "'+nama_sd_sipd+'"', true);
+				// simpan sumber dana
+				relayAjax({
+					url: config.fmis_url+'/parameter/simda-ng/sumber-dana/save',
+					type: "post",
+		            data: data_post,
+		            success: function(res){
+	            		resolve_reduce(nextData);
+		            },
+		            error: function(e){
+		            	console.log('Error save sumber dana!', e, this.data);
+		            }
+				});
     		})
             .catch(function(e){
                 console.log(e);
@@ -4524,8 +4621,12 @@ function singkronisasi_sumberdana(res){
     }, Promise.resolve(sd_sipd_new[last]))
     .then(function(data_last){
     	console.log('sd_belum_ada', sd_belum_ada, nama_sd_belum_ada);
-    	hide_loading();
-		alert('Nama sumber dana yang ada di WP-SIPD tapi belum ada di FMIS '+nama_sd_belum_ada.length+' dari total '+res.total+' sumberdana! '+nama_sd_belum_ada.join(', '));
+    	if(sd_sipd_new >= 1){
+    		mapping_sumberdana();
+    	}else{
+	    	hide_loading();
+			alert('Berhasil singkronisasi sumberdana. Nama sumber dana yang ada di WP-SIPD tapi belum ada di FMIS '+nama_sd_belum_ada.length+' dari total '+res.total+' sumberdana! '+nama_sd_belum_ada.join(', '));
+    	}
 	});
 }
 
