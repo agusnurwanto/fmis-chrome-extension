@@ -123,11 +123,26 @@ function singkronisasi_ssh(options){
 				|| b.kelompok == 9
 			){
 				var golongan = b.kode_gol_standar_harga;
-				var kelompok = b.kode_kel_standar_harga;
-				var sub_kelompok = b.nama_sub_kel_standar_harga;
-				var nama_subkelompok = b.nama_sub_kel_standar_harga;
-				var item_ssh = b.nama_standar_harga;
-				var nama_item = b.nama_standar_harga;
+				var kelompok = replace_string(b.kode_kel_standar_harga, true, true).replace(/&/g, 'dan');
+				if(!kelompok || kelompok==''){
+					kelompok = 'kosong';
+				}
+				var sub_kelompok = replace_string(b.nama_sub_kel_standar_harga, true, true).replace(/&/g, 'dan');
+				if(!sub_kelompok || sub_kelompok==''){
+					sub_kelompok = 'kosong';
+				}
+				var nama_subkelompok = replace_string(b.nama_sub_kel_standar_harga, true, true).replace(/&/g, 'dan');
+				if(!nama_subkelompok || nama_subkelompok==''){
+					nama_subkelompok = 'kosong';
+				}
+				var item_ssh = replace_string(b.nama_standar_harga, true, true).replace(/&/g, 'dan');
+				if(!item_ssh || item_ssh==''){
+					item_ssh = 'kosong';
+				}
+				var nama_item = replace_string(b.nama_standar_harga, true, true).replace(/&/g, 'dan');
+				if(!nama_item || nama_item==''){
+					nama_item = 'kosong';
+				}
 			}else{
 				var rek = b.kode_kel_standar_harga.split('.');
 				var golongan = rek[0]+'.'+rek[1]+'.'+rek[2]+'.'+rek[3]+'.'+rek[4];
