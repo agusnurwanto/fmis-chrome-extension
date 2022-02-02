@@ -651,9 +651,11 @@ function singkronisasi_ssh_item(data_ssh, cb, options){
 														if(cek == false){
 															no_urut_item++;
 															var keterangan_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.spek, true).substring(0, 250).trim();;
-															var satuan_asli = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.satuan.toLowerCase().trim();
-															if(satuan_asli == ''){
+															var satuan_asli = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.satuan;
+															if(!satuan_asli || satuan_asli == ''){
 																satuan_asli = 'kosong';
+															}else{
+																satuan_asli = satuan_asli.toLowerCase().trim();
 															}
 															var satuan = satuan_asli+' ('+satuan_asli+')';
 															sendDataSatuan.push(new Promise(function(resolve3, reject3){
@@ -1010,8 +1012,16 @@ function replace_string(text, no_lowercase=false, no_replace=false){
 		text = jQuery('<textarea />').html(text.toLowerCase().trim()).text();	
 	}
 	if(!no_replace){
+		text = text.replace(/⁰/g, '0');
+		text = text.replace(/⁹/g, '9');
+		text = text.replace(/⁸/g, '8');
+		text = text.replace(/⁷/g, '7');
+		text = text.replace(/⁶/g, '6');
+		text = text.replace(/⁵/g, '5');
+		text = text.replace(/⁴/g, '4');
 		text = text.replace(/³/g, '3');
 		text = text.replace(/²/g, '2');
+		text = text.replace(/¹/g, '1');
 		text = text.replace(/'/g, '`');
 	}
 	return text.trim();
