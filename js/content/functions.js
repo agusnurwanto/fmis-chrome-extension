@@ -2950,29 +2950,33 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 							var id_urusan = jQuery(b).attr('value');
 							if(id_urusan != ''){
 								var nama_urusan = jQuery(b).text().split(' ');
-								nama_urusan.shift();
+								var kode = nama_urusan.shift();
 								nama_urusan = nama_urusan.join(' ');
 								urusan_all[nama_urusan] = { 
 									id: id_urusan,
+									kode_urusan: kode,
 									bidang: {} 
 								};
 								sendData.push(new Promise(function(resolve, reduce){
 									// get master all bidang by id urusan
 									relayAjax({
-										url: config.fmis_url+'/parameter/unit-organisasi/select-bidang/'+id_urusan+'?nama_urusan='+nama_urusan+'&id_urusan='+id_urusan,
+										url: config.fmis_url+'/parameter/unit-organisasi/select-bidang/'+id_urusan+'?nama_urusan='+nama_urusan+'&id_urusan='+id_urusan+'&kode_urusan='+kode,
 										success: function(bidang){
 											var nama_urusan = replace_string(this.url.split('nama_urusan=')[1].split('&')[0], true, true);
 											var id_urusan = this.url.split('id_urusan=')[1].split('&')[0];
+											var kode_urusan = this.url.split('kode_urusan=')[1].split('&')[0];
 											for( var bb in bidang.bidang){
 												if(bb != ''){
 													var nama_bidang = bidang.bidang[bb].split(' ');
-													nama_bidang.shift();
+													var _kode_bidang = nama_bidang.shift();
+													var kode_bidang = kode_urusan+_kode_bidang.replace('.', '');
 													nama_bidang = nama_bidang.join(' ');
 													urusan_all[nama_urusan].bidang[bb] = nama_bidang;
-													bidang_all[nama_bidang] = {
+													bidang_all[kode_bidang] = {
 														id_bidang: bb,
 														nama_bidang: nama_bidang,
 														id_urusan: id_urusan,
+														kode_bidang: kode_bidang,
 														nama_urusan: nama_urusan
 													};
 												}
@@ -2994,32 +2998,30 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 										b.isskpd == 1
 										&& unit_fmis[b.nama_skpd]
 									){
+										// insert penunjang urusan bidang
 										var cek_exist = false;
 										var cek_exist_skpd = false;
-										var nama_bidang_sipd = b.bidur1.split(' ');
-										nama_bidang_sipd.shift();
-										nama_bidang_sipd = nama_bidang_sipd.join(' ');
+										var kode_bidang_sipd = '0.0';
 										bidur.data.map(function(bb, ii){
-											if(bb.bidang.nmbidang == nama_bidang_sipd){
+											if(bb.kdurbid == kode_bidang_sipd){
 												cek_exist = true;
+												bb.skpd_pelaksana.map(function(bbb, iii){
+													console.log('skpd_pelaksana', bbb);
+													if(bbb.skpd.kdskpd == b.id_skpd){
+														cek_exist_skpd = true;
+													}
+												});
 											}
-											bb.skpd_pelaksana.map(function(bbb, iii){
-												if(bbb.skpd.kdskpd == b.id_skpd){
-													cek_exist_skpd = true;
-												}
-											});
 										});
 										if(
-											(
-												!cek_exist
-												|| !cek_exist_skpd
-											)
-											&& bidang_all[nama_bidang_sipd]
+											!cek_exist_skpd
+											&& bidang_all[kode_bidang_sipd]
 										){
 											var data_bidur = {
-												urusan: bidang_all[nama_bidang_sipd].id_urusan,
-												bidang: bidang_all[nama_bidang_sipd].id_bidang,
-												nama_bidang: nama_bidang_sipd,
+												kode_bidang: kode_bidang_sipd,
+												urusan: bidang_all[kode_bidang_sipd].id_urusan,
+												bidang: bidang_all[kode_bidang_sipd].id_bidang,
+												nama_bidang: bidang_all[kode_bidang_sipd].nama_bidang,
 												id_skpd: b.id_skpd,
 												id_skpd_fmis: unit_fmis[b.nama_skpd].id,
 												skpd: b,
@@ -3031,12 +3033,168 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 											data_bidur_skpd.push(data_bidur);
 											pilih_bidur += ''
 												+'<tr>'
-													+'<td><input type="checkbox" value="'+b.id_skpd+'"></td>'
-													+'<td>'+b.bidur1+'</td>'
+													+'<td><input type="checkbox" value="'+kode_bidang_sipd+'-'+b.id_skpd+'"></td>'
+													+'<td>'+bidang_all[kode_bidang_sipd].nama_bidang+'</td>'
 													+'<td>'+b.nama_skpd+'</td>'
 												+'</tr>';
-										}else if(!bidang_all[nama_bidang_sipd]){
-											console.log('Bidang SIPD tidak ditemukan', nama_bidang_sipd, bidang_all);
+										}else if(!bidang_all[kode_bidang_sipd]){
+											console.log('Bidang SIPD tidak ditemukan', kode_bidang_sipd, bidang_all);
+										}
+
+										// cek bidur1
+										if(b.bidur1){
+											var cek_exist = false;
+											var cek_exist_skpd = false;
+											var _kode_bidang_sipd = b.bidur1.split(' ');
+											var kode_bidang_sipd = [];
+											_kode_bidang_sipd[0].split('.').map(function(c, n){
+												kode_bidang_sipd.push(+c);
+											});
+											kode_bidang_sipd = kode_bidang_sipd.join('.');
+											bidur.data.map(function(bb, ii){
+												if(bb.kdurbid == kode_bidang_sipd){
+													cek_exist = true;
+													bb.skpd_pelaksana.map(function(bbb, iii){
+														if(bbb.skpd.kdskpd == b.id_skpd){
+															cek_exist_skpd = true;
+														}
+													});
+												}
+											});
+											if(
+												(
+													!cek_exist
+													|| !cek_exist_skpd
+												)
+												&& bidang_all[kode_bidang_sipd]
+											){
+												var data_bidur = {
+													kode_bidang: kode_bidang_sipd,
+													urusan: bidang_all[kode_bidang_sipd].id_urusan,
+													bidang: bidang_all[kode_bidang_sipd].id_bidang,
+													nama_bidang: bidang_all[kode_bidang_sipd].nama_bidang,
+													id_skpd: b.id_skpd,
+													id_skpd_fmis: unit_fmis[b.nama_skpd].id,
+													skpd: b,
+													bidur_exist: false
+												};
+												if(cek_exist){
+													data_bidur.bidur_exist = true
+												}
+												data_bidur_skpd.push(data_bidur);
+												pilih_bidur += ''
+													+'<tr>'
+														+'<td><input type="checkbox" value="'+kode_bidang_sipd+'-'+b.id_skpd+'"></td>'
+														+'<td>'+bidang_all[kode_bidang_sipd].nama_bidang+'</td>'
+														+'<td>'+b.nama_skpd+'</td>'
+													+'</tr>';
+											}else if(!bidang_all[kode_bidang_sipd]){
+												console.log('Bidang SIPD tidak ditemukan', kode_bidang_sipd, bidang_all);
+											}
+										}
+
+										// cek bidur2
+										if(b.bidur2){
+											var cek_exist = false;
+											var cek_exist_skpd = false;
+											var _kode_bidang_sipd = b.bidur2.split(' ');
+											var kode_bidang_sipd = [];
+											_kode_bidang_sipd[0].split('.').map(function(c, n){
+												kode_bidang_sipd.push(+c);
+											});
+											kode_bidang_sipd = kode_bidang_sipd.join('.');
+											bidur.data.map(function(bb, ii){
+												if(bb.kdurbid == kode_bidang_sipd){
+													cek_exist = true;
+													bb.skpd_pelaksana.map(function(bbb, iii){
+														if(bbb.skpd.kdskpd == b.id_skpd){
+															cek_exist_skpd = true;
+														}
+													});
+												}
+											});
+											if(
+												(
+													!cek_exist
+													|| !cek_exist_skpd
+												)
+												&& bidang_all[kode_bidang_sipd]
+											){
+												var data_bidur = {
+													kode_bidang: kode_bidang_sipd,
+													urusan: bidang_all[kode_bidang_sipd].id_urusan,
+													bidang: bidang_all[kode_bidang_sipd].id_bidang,
+													nama_bidang: bidang_all[kode_bidang_sipd].nama_bidang,
+													id_skpd: b.id_skpd,
+													id_skpd_fmis: unit_fmis[b.nama_skpd].id,
+													skpd: b,
+													bidur_exist: false
+												};
+												if(cek_exist){
+													data_bidur.bidur_exist = true
+												}
+												data_bidur_skpd.push(data_bidur);
+												pilih_bidur += ''
+													+'<tr>'
+														+'<td><input type="checkbox" value="'+kode_bidang_sipd+'-'+b.id_skpd+'"></td>'
+														+'<td>'+bidang_all[kode_bidang_sipd].nama_bidang+'</td>'
+														+'<td>'+b.nama_skpd+'</td>'
+													+'</tr>';
+											}else if(!bidang_all[kode_bidang_sipd]){
+												console.log('Bidang SIPD tidak ditemukan', kode_bidang_sipd, bidang_all);
+											}
+										}
+
+										// cek bidur3
+										if(b.bidur3){
+											var cek_exist = false;
+											var cek_exist_skpd = false;
+											var _kode_bidang_sipd = b.bidur3.split(' ');
+											var kode_bidang_sipd = [];
+											_kode_bidang_sipd[0].split('.').map(function(c, n){
+												kode_bidang_sipd.push(+c);
+											});
+											kode_bidang_sipd = kode_bidang_sipd.join('.');
+											bidur.data.map(function(bb, ii){
+												if(bb.kdurbid == kode_bidang_sipd){
+													cek_exist = true;
+													bb.skpd_pelaksana.map(function(bbb, iii){
+														if(bbb.skpd.kdskpd == b.id_skpd){
+															cek_exist_skpd = true;
+														}
+													});
+												}
+											});
+											if(
+												(
+													!cek_exist
+													|| !cek_exist_skpd
+												)
+												&& bidang_all[kode_bidang_sipd]
+											){
+												var data_bidur = {
+													kode_bidang: kode_bidang_sipd,
+													urusan: bidang_all[kode_bidang_sipd].id_urusan,
+													bidang: bidang_all[kode_bidang_sipd].id_bidang,
+													nama_bidang: bidang_all[kode_bidang_sipd].nama_bidang,
+													id_skpd: b.id_skpd,
+													id_skpd_fmis: unit_fmis[b.nama_skpd].id,
+													skpd: b,
+													bidur_exist: false
+												};
+												if(cek_exist){
+													data_bidur.bidur_exist = true
+												}
+												data_bidur_skpd.push(data_bidur);
+												pilih_bidur += ''
+													+'<tr>'
+														+'<td><input type="checkbox" value="'+kode_bidang_sipd+'-'+b.id_skpd+'"></td>'
+														+'<td>'+bidang_all[kode_bidang_sipd].nama_bidang+'</td>'
+														+'<td>'+b.nama_skpd+'</td>'
+													+'</tr>';
+											}else if(!bidang_all[kode_bidang_sipd]){
+												console.log('Bidang SIPD tidak ditemukan', kode_bidang_sipd, bidang_all);
+											}
 										}
 									}
 								});
@@ -4356,9 +4514,14 @@ function singkronisasi_bidur_skpd_rpjm_modal(){
 	jQuery('#konfirmasi-bidur-skpd tbody tr input[type="checkbox"]').map(function(i, b){
 		var cek = jQuery(b).is(':checked');
 		if(cek){
-			var id_skpd = jQuery(b).attr('value');
+			var val = jQuery(b).attr('value').split('-');
+			var kode_bidang = val[0];
+			var id_skpd = val[1];
 			data_bidur_skpd.map(function(bb, ii){
-				if(bb.id_skpd == id_skpd){
+				if(
+					bb.kode_bidang == kode_bidang
+					&& bb.id_skpd == id_skpd
+				){
 					skpd_selected.push(bb);
 				}
 			});
