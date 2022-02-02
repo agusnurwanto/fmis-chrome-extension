@@ -21,7 +21,8 @@
 	"content_scripts": [
 		{
 			"matches": [
-				"https://fmis.bpkp.go.id/*"
+				"https://fmis.bpkp.go.id/*",
+				"https://*.fmis.id/*"
 			],
 			"css": [
 				"css/content.css",

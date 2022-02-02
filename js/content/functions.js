@@ -4646,3 +4646,123 @@ function mapping_rek_fmis(rek){
 	alert(rek.message);
 	hide_loading();
 }
+
+function mapping_sub_kegiatan(){
+	var bidur = [];
+	var program = [];
+	var kegiatan = [];
+	var sub_kegiatan = [];
+	jQuery('li[data-type="bidang"]').map(function(i, b){ 
+		bidur.push({
+			bidang: jQuery(b).attr('data-info'),
+			code: jQuery(b).attr('data-code')
+		});
+	});
+	var last = bidur.length - 1;
+	bidur.reduce(function(sequence, nextData){
+        return sequence.then(function(current_data){
+    		return new Promise(function(resolve_reduce, reject_reduce){
+    			pesan_loading('GET PROGRAM DARI BIDANG '+current_data.bidang, true);
+				relayAjax({
+					url: config.fmis_url+'/parameter/program-kegiatan/datatable?table=tabel-program&code='+current_data.code,
+			        success: function(res){
+			    		res.data.map(function(b, i){
+			    			program.push({
+								param: {
+									data: {
+					    				bidang: current_data.bidang,
+					    				program: b.nmprogram,
+					    				code: b.code
+					    			}
+								},
+								cb: function(ret, ret_cb){
+									pesan_loading('GET KEGIATAN DARI PROGRAM '+ret.data.program, true);
+									relayAjax({
+										url: config.fmis_url+'/parameter/program-kegiatan/datatable?table=tabel-kegiatan&code='+ret.data.code,
+								        success: function(res){
+								    		res.data.map(function(b, i){
+								    			kegiatan.push({
+								    				param: {
+														data: {
+										    				bidang: ret.data.bidang,
+								    						program: ret.data.program,
+										    				kegiatan: b.nmkegiatan,
+										    				code: b.code
+										    			}
+													},
+													cb: function(ret2, ret_cb2){
+														pesan_loading('GET SUB KEGIATAN DARI KEGIATAN '+ret2.data.kegiatan, true);
+														relayAjax({
+															url: config.fmis_url+'/parameter/program-kegiatan/datatable?table=tabel-sub-kegiatan&code='+ret2.data.code,
+													        success: function(res){
+													    		res.data.map(function(b, i){
+													    			sub_kegiatan.push({
+													    				bidang: ret2.data.bidang,
+											    						program: ret2.data.program,
+													    				kegiatan: ret2.data.kegiatan,
+													    				sub_kegiatan: b.nmsubkegiatan,
+													    				code: b.code
+													    			})
+													    		});
+													    		ret_cb2();
+													        }
+														});
+													}
+												});
+
+								    		});
+								    		ret_cb();
+								        }
+									});
+								}
+							});
+			    		});
+			    		resolve_reduce(nextData);
+			        }
+				});
+			})
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        })
+        .catch(function(e){
+            console.log(e);
+            return Promise.resolve(nextData);
+        });
+    }, Promise.resolve(bidur[last]))
+    .then(function(){
+    	return new Promise(function(resolve, reduce){
+    		console.log('list program', program);
+    		reduce_promise(program, function(){
+    			console.log('list kegiatan', kegiatan);
+	    		reduce_promise(kegiatan, function(){
+	    			resolve();
+	    		});
+    		});
+    	});
+    })
+    .then(function(){
+    	console.log('list sub_kegiatan', sub_kegiatan);
+    	pesan_loading('SEND SUB KEGIATAN KE WP-SIPD', true);
+    	var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'mapping_sub_kegiatan_fmis',
+						tahun_anggaran: config.tahun_anggaran,
+						sub_kegiatan: sub_kegiatan,
+						api_key: config.api_key
+					},
+	    			return: true
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
+	});
+}

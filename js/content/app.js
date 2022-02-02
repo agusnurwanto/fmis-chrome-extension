@@ -247,6 +247,16 @@ if(current_url.indexOf('parameter/rekening') != -1){
     jQuery('#delete-skpd-all').on('click', function(){
     	delete_skpd_all_fmis();
     });
+}else if(current_url.indexOf('/parameter/program-kegiatan') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-sub-kegiatan">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Mapping Data Sub Kegiatan ke WP-SIPD'
+    +'</button>';
+    jQuery('ol.breadcrumb').parent().append(btn);
+    jQuery('#singkron-sub-kegiatan').on('click', function(){
+		show_loading();
+		mapping_sub_kegiatan();
+    });
 }else if(current_url.indexOf('/parameter/simda-ng/sumber-dana') != -1){
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-sumber-dana">'
