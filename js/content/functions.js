@@ -3283,7 +3283,7 @@ function singkronisasi_program(sub_keg){
 												success: function(sub_kegiatan){
 													program_fmis[current_data.uraian].kegiatan[current_data2.uraian].sub_kegiatan = sub_kegiatan.data;
 													sub_kegiatan.data.map(function(b, i){
-														sub_keg_fmis[b.uraian] = b;
+														sub_keg_fmis[b.uraian.trim().toLowerCase()] = b;
 													});
 													resolve_reduce2(nextData2);
 												}
@@ -3323,7 +3323,7 @@ function singkronisasi_program(sub_keg){
 					sub_giat.shift();
 					sub_giat = sub_giat.join(' ');
 					// cek jika sub giat belum ada di fmis maka ditampilkan
-					if(!sub_keg_fmis[sub_giat]){
+					if(!sub_keg_fmis[sub_giat.trim().toLowerCase()]){
 						daftar_sub += ''
 							+'<tr>'
 								+'<td><input type="checkbox" value="'+b.kode_sbl+'"></td>'
@@ -3560,13 +3560,14 @@ function get_master_keg_fmis(idrkpdrenjaprogram){
 					master_keg_fmis_global[idrkpdrenjaprogram] = {};
 					jQuery(html_kegiatan).find('table td a').map(function(i, b){
 						var tr = jQuery(b).closest('tr');
-						var nama_kegiatan = tr.find('td').eq(1).text();
+						var nama_kegiatan = tr.find('td').eq(1).text().trim();
 						var id_kegiatan = jQuery(b).attr('data-idkegiatan');
 						var data_keg = {
 							id: id_kegiatan,
 							nama: nama_kegiatan
 						}
-						master_keg_fmis_global[idrkpdrenjaprogram][nama_kegiatan] = data_keg;
+						// keyword nama kegiatan dibuat lowercase agar mudah dicari
+						master_keg_fmis_global[idrkpdrenjaprogram][nama_kegiatan.toLowerCase()] = data_keg;
 					});
 					resolve(master_keg_fmis_global[idrkpdrenjaprogram]);
 				}
@@ -3595,11 +3596,12 @@ function cek_insert_kegiatan_fmis(program, sub_kegiatan_filter_program){
 			        		return new Promise(function(resolve_reduce, reject_reduce){
 			        			// cek proses kegiatan hanya yang nama programnya sama
 			        			if(current_data.nama_program == program.uraian){
+			        				current_data.nama_giat = current_data.nama_giat.toLowerCase();
 			        				// cek jika kegiatan sipd tidak ada di master kegiatan fmis
 									if(master_kegiatan[current_data.nama_giat]){
 										var cek_exist = false;
 										kegiatan_exist.data.map(function(b, i){
-											if(b.uraian == current_data.nama_giat){
+											if(b.uraian.toLowerCase() == current_data.nama_giat){
 												cek_exist = true;
 											}
 											if(kdurut <= +b.kdurut){
@@ -3615,7 +3617,7 @@ function cek_insert_kegiatan_fmis(program, sub_kegiatan_filter_program){
 				        						_token: _token,
 				        						kdurut: kdurut,
 				        						idkegiatan: master_kegiatan[current_data.nama_giat].id,
-				        						uraian: current_data.nama_giat,
+				        						uraian: master_kegiatan[current_data.nama_giat].nama,
 				        						pagu_tahun1: '0',
 				        						pagu_tahun2: '0',
 				        						pagu_tahun3: '0'
@@ -3676,13 +3678,13 @@ function get_master_sub_keg_fmis(idrkpdrenjakegiatan){
 					master_sub_keg_fmis_global[idrkpdrenjakegiatan] = {};
 					jQuery(html_kegiatan).find('table td a').map(function(i, b){
 						var tr = jQuery(b).closest('tr');
-						var nama_sub_kegiatan = tr.find('td').eq(1).text();
+						var nama_sub_kegiatan = tr.find('td').eq(1).text().trim();
 						var id_sub_kegiatan = jQuery(b).attr('data-idsubkegiatan');
 						var data_sub_keg = {
 							id: id_sub_kegiatan,
 							nama: nama_sub_kegiatan
 						}
-						master_sub_keg_fmis_global[idrkpdrenjakegiatan][nama_sub_kegiatan] = data_sub_keg;
+						master_sub_keg_fmis_global[idrkpdrenjakegiatan][nama_sub_kegiatan.toLowerCase()] = data_sub_keg;
 					});
 					resolve(master_sub_keg_fmis_global[idrkpdrenjakegiatan]);
 				}
@@ -3710,10 +3712,11 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 			            return sequence.then(function(current_data){
 			        		return new Promise(function(resolve_reduce, reject_reduce){
 			        			// cek proses kegiatan hanya yang nama programnya sama
-			        			if(current_data.nama_giat == kegiatan.uraian){
+			        			if(current_data.nama_giat == kegiatan.uraian.toLowerCase()){
 									var nama_sub_giat = current_data.nama_sub_giat.split(' ');
 									nama_sub_giat.shift();
 									nama_sub_giat = nama_sub_giat.join(' ');
+									nama_sub_giat = nama_sub_giat.trim().toLowerCase();
 			        				// cek jika kegiatan sipd tidak ada di master kegiatan fmis
 									if(master_sub_kegiatan[nama_sub_giat]){
 										var cek_exist = false;
@@ -3734,7 +3737,7 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 				        						_token: _token,
 				        						kdurut: kdurut,
 				        						idsubkegiatan: master_sub_kegiatan[nama_sub_giat].id,
-				        						uraian: nama_sub_giat,
+				        						uraian: master_sub_kegiatan[nama_sub_giat].nama,
 				        						pagu_tahun1: '0',
 				        						pagu_tahun2: '0',
 				        						pagu_tahun3: '0',
