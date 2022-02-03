@@ -3331,6 +3331,14 @@ function singkronisasi_program(sub_keg){
 								+'<td>'+b.nama_giat+'</td>'
 								+'<td>'+b.nama_sub_giat+'</td>'
 							+'</tr>';
+					}else{
+						daftar_sub += ''
+							+'<tr>'
+								+'<td><input type="checkbox" value="'+b.kode_sbl+'"> <b>EXISTING</b></td>'
+								+'<td>'+b.nama_program+'</td>'
+								+'<td>'+b.nama_giat+'</td>'
+								+'<td>'+b.nama_sub_giat+'</td>'
+							+'</tr>';
 					}
 				});
 				jQuery('#konfirmasi-program tbody').html(daftar_sub);
@@ -3345,7 +3353,7 @@ function singkronisasi_program(sub_keg){
 						jQuery('#mod-program-rkpd').parent().show();
 						var table = jQuery('#konfirmasi-program');
 						table.attr('data-singkron-rka', '');
-						run_script('jQuery("#konfirmasi-program").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]]});');
+						run_script('jQuery("#konfirmasi-program").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]], "columnDefs": [{ "orderable": false, "targets": 0 } ]});');
 						run_script('jQuery("#mod-konfirmasi-program").modal("show")');
 						hide_loading();
 					}
@@ -3704,6 +3712,8 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 			url: config.fmis_url+'/perencanaan-tahunan/renja-murni/subkegiatan/data/'+kegiatan.idrkpdrenjakegiatan,
 			success: function(sub_kegiatan_exist){
 				var kdurut = 0;
+				var kdurut_exist = 0;
+				var idrkpdrenjasubkegiatan = 0;
 				get_master_sub_keg_fmis(kegiatan.idrkpdrenjakegiatan)
 				.then(function(master_sub_kegiatan){
 					var cek_sub_kegiatan = {};
@@ -3721,8 +3731,10 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 									if(master_sub_kegiatan[nama_sub_giat]){
 										var cek_exist = false;
 										sub_kegiatan_exist.data.map(function(b, i){
-											if(b.uraian == nama_sub_giat){
+											if(b.uraian.trim().toLowerCase() == nama_sub_giat){
 												cek_exist = true;
+												kdurut_exist = b.kdurut;
+												idrkpdrenjasubkegiatan = b.idrkpdrenjasubkegiatan;
 											}
 											if(kdurut <= +b.kdurut){
 												kdurut = +b.kdurut;
@@ -3730,19 +3742,19 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 										});
 										current_data.kegiatan_fmis = kegiatan;
 										sub_kegiatan_filter.push(current_data);
+			        					var data_post = {
+			        						_token: _token,
+			        						idsubkegiatan: master_sub_kegiatan[nama_sub_giat].id,
+			        						uraian: master_sub_kegiatan[nama_sub_giat].nama,
+			        						pagu_tahun1: current_data.pagu_n_depan,
+			        						pagu_tahun2: current_data.pagu_keg,
+			        						pagu_tahun3: current_data.pagu_n_lalu
+			        					};
 										if(!cek_exist && !cek_sub_kegiatan[nama_sub_giat]){
 											cek_sub_kegiatan[nama_sub_giat] = current_data;
 						        			kdurut++;
-				        					var data_post = {
-				        						_token: _token,
-				        						kdurut: kdurut,
-				        						idsubkegiatan: master_sub_kegiatan[nama_sub_giat].id,
-				        						uraian: master_sub_kegiatan[nama_sub_giat].nama,
-				        						pagu_tahun1: '0',
-				        						pagu_tahun2: '0',
-				        						pagu_tahun3: '0',
-				        						'table-pilih-subkegiatan_length': 10
-				        					};
+				        					data_post.kdurut = kdurut;
+				        					data_post['table-pilih-subkegiatan_length'] = 10;
 				        					pesan_loading('SIMPAN SUB KEGIATAN '+nama_sub_giat, true);
 				        					relayAjax({
 												url: config.fmis_url+'/perencanaan-tahunan/renja-murni/subkegiatan/create/'+kegiatan.idrkpdrenjakegiatan,
@@ -3755,8 +3767,22 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 									            	console.log('Error kegiatan!', e, this.data);
 									            }
 											});
+				        				}else if(cek_exist && !cek_sub_kegiatan[nama_sub_giat]){
+				        					data_post.kdurut = kdurut_exist;
+				        					pesan_loading('UPDATE SUB KEGIATAN '+nama_sub_giat, true);
+				        					relayAjax({
+												url: config.fmis_url+'/perencanaan-tahunan/renja-murni/subkegiatan/update/'+idrkpdrenjasubkegiatan,
+												type: "post",
+									            data: data_post,
+									            success: function(res){
+									            	resolve_reduce(nextData);
+									            },
+									            error: function(e){
+									            	console.log('Error kegiatan!', e, this.data);
+									            }
+											});
 				        				}else{
-				        					console.log('sub kegiatan sudah ada di fmis', current_data, sub_kegiatan_exist.data);
+				        					console.log('sub kegiatan sudah ada di fmis double', current_data, sub_kegiatan_exist.data);
 											resolve_reduce(nextData);
 				        				}
 									}else{
