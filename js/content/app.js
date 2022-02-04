@@ -420,7 +420,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	                  	+'</table>'
 	                +'</div>'
 	                +'<div class="modal-footer">'
-	                    +'<button type="button" class="btn btn-success" id="singkron_program_modal">Sinkronisasi</button>'
+	                    +'<button type="button" class="btn btn-success" id="singkron_program_modal">Proses</button>'
 	                    +'<button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>'
 	                +'</div>'
 	            +'</div>'
@@ -434,13 +434,18 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	jQuery('#singkron_program_modal').on('click', function(){
 		var table = jQuery('#konfirmasi-program');
 		var idkegiatan = table.attr('data-singkron-rka');
-		if(idkegiatan != ''){
+		if(idkegiatan != '' && idkegiatan.indexOf('delete-') != -1){
+			delete_rka_modal(idkegiatan.split('-')[1]);
+		}else if(idkegiatan != ''){
 			singkronisasi_rka_modal(idkegiatan);
 		}else{
 			singkronisasi_program_modal();
 		}
 	});
 	var btn = ''
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 10px; float: right;" id="delete-rka">'
+        +'<i class="fa fa-trash fa-fw"></i> Delete RKA'
+    +'</button>'
 	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 10px; float: right;" id="singkron-rka">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi RKA WP-SIPD di tab Sub Kegiatan'
     +'</button>'
@@ -448,6 +453,21 @@ if(current_url.indexOf('parameter/rekening') != -1){
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Program WP-SIPD di tab Program'
     +'</button>';
     jQuery('.card-header.bg-light').prepend(btn);
+    jQuery('#delete-rka').on('click', function(){
+		show_loading();
+    	var tambah_sub_kegiatan = jQuery('a.btn-sm[title="Tambah Sub Kegiatan"]');
+		if(tambah_sub_kegiatan.length >= 1){
+			var keg_fmis = jQuery('button.previous-tab[data-tab-target="#kegiatan-tab"]').closest('tr').find('td').eq(2).text().split(' ');
+			keg_fmis.shift();
+			keg_fmis = keg_fmis.join(' ');
+			if(confirm('Apakah anda yakin untuk menghapus data RKA dari kegiatan '+keg_fmis+'?')){
+	    		delete_rka();
+	    	}
+		}else{
+			hide_loading();
+			alert('Masuk ke tab Sub Kegiatan dulu!');
+		}
+    });
     jQuery('#singkron-program').on('click', function(){
     	if(confirm('Apakah anda yakin untuk mengsingkronkan data program RENJA dari WP-SIPD?')){
 			show_loading();

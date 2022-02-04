@@ -3351,6 +3351,7 @@ function singkronisasi_program(sub_keg){
 						var html_program_rkpd = form.find('select[name="idrkpdranwalprogram"]').html();
 						jQuery('#mod-program-rkpd').html(html_program_rkpd);
 						jQuery('#mod-program-rkpd').parent().show();
+						jQuery('#mod-konfirmasi-program .modal-title').text('Data Sub Kegiatan dari WP-SIPD yang akan disingkronisasi ke FMIS');
 						var table = jQuery('#konfirmasi-program');
 						table.attr('data-singkron-rka', '');
 						run_script('jQuery("#konfirmasi-program").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]], "columnDefs": [{ "orderable": false, "targets": 0 } ]});');
@@ -3403,6 +3404,7 @@ function singkronisasi_rka(sub_keg){
 			});
 			jQuery('#konfirmasi-program tbody').html(daftar_sub);
 			jQuery('#mod-program-rkpd').parent().hide();
+			jQuery('#mod-konfirmasi-program .modal-title').text('Singkronisasi data RKA per sub kegiatan');
 			var table = jQuery('#konfirmasi-program');
 			table.attr('data-singkron-rka', idkegiatan);
 			run_script('jQuery("#konfirmasi-program").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]]});');
@@ -3410,6 +3412,170 @@ function singkronisasi_rka(sub_keg){
 			hide_loading();
 		}
 	});
+}
+
+function delete_rka(sub_keg){
+	window.sub_keg_fmis_delete = {};
+	var url_tambah_sub_kegiatan = jQuery('a.btn-sm[title="Tambah Sub Kegiatan"]').attr('href');
+	var keg_fmis = jQuery('button.previous-tab[data-tab-target="#kegiatan-tab"]').closest('tr').find('td').eq(2).text().split(' ');
+	keg_fmis.shift();
+	keg_fmis = keg_fmis.join(' ');
+	var program_fmis = jQuery('button.previous-tab[data-tab-target="#program-tab"]').closest('tr').find('td').eq(2).text().split(' ');
+	program_fmis.shift();
+	program_fmis = program_fmis.join(' ');
+	var idkegiatan = url_tambah_sub_kegiatan.split('/').pop();
+	pesan_loading('GET SUB KEGIATAN EXISTING UNTUK IDKEGIATAN = '+idkegiatan, true);
+	// get sub kegiatan fmis
+	relayAjax({
+		url: config.fmis_url+'/perencanaan-tahunan/renja-murni/subkegiatan/data/'+idkegiatan,
+		success: function(sub_kegiatan){
+			var daftar_sub = '';
+			sub_kegiatan.data.map(function(b, i){
+				var keyword = b.idrkpdrenjakegiatan+'-'+b.idrkpdrenjasubkegiatan+'-'+b.idsubkegiatan;
+				sub_keg_fmis_delete[keyword] = b;
+				daftar_sub += ''
+					+'<tr>'
+						+'<td><input type="checkbox" value="'+keyword+'"></td>'
+						+'<td>'+program_fmis+'</td>'
+						+'<td>'+keg_fmis+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			});
+			run_script('jQuery("#konfirmasi-program").DataTable().destroy();');
+			jQuery('#mod-konfirmasi-program .modal-title').text('Delete RKA per sub kegiatan');
+			jQuery('#konfirmasi-program tbody').html(daftar_sub);
+			jQuery('#mod-program-rkpd').parent().hide();
+			var table = jQuery('#konfirmasi-program');
+			table.attr('data-singkron-rka', 'delete-'+idkegiatan);
+			run_script('jQuery("#konfirmasi-program").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]]});');
+			run_script('jQuery("#mod-konfirmasi-program").modal("show")');
+			hide_loading();
+		}
+	});
+}
+
+function delete_rka_modal(idkegiatan){
+	show_loading();
+	var sub_kegiatan = [];
+	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
+		var cek = jQuery(b).is(':checked');
+		if(cek){
+			var keyword_selected = jQuery(b).val();
+			for(var keyword in sub_keg_fmis_delete){
+				if(keyword == keyword_selected){
+					sub_kegiatan.push(sub_keg_fmis_delete[keyword]);
+				}
+			}
+		}
+	});
+	if(sub_kegiatan.length >= 1){
+		console.log('delete sub_kegiatan ', sub_kegiatan);
+		var last = sub_kegiatan.length - 1;
+		sub_kegiatan.reduce(function(sequence, nextData){
+            return sequence.then(function(current_data){
+        		return new Promise(function(resolve_reduce, reject_reduce){
+					pesan_loading('GET ALL AKTIVITAS DARI SUBKEGIATAN = '+current_data.uraian, true);
+					relayAjax({
+						url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/data/'+current_data.idrkpdrenjasubkegiatan,
+						success: function(aktivitas_exist){
+							var last2 = aktivitas_exist.data.length - 1;
+							aktivitas_exist.data.reduce(function(sequence2, nextData2){
+					            return sequence2.then(function(aktivitas){
+					        		return new Promise(function(resolve_reduce2, reject_reduce2){
+					        			get_rka_aktivitas(aktivitas.idrkpdrenjaaktivitas)
+										.then(function(data_rka){
+											var last3 = data_rka.length - 1;
+											data_rka.reduce(function(sequence3, nextData3){
+									            return sequence3.then(function(rka){
+									        		return new Promise(function(resolve_reduce3, reject_reduce3){
+									        			pesan_loading('HAPUS RINCIAN = '+rka.uraian_belanja, true);
+									        			var url_delete = rka.action.split('href="')[2].split('"')[0];
+									        			relayAjax({
+															url: url_delete,
+															headers: {"x-csrf-token": _token},
+															type: "post",
+												            success: function(res){
+												            	resolve_reduce3(nextData3);
+												            },
+												            error: function(e){
+												            	console.log('Error hapus rincian!', e, rka);
+												            }
+														});
+									        		})
+									                .catch(function(e){
+									                    console.log(e);
+									                    return Promise.resolve(nextData3);
+									                });
+									            })
+									            .catch(function(e){
+									                console.log(e);
+									                return Promise.resolve(nextData3);
+									            });
+									        }, Promise.resolve(data_rka[last3]))
+									        .then(function(){
+									        	pesan_loading('HAPUS AKTIVITAS = '+aktivitas.uraian, true);
+									        	var url_delete = aktivitas.action.split('href="')[2].split('"')[0];
+							        			relayAjax({
+													url: url_delete,
+													headers: {"x-csrf-token": _token},
+													type: "post",
+										            success: function(res){
+									        			resolve_reduce2(nextData2);
+										            },
+										            error: function(e){
+										            	console.log('Error hapus aktivitas!', e, aktivitas);
+										            }
+												});
+									        });
+										});
+					        		})
+					                .catch(function(e){
+					                    console.log(e);
+					                    return Promise.resolve(nextData2);
+					                });
+					            })
+					            .catch(function(e){
+					                console.log(e);
+					                return Promise.resolve(nextData2);
+					            });
+					        }, Promise.resolve(aktivitas_exist.data[last2]))
+					        .then(function(){
+					        	pesan_loading('HAPUS SUB KEGIATAN = '+current_data.uraian, true);
+					        	var url_delete = current_data.action.split('href="')[3].split('"')[0];
+			        			relayAjax({
+									url: url_delete,
+									headers: {"x-csrf-token": _token},
+									type: "post",
+						            success: function(res){
+					        			resolve_reduce(nextData);
+						            },
+						            error: function(e){
+						            	console.log('Error hapus sub kegiatan!', e, current_data);
+						            }
+								});
+					        });
+						}
+					});
+        		})
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(sub_kegiatan[last]))
+        .then(function(data_last){
+        	alert('berhasil hapus rincian, aktivitas dan sub kegiatan!');
+			hide_loading();
+			run_script('jQuery("#mod-konfirmasi-program").modal("hide")');
+        });
+	}else{
+		alert('Pilih sub kegiatan dulu!');
+		hide_loading();
+	}
 }
 
 function get_id_sub_unit_fmis(idsubkegiatan, id_mapping_skpd, nama_sub_skpd){
