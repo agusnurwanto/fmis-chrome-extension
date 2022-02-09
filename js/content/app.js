@@ -392,8 +392,17 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			});
 		}
     });
-}else if(current_url.indexOf('/perencanaan-tahunan/renja-murni') != -1){
-	console.log('Halaman RENJA Murni');
+}else if(
+	current_url.indexOf('/perencanaan-tahunan/renja-murni') != -1
+	|| current_url.indexOf('/anggaran/rka-opd') != -1
+){
+	window._type_singkronisasi_rka = 'renja-murni';
+	if(current_url.indexOf('/anggaran/rka-opd') != -1){
+		console.log('Halaman RKA OPD');
+		_type_singkronisasi_rka = 'rka-opd';
+	}else{
+		console.log('Halaman RENJA Murni');
+	}
 	var modal_sub_keg = ''
 		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
 	        +'<div class="modal-dialog modal-xl" role="document">'
@@ -475,6 +484,9 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			.then(function(id_skpd_fmis){
 				pesan_loading('GET DATA SUB KEGIATAN DARI WP-SIPD UNTUK ID SKPD = '+id_skpd_fmis, true);
 				var tambah_program = jQuery('a.btn-sm[title="Tambah Program"]');
+				if(_type_singkronisasi_rka == 'rka-opd'){
+					tambah_program = jQuery('a.btn-sm[title="Tambah Program RKA"]');
+				}
 				if(tambah_program.length >= 1){
 					var data = {
 					    message:{

@@ -3249,118 +3249,226 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 	});
 }
 
+function get_list_program(){
+	return new Promise(function(resolve, reject){
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			var sasaran = jQuery(".info-sasaran").text();
+			pesan_loading('GET PROGRAM EXISTING UNTUK SASARAN = '+sasaran, true);
+			var url_tambah_program = jQuery('a.btn-sm[title="Tambah Program RKA"]').attr('href');
+			var code_sasaran = url_tambah_program.split('code=')[1].split('&')[0];
+			// get program fmis
+			relayAjax({
+				url: config.fmis_url+'/anggaran/rka-opd/program/datatable?code='+code_sasaran,
+				success: function(program){
+					return resolve(program);
+				}
+			});
+		}else{
+			var sasaran = jQuery('button[data-tab-target="#sasaran-tab"]').closest('tr').find('td').eq(2).text();
+			pesan_loading('GET PROGRAM EXISTING UNTUK SASARAN = '+sasaran, true);
+			var url_tambah_program = jQuery('a.btn-sm[title="Tambah Program"]').attr('href');
+			var id_sasaran = url_tambah_program.split('/').pop();
+			// get program fmis
+			relayAjax({
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/data/'+id_sasaran,
+				success: function(program){
+					return resolve(program);
+				}
+			});
+		}
+	});
+}
+
+function get_list_kegiatan(options){
+	return new Promise(function(resolve, reject){
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			pesan_loading('GET KEGIATAN EXISTING UNTUK PROGRAM = '+options.nmprogram, true);
+			var code_program = options.action.split('data-code="')[1].split('"')[0];
+			// get program fmis
+			relayAjax({
+				url: config.fmis_url+'/anggaran/rka-opd/kegiatan/datatable?code='+code_program,
+				success: function(kegiatan){
+					return resolve(kegiatan);
+				}
+			});
+		}else{
+			pesan_loading('GET KEGIATAN EXISTING UNTUK PROGRAM = '+options.uraian, true);
+			// get program fmis
+			relayAjax({
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/kegiatan/data/'+options.idrkpdrenjaprogram,
+				success: function(kegiatan){
+					return resolve(kegiatan);
+				}
+			});
+		}
+	});
+}
+
+function get_list_sub_kegiatan(options){
+	return new Promise(function(resolve, reject){
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			pesan_loading('GET SUB KEGIATAN EXISTING UNTUK KEGIATAN = '+options.nmkegiatan, true);
+			var code_kegiatan = options.action.split('data-code="')[1].split('"')[0];
+			relayAjax({
+				url: config.fmis_url+'/anggaran/rka-opd/subkegiatan/datatable?code='+code_kegiatan,
+				success: function(sub_kegiatan){
+					return resolve(sub_kegiatan);
+				}
+			});
+		}else{
+			pesan_loading('GET SUB KEGIATAN EXISTING UNTUK KEGIATAN = '+options.uraian, true);
+			relayAjax({
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/subkegiatan/data/'+options.idrkpdrenjakegiatan,
+				success: function(sub_kegiatan){
+					return resolve(sub_kegiatan);
+				}
+			});
+		}
+	});
+}
+
+function get_list_program_rpjmd(code_sasaran, form_tambah){
+	return new Promise(function(resolve, reject){
+		var form = jQuery(form_tambah);
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			relayAjax({
+				url: config.fmis_url+'/anggaran/rka-opd/program/datatable-rpjmd?code='+code_sasaran,
+				success: function(sub_kegiatan){
+					var html_program_rkpd = '<option value="">Pilih Program</option>';
+					sub_kegiatan.data.map(function(b, i){
+						html_program_rkpd += '<option value="'+b.idrapbdprogram+'">'+b.uraian_program+'</option>';
+					});
+					return resolve(html_program_rkpd);
+				}
+			});
+		}else{
+			var html_program_rkpd = form.find('select[name="idrkpdranwalprogram"]').html();
+			return resolve(html_program_rkpd);
+		}
+	});
+}
+
+function load_tambah_program(){
+	pesan_loading('GET FORM TAMBAH PROGRAM UNTUK MENDAPATKAN PROGRAM RKPD', true);
+	return new Promise(function(resolve, reject){
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			var url_tambah_program = jQuery('a.btn-sm[title="Tambah Program RKA"]').attr('href');
+			var code_sasaran = url_tambah_program.split('code=')[1].split('&')[0];
+			// load form tambah program
+			relayAjax({
+				url: url_tambah_program+'&action=create',
+				success: function(form_tambah){
+					resolve(form_tambah, code_sasaran);
+				}
+			});
+		}else{
+			var url_tambah_program = jQuery('a.btn-sm[title="Tambah Program"]').attr('href');
+			// load form tambah program
+			relayAjax({
+				url: url_tambah_program,
+				success: function(form_tambah){
+					resolve(form_tambah, false);
+				}
+			});
+		}
+	});
+}
+
 function singkronisasi_program(sub_keg){
 	window.sub_keg_renja = sub_keg;
 	var program_fmis = {};
 	var sub_keg_fmis = {};
-	var url_tambah_program = jQuery('a.btn-sm[title="Tambah Program"]').attr('href');
-	var id_sasaran = url_tambah_program.split('/').pop();
-	pesan_loading('GET PROGRAM EXISTING UNTUK IDSASARAN = '+id_sasaran, true);
-	// get program fmis
-	relayAjax({
-		url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/data/'+id_sasaran,
-		success: function(program){
-			var last = program.data.length - 1;
-			program.data.reduce(function(sequence, nextData){
-	            return sequence.then(function(current_data){
-	        		return new Promise(function(resolve_reduce, reject_reduce){
-	        			program_fmis[current_data.uraian] = current_data;
-						pesan_loading('GET KEGIATAN EXISTING UNTUK IDPROGRAM = '+current_data.idrkpdrenjaprogram, true);
-	        			// get kegiatan fmis
-	        			relayAjax({
-							url: config.fmis_url+'/perencanaan-tahunan/renja-murni/kegiatan/data/'+current_data.idrkpdrenjaprogram,
-							success: function(kegiatan){
-								program_fmis[current_data.uraian].kegiatan = {};
-								var last = kegiatan.data.length - 1;
-								kegiatan.data.reduce(function(sequence2, nextData2){
-						            return sequence2.then(function(current_data2){
-						        		return new Promise(function(resolve_reduce2, reject_reduce2){
-						        			program_fmis[current_data.uraian].kegiatan[current_data2.uraian] = current_data2;
-						        			pesan_loading('GET SUB KEGIATAN EXISTING UNTUK IDKEGIATAN = '+current_data2.idrkpdrenjakegiatan, true);
-						        			// get sub kegiatan fmis
-						        			relayAjax({
-												url: config.fmis_url+'/perencanaan-tahunan/renja-murni/subkegiatan/data/'+current_data2.idrkpdrenjakegiatan,
-												success: function(sub_kegiatan){
-													program_fmis[current_data.uraian].kegiatan[current_data2.uraian].sub_kegiatan = sub_kegiatan.data;
-													sub_kegiatan.data.map(function(b, i){
-														sub_keg_fmis[b.uraian.trim().toLowerCase()] = b;
-													});
-													resolve_reduce2(nextData2);
-												}
-											});
-						        		})
-						                .catch(function(e){
-						                    console.log(e);
-						                    return Promise.resolve(nextData2);
-						                });
-						            })
-						            .catch(function(e){
-						                console.log(e);
-						                return Promise.resolve(nextData2);
-						            });
-						        }, Promise.resolve(kegiatan.data[last]))
-						        .then(function(data_last){
-						        	resolve_reduce(nextData);
-						        });
-							}
-						});
-	        		})
-	                .catch(function(e){
-	                    console.log(e);
-	                    return Promise.resolve(nextData);
-	                });
-	            })
-	            .catch(function(e){
-	                console.log(e);
-	                return Promise.resolve(nextData);
-	            });
-	        }, Promise.resolve(program.data[last]))
-	        .then(function(data_last){
-				run_script('jQuery("#konfirmasi-program").DataTable().destroy();');
-				var daftar_sub = '';
-				sub_keg_renja.map(function(b, i){
-					var sub_giat = b.nama_sub_giat.split(' ');
-					sub_giat.shift();
-					sub_giat = sub_giat.join(' ');
-					// cek jika sub giat belum ada di fmis maka ditampilkan
-					if(!sub_keg_fmis[sub_giat.trim().toLowerCase()]){
-						daftar_sub += ''
-							+'<tr>'
-								+'<td><input type="checkbox" value="'+b.kode_sbl+'"></td>'
-								+'<td>'+b.nama_program+'</td>'
-								+'<td>'+b.nama_giat+'</td>'
-								+'<td>'+b.nama_sub_giat+'</td>'
-							+'</tr>';
-					}else{
-						daftar_sub += ''
-							+'<tr>'
-								+'<td><input type="checkbox" value="'+b.kode_sbl+'"> <b>EXISTING</b></td>'
-								+'<td>'+b.nama_program+'</td>'
-								+'<td>'+b.nama_giat+'</td>'
-								+'<td>'+b.nama_sub_giat+'</td>'
-							+'</tr>';
-					}
+	get_list_program()
+	.then(function(program){
+		var last = program.data.length - 1;
+		program.data.reduce(function(sequence, nextData){
+            return sequence.then(function(current_data){
+        		return new Promise(function(resolve_reduce, reject_reduce){
+        			program_fmis[current_data.uraian] = current_data;
+					get_list_kegiatan(current_data)
+					.then(function(kegiatan){
+						program_fmis[current_data.uraian].kegiatan = {};
+						var last = kegiatan.data.length - 1;
+						kegiatan.data.reduce(function(sequence2, nextData2){
+				            return sequence2.then(function(current_data2){
+				        		return new Promise(function(resolve_reduce2, reject_reduce2){
+				        			program_fmis[current_data.uraian].kegiatan[current_data2.uraian] = current_data2;
+				        			get_list_sub_kegiatan(current_data2)
+				        			.then(function(sub_kegiatan){
+										program_fmis[current_data.uraian].kegiatan[current_data2.uraian].sub_kegiatan = sub_kegiatan.data;
+										sub_kegiatan.data.map(function(b, i){
+											sub_keg_fmis[b.uraian.trim().toLowerCase()] = b;
+										});
+										resolve_reduce2(nextData2);
+									});
+				        		})
+				                .catch(function(e){
+				                    console.log(e);
+				                    return Promise.resolve(nextData2);
+				                });
+				            })
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData2);
+				            });
+				        }, Promise.resolve(kegiatan.data[last]))
+				        .then(function(data_last){
+				        	resolve_reduce(nextData);
+				        });
+					});
+        		})
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(program.data[last]))
+        .then(function(data_last){
+			run_script('jQuery("#konfirmasi-program").DataTable().destroy();');
+			var daftar_sub = '';
+			sub_keg_renja.map(function(b, i){
+				var sub_giat = b.nama_sub_giat.split(' ');
+				sub_giat.shift();
+				sub_giat = sub_giat.join(' ');
+				// cek jika sub giat belum ada di fmis maka ditampilkan
+				if(!sub_keg_fmis[sub_giat.trim().toLowerCase()]){
+					daftar_sub += ''
+						+'<tr>'
+							+'<td><input type="checkbox" value="'+b.kode_sbl+'"></td>'
+							+'<td>'+b.nama_program+'</td>'
+							+'<td>'+b.nama_giat+'</td>'
+							+'<td>'+b.nama_sub_giat+'</td>'
+						+'</tr>';
+				}else{
+					daftar_sub += ''
+						+'<tr>'
+							+'<td><input type="checkbox" value="'+b.kode_sbl+'"> <b>EXISTING</b></td>'
+							+'<td>'+b.nama_program+'</td>'
+							+'<td>'+b.nama_giat+'</td>'
+							+'<td>'+b.nama_sub_giat+'</td>'
+						+'</tr>';
+				}
+			});
+			jQuery('#konfirmasi-program tbody').html(daftar_sub);
+			load_tambah_program()
+			.then(function(form_tambah, code_sasaran){
+				get_list_program_rpjmd(code_sasaran, form_tambah)
+				.then(function(html_program_rkpd){
+					jQuery('#mod-program-rkpd').html(html_program_rkpd);
+					jQuery('#mod-program-rkpd').parent().show();
+					jQuery('#mod-konfirmasi-program .modal-title').text('Data Sub Kegiatan dari WP-SIPD yang akan disingkronisasi ke FMIS');
+					var table = jQuery('#konfirmasi-program');
+					table.attr('data-singkron-rka', '');
+					run_script('jQuery("#konfirmasi-program").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]], "columnDefs": [{ "orderable": false, "targets": 0 } ]});');
+					run_script('jQuery("#mod-konfirmasi-program").modal("show")');
+					hide_loading();
 				});
-				jQuery('#konfirmasi-program tbody').html(daftar_sub);
-				pesan_loading('GET FORM TAMBAH PROGRAM UNTUK MENDAPATKAN PROGRAM RKPD', true);
-				// load form tambah program
-				relayAjax({
-					url: url_tambah_program,
-					success: function(form_tambah){
-						var form = jQuery(form_tambah);
-						var html_program_rkpd = form.find('select[name="idrkpdranwalprogram"]').html();
-						jQuery('#mod-program-rkpd').html(html_program_rkpd);
-						jQuery('#mod-program-rkpd').parent().show();
-						jQuery('#mod-konfirmasi-program .modal-title').text('Data Sub Kegiatan dari WP-SIPD yang akan disingkronisasi ke FMIS');
-						var table = jQuery('#konfirmasi-program');
-						table.attr('data-singkron-rka', '');
-						run_script('jQuery("#konfirmasi-program").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]], "columnDefs": [{ "orderable": false, "targets": 0 } ]});');
-						run_script('jQuery("#mod-konfirmasi-program").modal("show")');
-						hide_loading();
-					}
-				});
-	        });
-		}
+			});
+        });
 	});
 }
 
@@ -3626,20 +3734,108 @@ function get_id_sub_unit_fmis(idsubkegiatan, id_mapping_skpd, nama_sub_skpd){
 function get_id_unit_fmis(){
 	pesan_loading('GET ID UNIT FMIS', true);
 	return new Promise(function(resolve, reject){
-		if(typeof id_unit_fmis_global == 'undefined'){
+		var url_unit = config.fmis_url+'/perencanaan-tahunan/renja-murni';
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			url_unit = config.fmis_url+'/anggaran/rka-opd/dokumen/datatable';
+		}
+		relayAjax({
+			url: url_unit,
+			success: function(renja){
+				if(renja.data.length >= 1){
+					resolve(renja.data[0].idunit);
+				}else{
+					reject();
+				}
+			}
+		});
+	});
+}
+
+function get_load_urusan(){
+	return new Promise(function(resolve, reject){
+		pesan_loading('GET MASTER URUSAN', true);
+		if(_type_singkronisasi_rka == 'rka-opd'){
+
+		}else{
+			var idsasaran = jQuery('a.btn-sm[title="Tambah Program"]').attr('href').split('/').pop();
 			relayAjax({
-				url: config.fmis_url+'/perencanaan-tahunan/renja-murni',
-				success: function(renja){
-					if(renja.data.length >= 1){
-						window.id_unit_fmis_global = renja.data[0].idunit;
-						resolve(id_unit_fmis_global);
-					}else{
-						reject();
-					}
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/pilih-program/'+idsasaran+'?load=urusan',
+				success: function(html_urusan){
+					var urusan = [];
+					jQuery(html_urusan).find('table td a').map(function(i, b){
+						var tr = jQuery(b).closest('tr');
+						var nama_urusan = tr.find('td').eq(1).text();
+						var url_bidang = jQuery(b).attr('href');
+						var id_urusan = url_bidang.split('&kode=')[1].split('&')[0];
+						urusan.push({
+							id_urusan: id_urusan,
+							nama_urusan: nama_urusan,
+							url_bidang: url_bidang+'&id_urusan='+id_urusan
+						});
+					});
+					return resolve(urusan);
 				}
 			});
+		}
+	});
+}
+
+function get_load_bidang(url_bidang){
+	return new Promise(function(resolve, reject){
+		pesan_loading('GET MASTER BIDANG', true);
+		if(_type_singkronisasi_rka == 'rka-opd'){
+
 		}else{
-			resolve(id_unit_fmis_global);
+			relayAjax({
+				url: url_bidang,
+				success: function(html_bidang){
+					var id_urusan = this.url.split('&id_urusan=')[1].split('&')[0];
+					var bidang = [];
+					jQuery(html_bidang).find('table td a').map(function(i, b){
+						var tr = jQuery(b).closest('tr');
+						var nama_bidang = tr.find('td').eq(1).text();
+						var url_program = jQuery(b).attr('href');
+						var id_bidang = url_program.split('&kode=')[1].split('&')[0];
+						bidang.push({
+							id_urusan: id_urusan,
+							id_bidang: id_bidang,
+							nama_bidang: nama_bidang,
+							url_program: url_program+'&id_urusan='+id_urusan+'&id_bidang='+id_bidang
+						});
+					});
+					resolve(bidang);
+				}
+			});
+		}
+	});
+}
+
+function get_load_program(url_program){
+	return new Promise(function(resolve, reject){
+		pesan_loading('GET MASTER PROGRAM', true);
+		if(_type_singkronisasi_rka == 'rka-opd'){
+
+		}else{
+			relayAjax({
+				url: url_program,
+				success: function(html_program){
+					var id_urusan = this.url.split('&id_urusan=')[1].split('&')[0];
+					var id_bidang = this.url.split('&id_bidang=')[1].split('&')[0];
+					var program = [];
+					jQuery(html_program).find('table td a').map(function(i, b){
+						var tr = jQuery(b).closest('tr');
+						var nama_program = tr.find('td').eq(1).text();
+						var id_program = jQuery(b).attr('data-idprogram');
+						program.push({
+							id_urusan: id_urusan,
+							id_bidang: id_bidang,
+							id_program: id_program,
+							nama_program: nama_program
+						});
+					});
+					resolve(program);
+				}
+			});
 		}
 	});
 }
@@ -3647,107 +3843,82 @@ function get_id_unit_fmis(){
 function get_master_prog_fmis(idsasaran){
 	pesan_loading('GET MASTER PROGRAM FMIS UNTUK IDSASARAN = '+idsasaran, true);
 	return new Promise(function(resolve, reject){
-		if(typeof master_prog_fmis_global == 'undefined'){
-			var master_prog_fmis_global = {
-				hirarki: {},
-				program: []
-			};
-			pesan_loading('GET MASTER URUSAN', true);
-			// load urusan
-			relayAjax({
-				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/pilih-program/'+idsasaran+'?load=urusan',
-				success: function(html_urusan){
-					pesan_loading('GET MASTER BIDANG', true);
-					var sendData = [];
-					jQuery(html_urusan).find('table td a').map(function(i, b){
-						var tr = jQuery(b).closest('tr');
-						var nama_urusan = tr.find('td').eq(1).text();
-						var url_bidang = jQuery(b).attr('href');
-						var id_urusan = url_bidang.split('&kode=')[1].split('&')[0];
-						master_prog_fmis_global.hirarki[id_urusan] = {
-							id: id_urusan,
-							nama: nama_urusan,
-							bidang: {}
-						};
-						sendData.push(new Promise(function(resolve2, reject2){
-							// load bidang
-							relayAjax({
-								url: url_bidang,
-								success: function(html_bidang){
-									var url_programs = [];
-									jQuery(html_bidang).find('table td a').map(function(i, b){
-										var tr = jQuery(b).closest('tr');
-										var nama_bidang = tr.find('td').eq(1).text();
-										var url_program = jQuery(b).attr('href');
-										var id_bidang = url_program.split('&kode=')[1].split('&')[0];
-										master_prog_fmis_global.hirarki[id_urusan].bidang[id_bidang] = {
-											id: id_bidang,
-											nama: nama_bidang,
-											program: {}
-										}
-										url_programs.push(url_program+'&id_urusan='+id_urusan+'&id_bidang='+id_bidang);
-									});
-									resolve2(url_programs);
-								}
-							});
-						}));
+		var master_prog_fmis_global = {
+			hirarki: {},
+			program: []
+		};
+		get_load_urusan()
+		.then(function(data_urusan){
+			console.log('data_urusan', data_urusan);
+			var sendData = [];
+			data_urusan.map(function(b, i){
+				master_prog_fmis_global.hirarki[b.id_urusan] = {
+					id: b.id_urusan,
+					nama: b.nama_urusan,
+					bidang: {}
+				};
+				sendData.push(new Promise(function(resolve2, reject2){
+					get_load_bidang(b.url_bidang)
+					.then(function(data_bidang){
+						console.log('data_bidang', data_bidang);
+						var url_programs = [];
+						data_bidang.map(function(bb, ii){
+							master_prog_fmis_global.hirarki[bb.id_urusan].bidang[bb.id_bidang] = {
+								id: bb.id_bidang,
+								nama: bb.nama_bidang,
+								program: {}
+							}
+							url_programs.push(bb.url_program+'&id_urusan='+bb.id_urusan+'&id_bidang='+bb.id_bidang);
+						});
+						resolve2(url_programs);
 					});
-					Promise.all(sendData)
-					.then(function(all_url_program){
-						var last = all_url_program.length - 1;
-						all_url_program.reduce(function(sequence, nextData){
-				            return sequence.then(function(current_data){
-				        		return new Promise(function(resolve_reduce, reject_reduce){
-				        			var sendData = current_data.map(function(url_program, ii){
-				        				return new Promise(function(resolve2, reject2){
-											pesan_loading('GET MASTER PROGRAM', true);
-						        			// load program
-						        			relayAjax({
-												url: url_program,
-												success: function(html_program){
-													var id_urusan = this.url.split('&id_urusan=')[1].split('&')[0];
-													var id_bidang = this.url.split('&id_bidang=')[1].split('&')[0];
-													jQuery(html_program).find('table td a').map(function(i, b){
-														var tr = jQuery(b).closest('tr');
-														var nama_program = tr.find('td').eq(1).text();
-														var id_program = jQuery(b).attr('data-idprogram');
-														var data_prog = {
-															id: id_program,
-															nama: nama_program,
-															kegiatan: {}
-														}
-														master_prog_fmis_global.hirarki[id_urusan].bidang[id_bidang].program[id_program] = data_prog;
-														master_prog_fmis_global.program[nama_program] = data_prog;
-													});
-													resolve2();
-												}
-											});
-						        		});
-				        			});
-				        			Promise.all(sendData)
-									.then(function(){
-										resolve_reduce(nextData);
-									});
-				        		})
-				                .catch(function(e){
-				                    console.log(e);
-				                    return Promise.resolve(nextData);
-				                });
-				            })
-				            .catch(function(e){
-				                console.log(e);
-				                return Promise.resolve(nextData);
-				            });
-				        }, Promise.resolve(all_url_program[last]))
-				        .then(function(data_last){
-							resolve(master_prog_fmis_global);
-				        });
-					});
-				}
+				}));
 			});
-		}else{
-			resolve(master_prog_fmis_global);
-		}
+			Promise.all(sendData)
+			.then(function(all_url_program){
+				var last = all_url_program.length - 1;
+				all_url_program.reduce(function(sequence, nextData){
+		            return sequence.then(function(current_data){
+		        		return new Promise(function(resolve_reduce, reject_reduce){
+		        			var sendData = current_data.map(function(url_program, ii){
+		        				return new Promise(function(resolve2, reject2){
+									get_load_program(url_program)
+									.then(function(data_program){
+										console.log('data_program', data_program);
+										data_program.map(function(b, i){
+											var data_prog = {
+												id: b.id_program,
+												nama: b.nama_program,
+												kegiatan: {}
+											};
+											master_prog_fmis_global.hirarki[b.id_urusan].bidang[b.id_bidang].program[b.id_program] = data_prog;
+											master_prog_fmis_global.program[b.nama_program] = data_prog;
+										});
+										resolve2();
+									});
+				        		});
+		        			});
+		        			Promise.all(sendData)
+							.then(function(){
+								resolve_reduce(nextData);
+							});
+		        		})
+		                .catch(function(e){
+		                    console.log(e);
+		                    return Promise.resolve(nextData);
+		                });
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData);
+		            });
+		        }, Promise.resolve(all_url_program[last]))
+		        .then(function(data_last){
+		        	console.log('master_prog_fmis_global', master_prog_fmis_global);
+					resolve(master_prog_fmis_global);
+		        });
+			});
+		});
 	});
 }
 
@@ -4579,85 +4750,126 @@ function singkronisasi_program_modal(){
 				new Promise(function(resolve, reject){
 					get_master_prog_fmis(id_sasaran)
 					.then(function(master_program){
-						pesan_loading('GET PROGRAM EXISTING DARI IDSASARAN = '+id_sasaran, true);
-						// get program fmis dan insert jika belum ada
-						relayAjax({
-							url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/data/'+id_sasaran,
-							success: function(program_exist){
-								var cek_program = {};
-								var last = sub_kegiatan.length - 1;
-								var kdurut = 0;
-								// sub kegiatan yang sudah dipilih kemudian dilooping satu per satu
-								sub_kegiatan.reduce(function(sequence, nextData){
-						            return sequence.then(function(current_data){
-						        		return new Promise(function(resolve_reduce, reject_reduce){
-					        				var check_exist = false;
-					        				program_exist.data.map(function(b, i){
-					        					if(current_data.nama_program == b.uraian){
-					        						check_exist = true;
-					        					}
-					        					if(kdurut <= +b.kdurut){
-					        						kdurut = +b.kdurut;
-					        					}
-					        				});
-					        				// cek jika sub kegiatan memiliki nama program yang sama dengan program yang sudah ditambahkan
-					        				if(!check_exist){
-					        					// cek jika sub kegiatan memiliki nama program yang ada di master program FMIS
-					        					if(master_program.program[current_data.nama_program]){
-					        						// cek jika sudah pernah disimpan, jangan disimpan lagi
-					        						if(!cek_program[current_data.nama_program]){
-						        						cek_program[current_data.nama_program] = current_data;
-							        					kdurut++;
-							        					var data_post = {
-							        						_token: _token,
-							        						kdurut: kdurut,
-							        						idrkpdranwalprogram: idrkpdranwalprogram,
-							        						idprogram: master_program.program[current_data.nama_program].id,
-							        						uraian: current_data.nama_program,
-							        						pagu_tahun1: '0',
-							        						pagu_tahun2: '0',
-							        						pagu_tahun3: '0'
-							        					}
-														pesan_loading('SIMPAN PROGRAM '+current_data.nama_program, true);
-							        					relayAjax({
-															url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/create/'+id_sasaran,
-															type: "post",
-												            data: data_post,
-												            success: function(res){
-						        								sub_kegiatan_filter_program.push(current_data);
-												            	resolve_reduce(nextData);
-												            },
-												            error: function(e){
-												            	console.log('Error save bidang urusan!', e, this.data);
-												            }
-														});
-								        			}else{
-						        						sub_kegiatan_filter_program.push(current_data);
-								        				resolve_reduce(nextData);
-								        			}
-						        				}else{
-						        					console.log('Program "'+current_data.nama_program+'" tidak ditemukan di master program FMIS', master_program);
-					        						resolve_reduce(nextData);
-						        				}
+						get_list_program()
+						.then(function(program_exist){
+							var cek_program = {};
+							var last = sub_kegiatan.length - 1;
+							var kdurut = 0;
+							var kdurut_exist = 0;
+							var pagu_tahun1 = 0;
+							var pagu_tahun2 = 0;
+							var pagu_tahun3 = 0;
+							var idrkpdrenjaprogram = 0;
+							// sub kegiatan yang sudah dipilih kemudian dilooping satu per satu
+							sub_kegiatan.reduce(function(sequence, nextData){
+					            return sequence.then(function(current_data){
+					        		return new Promise(function(resolve_reduce, reject_reduce){
+				        				var check_exist = false;
+				        				program_exist.data.map(function(b, i){
+				        					if(current_data.nama_program == b.uraian){
+				        						check_exist = true;
+				        						kdurut_exist = b.kdurut;
+				        						pagu_tahun1 = b.pagu_tahun1;
+												pagu_tahun2 = b.pagu_tahun2;
+												pagu_tahun3 = b.pagu_tahun3;
+												idrkpdrenjaprogram = b.idrkpdrenjaprogram;
+				        					}
+				        					if(kdurut <= +b.kdurut){
+				        						kdurut = +b.kdurut;
+				        					}
+				        				});
+				        				// cek jika sub kegiatan memiliki nama program yang sama dengan program yang belum ditambahkan
+				        				if(!check_exist){
+				        					// cek jika sub kegiatan memiliki nama program yang ada di master program FMIS
+				        					if(master_program.program[current_data.nama_program]){
+				        						// cek jika sudah pernah disimpan, jangan disimpan lagi
+				        						if(!cek_program[current_data.nama_program]){
+					        						cek_program[current_data.nama_program] = current_data;
+						        					kdurut++;
+						        					var data_post = {
+						        						_token: _token,
+						        						kdurut: kdurut,
+						        						idrkpdranwalprogram: idrkpdranwalprogram,
+						        						idprogram: master_program.program[current_data.nama_program].id,
+						        						uraian: current_data.nama_program,
+						        						pagu_tahun1: '0',
+						        						pagu_tahun2: '0',
+						        						pagu_tahun3: '0'
+						        					}
+													pesan_loading('SIMPAN PROGRAM '+current_data.nama_program, true);
+						        					relayAjax({
+														url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/create/'+id_sasaran,
+														type: "post",
+											            data: data_post,
+											            success: function(res){
+					        								sub_kegiatan_filter_program.push(current_data);
+											            	resolve_reduce(nextData);
+											            },
+											            error: function(e){
+											            	console.log('Error save bidang urusan!', e, this.data);
+											            }
+													});
+							        			}else{
+					        						sub_kegiatan_filter_program.push(current_data);
+							        				resolve_reduce(nextData);
+							        			}
 					        				}else{
-					        					sub_kegiatan_filter_program.push(current_data);
-					        					resolve_reduce(nextData);
+					        					console.log('Program "'+current_data.nama_program+'" tidak ditemukan di master program FMIS', master_program);
+				        						resolve_reduce(nextData);
 					        				}
-						        		})
-						                .catch(function(e){
-						                    console.log(e);
-						                    return Promise.resolve(nextData);
-						                });
-						            })
-						            .catch(function(e){
-						                console.log(e);
-						                return Promise.resolve(nextData);
-						            });
-						        }, Promise.resolve(sub_kegiatan[last]))
-						        .then(function(data_last){
-						        	resolve();
-						        });
-						    }
+					        			// update program jika sudah ada
+				        				}else{
+				        					sub_kegiatan_filter_program.push(current_data);
+				        					// cek jika sub kegiatan memiliki nama program yang ada di master program FMIS
+				        					if(master_program.program[current_data.nama_program]){
+				        						// cek jika sudah pernah diupdate, jangan diupdate lagi
+				        						if(!cek_program[current_data.nama_program]){
+					        						cek_program[current_data.nama_program] = current_data;
+					        						var data_post = {
+						        						_token: _token,
+						        						kdurut: kdurut_exist,
+						        						idrkpdranwalprogram: idrkpdranwalprogram,
+						        						idprogram: master_program.program[current_data.nama_program].id,
+						        						uraian: current_data.nama_program,
+						        						pagu_tahun1: pagu_tahun1,
+						        						pagu_tahun2: pagu_tahun2,
+						        						pagu_tahun3: pagu_tahun3
+						        					}
+													pesan_loading('UPDATE PROGRAM '+current_data.nama_program, true);
+						        					relayAjax({
+														url: config.fmis_url+'/perencanaan-tahunan/renja-murni/program/update/'+idrkpdrenjaprogram,
+														type: "post",
+											            data: data_post,
+											            success: function(res){
+					        								sub_kegiatan_filter_program.push(current_data);
+											            	resolve_reduce(nextData);
+											            },
+											            error: function(e){
+											            	console.log('Error update bidang urusan!', e, this.data);
+											            }
+													});
+					        					}else{
+					        						resolve_reduce(nextData);
+					        					}
+					        				}else{
+					        					console.log('Program "'+current_data.nama_program+'" tidak ditemukan di master program FMIS', master_program);
+				        						resolve_reduce(nextData);
+					        				}
+				        				}
+					        		})
+					                .catch(function(e){
+					                    console.log(e);
+					                    return Promise.resolve(nextData);
+					                });
+					            })
+					            .catch(function(e){
+					                console.log(e);
+					                return Promise.resolve(nextData);
+					            });
+					        }, Promise.resolve(sub_kegiatan[last]))
+					        .then(function(data_last){
+					        	resolve();
+					        });
 						});
 					});
 				})
