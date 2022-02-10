@@ -485,7 +485,10 @@ if(current_url.indexOf('parameter/rekening') != -1){
 				pesan_loading('GET DATA SUB KEGIATAN DARI WP-SIPD UNTUK ID SKPD = '+id_skpd_fmis, true);
 				var tambah_program = jQuery('a.btn-sm[title="Tambah Program"]');
 				if(_type_singkronisasi_rka == 'rka-opd'){
-					tambah_program = jQuery('a.btn-sm[title="Tambah Program RKA"]');
+					var code_program = jQuery('a.btn-sm[title="Tambah Program RKA"]').attr('href').split('code=')[1];
+					if(code_program){
+						tambah_program = code_program;
+					}
 				}
 				if(tambah_program.length >= 1){
 					var data = {
