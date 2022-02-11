@@ -2,7 +2,7 @@
 	"manifest_version": 2,
 	"name": "FMIS tools",
 	"description": "Chrome extension untuk mempermudah manajemen data di web fmis.bpkp.go.id",
-	"version": "1.1.1",
+	"version": "1.1.2",
 	"icons": {
 		"16": "img/logo-small.png",
 		"48": "img/logo-small.png",

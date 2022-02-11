@@ -529,6 +529,12 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			.then(function(id_skpd_fmis){
 				pesan_loading('GET DATA SUB KEGIATAN DARI WP-SIPD UNTUK ID SKPD = '+id_skpd_fmis, true);
 				var tambah_sub_kegiatan = jQuery('a.btn-sm[title="Tambah Sub Kegiatan"]');
+				if(_type_singkronisasi_rka == 'rka-opd'){
+					var code_kegiatan = jQuery('a.btn-sm[title="Tambah Sub Kegiatan RKA"]').attr('href').split('code=')[1];
+					if(code_kegiatan){
+						tambah_sub_kegiatan = code_kegiatan;
+					}
+				}
 				if(tambah_sub_kegiatan.length >= 1){
 					var data = {
 					    message:{
