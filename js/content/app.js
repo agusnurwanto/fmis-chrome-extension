@@ -465,10 +465,19 @@ if(current_url.indexOf('parameter/rekening') != -1){
     jQuery('#delete-rka').on('click', function(){
 		show_loading();
     	var tambah_sub_kegiatan = jQuery('a.btn-sm[title="Tambah Sub Kegiatan"]');
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			var code_subkegiatan = jQuery('a.btn-sm[title="Tambah Sub Kegiatan RKA"]').attr('href').split('code=')[1];
+			if(code_subkegiatan){
+				tambah_sub_kegiatan = code_subkegiatan;
+				var keg_fmis = jQuery('button.tab-return[onclick="changeTab(\'#tab-kegiatan\')"]').closest('tr').find('td').eq(2).text();
+			}
+		}
 		if(tambah_sub_kegiatan.length >= 1){
-			var keg_fmis = jQuery('button.previous-tab[data-tab-target="#kegiatan-tab"]').closest('tr').find('td').eq(2).text().split(' ');
-			keg_fmis.shift();
-			keg_fmis = keg_fmis.join(' ');
+			if(typeof keg_fmis != 'undefined'){
+				var keg_fmis = jQuery('button.previous-tab[data-tab-target="#kegiatan-tab"]').closest('tr').find('td').eq(2).text().split(' ');
+				keg_fmis.shift();
+				keg_fmis = keg_fmis.join(' ');
+			}
 			if(confirm('Apakah anda yakin untuk menghapus data RKA dari kegiatan '+keg_fmis+'?')){
 	    		delete_rka();
 	    	}

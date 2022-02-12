@@ -3604,40 +3604,62 @@ function delete_rka(sub_keg){
 
 function delete_rka_modal(idkegiatan){
 	show_loading();
-	var sub_kegiatan = [];
+	var sub_kegiatan_selected = [];
 	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
 		var cek = jQuery(b).is(':checked');
 		if(cek){
 			var keyword_selected = jQuery(b).val();
 			for(var keyword in sub_keg_fmis_delete){
 				if(keyword == keyword_selected){
-					sub_kegiatan.push(sub_keg_fmis_delete[keyword]);
+					sub_kegiatan_selected.push(sub_keg_fmis_delete[keyword]);
 				}
 			}
 		}
 	});
-	if(sub_kegiatan.length >= 1){
-		console.log('delete sub_kegiatan ', sub_kegiatan);
-		var last = sub_kegiatan.length - 1;
-		sub_kegiatan.reduce(function(sequence, nextData){
-            return sequence.then(function(current_data){
+	if(sub_kegiatan_selected.length >= 1){
+		console.log('delete sub_kegiatan ', sub_kegiatan_selected);
+		var last = sub_kegiatan_selected.length - 1;
+		sub_kegiatan_selected.reduce(function(sequence, nextData){
+            return sequence.then(function(sub_kegiatan){
         		return new Promise(function(resolve_reduce, reject_reduce){
-					pesan_loading('GET ALL AKTIVITAS DARI SUBKEGIATAN = '+current_data.uraian, true);
-					relayAjax({
-						url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/data/'+current_data.idrkpdrenjasubkegiatan,
-						success: function(aktivitas_exist){
-							var last2 = aktivitas_exist.data.length - 1;
-							aktivitas_exist.data.reduce(function(sequence2, nextData2){
-					            return sequence2.then(function(aktivitas){
-					        		return new Promise(function(resolve_reduce2, reject_reduce2){
-					        			get_rka_aktivitas(aktivitas)
-										.then(function(data_rka){
-											var last3 = data_rka.length - 1;
-											data_rka.reduce(function(sequence3, nextData3){
-									            return sequence3.then(function(rka){
-									        		return new Promise(function(resolve_reduce3, reject_reduce3){
-									        			pesan_loading('HAPUS RINCIAN = '+rka.uraian_belanja, true);
-									        			var url_delete = rka.action.split('href="')[2].split('"')[0];
+        			get_list_aktivitas(sub_kegiatan)
+        			.then(function(aktivitas_exist){
+						var last2 = aktivitas_exist.data.length - 1;
+						aktivitas_exist.data.reduce(function(sequence2, nextData2){
+				            return sequence2.then(function(aktivitas){
+				        		return new Promise(function(resolve_reduce2, reject_reduce2){
+				        			get_rka_aktivitas(aktivitas)
+									.then(function(data_rka){
+										var last3 = data_rka.length - 1;
+										data_rka.reduce(function(sequence3, nextData3){
+								            return sequence3.then(function(rka){
+								        		return new Promise(function(resolve_reduce3, reject_reduce3){
+								        			pesan_loading('HAPUS RINCIAN = '+rka.uraian_belanja, true);
+								        			if(_type_singkronisasi_rka == 'rka-opd'){
+								        				var url_form_delete = rka.action.split('href="')[3].split('"')[0];
+									        			relayAjax({
+															url: url_form_delete+'&action=delete',
+												            success: function(form_delete){
+												            	var form = jQuery(form_delete.form);
+												            	var url_delete = form.attr('action');
+											        			relayAjax({
+																	url: url_delete,
+																	data: {
+																		_method: 'DELETE',
+																		_token: _token
+																	},
+																	type: "post",
+														            success: function(res){
+														            	resolve_reduce3(nextData3);
+														            },
+														            error: function(e){
+														            	console.log('Error hapus rincian!', e, rka);
+														            }
+																});
+												            }
+														});
+								        			}else{
+								        				var url_delete = rka.action.split('href="')[2].split('"')[0];
 									        			relayAjax({
 															url: url_delete,
 															headers: {"x-csrf-token": _token},
@@ -3649,19 +3671,44 @@ function delete_rka_modal(idkegiatan){
 												            	console.log('Error hapus rincian!', e, rka);
 												            }
 														});
-									        		})
-									                .catch(function(e){
-									                    console.log(e);
-									                    return Promise.resolve(nextData3);
-									                });
-									            })
-									            .catch(function(e){
-									                console.log(e);
-									                return Promise.resolve(nextData3);
-									            });
-									        }, Promise.resolve(data_rka[last3]))
-									        .then(function(){
-									        	pesan_loading('HAPUS AKTIVITAS = '+aktivitas.uraian, true);
+								        			}
+								        		})
+								                .catch(function(e){
+								                    console.log(e);
+								                    return Promise.resolve(nextData3);
+								                });
+								            })
+								            .catch(function(e){
+								                console.log(e);
+								                return Promise.resolve(nextData3);
+								            });
+								        }, Promise.resolve(data_rka[last3]))
+								        .then(function(){
+								        	pesan_loading('HAPUS AKTIVITAS = '+aktivitas.uraian, true);
+								        	if(_type_singkronisasi_rka == 'rka-opd'){
+						        				var url_form_delete = aktivitas.action.split('href="')[2].split('"')[0];
+							        			relayAjax({
+													url: url_form_delete+'&action=delete',
+										            success: function(form_delete){
+										            	var form = jQuery(form_delete.form);
+										            	var url_delete = form.attr('action');
+									        			relayAjax({
+															url: url_delete,
+															data: {
+																_method: 'DELETE',
+																_token: _token
+															},
+															type: "post",
+												            success: function(res){
+												            	resolve_reduce2(nextData2);
+												            },
+												            error: function(e){
+												            	console.log('Error hapus aktivitas!', e, aktivitas);
+												            }
+														});
+										            }
+												});
+						        			}else{
 									        	var url_delete = aktivitas.action.split('href="')[2].split('"')[0];
 							        			relayAjax({
 													url: url_delete,
@@ -3674,22 +3721,47 @@ function delete_rka_modal(idkegiatan){
 										            	console.log('Error hapus aktivitas!', e, aktivitas);
 										            }
 												});
-									        });
+							        		}
+								        });
+									});
+				        		})
+				                .catch(function(e){
+				                    console.log(e);
+				                    return Promise.resolve(nextData2);
+				                });
+				            })
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData2);
+				            });
+				        }, Promise.resolve(aktivitas_exist.data[last2]))
+				        .then(function(){
+				        	pesan_loading('HAPUS SUB KEGIATAN = '+sub_kegiatan.uraian, true);
+				        	if(_type_singkronisasi_rka == 'rka-opd'){
+		        				var url_form_delete = sub_kegiatan.action.split('href="')[2].split('"')[0];
+			        			relayAjax({
+									url: url_form_delete+'&action=delete',
+						            success: function(form_delete){
+						            	var form = jQuery(form_delete.form);
+						            	var url_delete = form.attr('action');
+					        			relayAjax({
+											url: url_delete,
+											data: {
+												_method: 'DELETE',
+												_token: _token
+											},
+											type: "post",
+								            success: function(res){
+								            	resolve_reduce(nextData);
+								            },
+								            error: function(e){
+								            	console.log('Error hapus sub kegiatan!', e, sub_kegiatan);
+								            }
 										});
-					        		})
-					                .catch(function(e){
-					                    console.log(e);
-					                    return Promise.resolve(nextData2);
-					                });
-					            })
-					            .catch(function(e){
-					                console.log(e);
-					                return Promise.resolve(nextData2);
-					            });
-					        }, Promise.resolve(aktivitas_exist.data[last2]))
-					        .then(function(){
-					        	pesan_loading('HAPUS SUB KEGIATAN = '+current_data.uraian, true);
-					        	var url_delete = current_data.action.split('href="')[3].split('"')[0];
+						            }
+								});
+		        			}else{
+					        	var url_delete = sub_kegiatan.action.split('href="')[3].split('"')[0];
 			        			relayAjax({
 									url: url_delete,
 									headers: {"x-csrf-token": _token},
@@ -3698,11 +3770,11 @@ function delete_rka_modal(idkegiatan){
 					        			resolve_reduce(nextData);
 						            },
 						            error: function(e){
-						            	console.log('Error hapus sub kegiatan!', e, current_data);
+						            	console.log('Error hapus sub kegiatan!', e, sub_kegiatan);
 						            }
 								});
-					        });
-						}
+			        		}
+				        });
 					});
         		})
                 .catch(function(e){
@@ -3714,7 +3786,7 @@ function delete_rka_modal(idkegiatan){
                 console.log(e);
                 return Promise.resolve(nextData);
             });
-        }, Promise.resolve(sub_kegiatan[last]))
+        }, Promise.resolve(sub_kegiatan_selected[last]))
         .then(function(data_last){
         	alert('berhasil hapus rincian, aktivitas dan sub kegiatan!');
 			hide_loading();
