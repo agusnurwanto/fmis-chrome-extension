@@ -123,23 +123,23 @@ function singkronisasi_ssh(options){
 				|| b.kelompok == 9
 			){
 				var golongan = b.kode_gol_standar_harga;
-				var kelompok = replace_string(b.kode_kel_standar_harga, true, true).replace(/&/g, 'dan');
+				var kelompok = replace_string(b.kode_kel_standar_harga, true);
 				if(!kelompok || kelompok==''){
 					kelompok = 'kosong';
 				}
-				var sub_kelompok = replace_string(b.nama_sub_kel_standar_harga, true, true).replace(/&/g, 'dan');
+				var sub_kelompok = replace_string(b.nama_sub_kel_standar_harga, true);
 				if(!sub_kelompok || sub_kelompok==''){
 					sub_kelompok = 'kosong';
 				}
-				var nama_subkelompok = replace_string(b.nama_sub_kel_standar_harga, true, true).replace(/&/g, 'dan');
+				var nama_subkelompok = replace_string(b.nama_sub_kel_standar_harga, true);
 				if(!nama_subkelompok || nama_subkelompok==''){
 					nama_subkelompok = 'kosong';
 				}
-				var item_ssh = replace_string(b.nama_standar_harga, true, true).replace(/&/g, 'dan');
+				var item_ssh = replace_string(b.nama_standar_harga, true);
 				if(!item_ssh || item_ssh==''){
 					item_ssh = 'kosong';
 				}
-				var nama_item = replace_string(b.nama_standar_harga, true, true).replace(/&/g, 'dan');
+				var nama_item = replace_string(b.nama_standar_harga, true);
 				if(!nama_item || nama_item==''){
 					nama_item = 'kosong';
 				}
@@ -278,7 +278,7 @@ function singkronisasi_ssh(options){
 }
 
 function get_id_ssh(text){
-	return replace_string(text, true, true);
+	return replace_string(text, true);
 	var _text = text.split(' ');
 	var ret = text;
 	if(_text[1]){
@@ -315,7 +315,7 @@ function singkronisasi_ssh_tarif(data_ssh, cb, options){
 					}
 					all_ssh[id_ssh] = b;
 				});
-				console.log(all_ssh);
+				console.log('all_ssh', all_ssh);
 	            var no = 0;
 	            var _leng = 100;
 	            var _data_all = [];
@@ -330,7 +330,7 @@ function singkronisasi_ssh_tarif(data_ssh, cb, options){
 							_data = [];
 						}
 					}else{
-						console.log('Uraian item SSH tidak ditemukan!', b.uraian);
+						console.log('Uraian item SSH tidak ditemukan!', id_ssh);
 					}
 				});
 				if(_data.length > 0){
@@ -355,7 +355,7 @@ function singkronisasi_ssh_tarif(data_ssh, cb, options){
 				            data_post[idssh_fmis] = {};
 		        			current_data.map(function(b, i){
 								var id_fmis = b.nilai.split('idperkadatarif[')[1].split(']')[0];
-								data_post.nilai[id_fmis] = b.harga+',00';
+								data_post.nilai[id_fmis] = +(b.harga)+',00';
 								data_post.idperkadatarif[id_fmis] = '';
 								data_post[idssh_fmis][id_fmis] = id_fmis;
 								no++;
@@ -1039,6 +1039,7 @@ function replace_string(text, no_lowercase=false, no_replace=false){
 		text = text.replace(/²/g, '2');
 		text = text.replace(/¹/g, '1');
 		text = text.replace(/'/g, '`');
+		text = text.replace(/&/g, 'dan');
 	}
 	return text.trim();
 }

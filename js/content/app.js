@@ -59,29 +59,33 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	jQuery('#singkron-ssh-sipd').on('click', function(){
     	if(confirm('Apakah anda yakin untuk melakukan singkronisasi data Struktur SSH dari WP-SIPD ke FMIS?')){
 			var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
-			show_loading();
-			jQuery('#persen-loading').attr('persen', 0);
-			pesan_loading('GET STRUKTUR STANDAR HARGA DARI WP-SIPD', true);
-			var data = {
-			    message:{
-			        type: "get-url",
-			        content: {
-					    url: config.url_server_lokal,
-					    type: 'post',
-					    data: { 
-							action: 'get_ssh',
-							kelompok: idkelompok,
-							tahun_anggaran: config.tahun_anggaran,
-							api_key: config.api_key
-						},
-		    			return: true,
-		    			continue: 'get_ssh'
-					}
-			    }
-			};
-			chrome.runtime.sendMessage(data, function(response) {
-			    console.log('responeMessage', response);
-			});
+			if(idkelompok >= 1){
+				show_loading();
+				jQuery('#persen-loading').attr('persen', 0);
+				pesan_loading('GET STRUKTUR STANDAR HARGA DARI WP-SIPD', true);
+				var data = {
+				    message:{
+				        type: "get-url",
+				        content: {
+						    url: config.url_server_lokal,
+						    type: 'post',
+						    data: { 
+								action: 'get_ssh',
+								kelompok: idkelompok,
+								tahun_anggaran: config.tahun_anggaran,
+								api_key: config.api_key
+							},
+			    			return: true,
+			    			continue: 'get_ssh'
+						}
+				    }
+				};
+				chrome.runtime.sendMessage(data, function(response) {
+				    console.log('responeMessage', response);
+				});
+			}else{
+				alert('ID kelompok harus diisi!');
+			}
 		}
 	});
 
@@ -500,26 +504,33 @@ if(current_url.indexOf('parameter/rekening') != -1){
 					}
 				}
 				if(tambah_program.length >= 1){
-					var data = {
-					    message:{
-					        type: "get-url",
-					        content: {
-							    url: config.url_server_lokal,
-							    type: 'post',
-							    data: { 
-									action: 'get_sub_keg',
-									run: 'singkronisasi_program',
-									tahun_anggaran: config.tahun_anggaran,
-									id_skpd_fmis: id_skpd_fmis,
-									api_key: config.api_key
-								},
-				    			return: true
-							}
-					    }
-					};
-					chrome.runtime.sendMessage(data, function(response) {
-					    console.log('responeMessage', response);
-					});
+					var idsumber = prompt('Masukan ID sumber RKA: 1=WP-SIPD (RKA terbaru), 2=SIMDA PINK (APBD Murni)', 1);
+					if(idsumber >= 1){
+						var data = {
+						    message:{
+						        type: "get-url",
+						        content: {
+								    url: config.url_server_lokal,
+								    type: 'post',
+								    data: { 
+										action: 'get_sub_keg',
+										run: 'singkronisasi_program',
+										tahun_anggaran: config.tahun_anggaran,
+										id_skpd_fmis: id_skpd_fmis,
+										idsumber: idsumber,
+										api_key: config.api_key
+									},
+					    			return: true
+								}
+						    }
+						};
+						chrome.runtime.sendMessage(data, function(response) {
+						    console.log('responeMessage', response);
+						});
+					}else{
+						hide_loading();
+						alert('ID sumber RKA harus diisi!');
+					}
 				}else{
 					hide_loading();
 					alert('Masuk ke tab Program dulu!');
@@ -545,26 +556,33 @@ if(current_url.indexOf('parameter/rekening') != -1){
 					}
 				}
 				if(tambah_sub_kegiatan.length >= 1){
-					var data = {
-					    message:{
-					        type: "get-url",
-					        content: {
-							    url: config.url_server_lokal,
-							    type: 'post',
-							    data: { 
-									action: 'get_sub_keg',
-									run: 'singkronisasi_rka',
-									tahun_anggaran: config.tahun_anggaran,
-									id_skpd_fmis: id_skpd_fmis,
-									api_key: config.api_key
-								},
-				    			return: true
-							}
-					    }
-					};
-					chrome.runtime.sendMessage(data, function(response) {
-					    console.log('responeMessage', response);
-					});
+					var idsumber = prompt('Masukan ID sumber RKA: 1=WP-SIPD (RKA terbaru), 2=SIMDA PINK (APBD Murni)', 1);
+					if(idsumber >= 1){
+						var data = {
+						    message:{
+						        type: "get-url",
+						        content: {
+								    url: config.url_server_lokal,
+								    type: 'post',
+								    data: { 
+										action: 'get_sub_keg',
+										run: 'singkronisasi_rka',
+										tahun_anggaran: config.tahun_anggaran,
+										id_skpd_fmis: id_skpd_fmis,
+										idsumber: idsumber,
+										api_key: config.api_key
+									},
+					    			return: true
+								}
+						    }
+						};
+						chrome.runtime.sendMessage(data, function(response) {
+						    console.log('responeMessage', response);
+						});
+					}else{
+						hide_loading();
+						alert('ID sumber RKA harus diisi!');
+					}
 				}else{
 					hide_loading();
 					alert('Masuk ke tab Sub Kegiatan dulu!');
@@ -580,28 +598,32 @@ if(current_url.indexOf('parameter/rekening') != -1){
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
     if(confirm('Apakah anda yakin untuk melakukan singkronisasi data tarif SSH dari WP-SIPD ke FMIS?')){
-		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 9=RKA', 1);
-		show_loading();
-		jQuery('#persen-loading').attr('persen', 0);
-		pesan_loading('GET STRUKTUR STANDAR HARGA DARI WP-SIPD', true);
-		var data = {
-		    message:{
-		        type: "get-url",
-		        content: {
-				    url: config.url_server_lokal,
-				    type: 'post',
-				    data: { 
-						action: 'get_ssh',
-						kelompok: idkelompok,
-						tahun_anggaran: config.tahun_anggaran,
-						api_key: config.api_key
-					},
-	    			return: true
-				}
-		    }
-		};
-		chrome.runtime.sendMessage(data, function(response) {
-		    console.log('responeMessage', response);
-		});
+		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
+		if(idkelompok >= 1){
+			show_loading();
+			jQuery('#persen-loading').attr('persen', 0);
+			pesan_loading('GET STRUKTUR STANDAR HARGA DARI WP-SIPD', true);
+			var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_ssh',
+							kelompok: idkelompok,
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+		}else{
+			alert('ID kelompok harus diisi!');
+		}
 	}
 });
