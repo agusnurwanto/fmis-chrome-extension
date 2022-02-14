@@ -204,9 +204,10 @@ function singkronisasi_ssh(options){
 								|| jns_golongan == 2
 								|| jns_golongan == 3
 								|| jns_golongan == 4
-								|| jns_golongan == 9
 							){
 								var jns_ssh = 1;
+							}else if(jns_golongan == 9){
+								var jns_ssh = 4;
 							}else{
 								continue;
 							}
