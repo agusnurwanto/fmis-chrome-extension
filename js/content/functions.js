@@ -1940,11 +1940,12 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 			data_skpd.map(function(b, i){
 				if(
 					b.code == code_bidang
-					&& b.isskpd == 1
+					&& b.is_skpd == 1
 				){
 					data_skpd_selected.push(b);
 				}
 			});
+			console.log('data_skpd_selected', data_skpd_selected);
 			relayAjax({
 				url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_bidang+'&table=skpd',
 				success: function(skpd){
@@ -1986,6 +1987,7 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 													var idbidang_utama = form.find('input[name="idbidang_utama"]:checked').val();
 													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2);
 													var idbidang3 = get_id_bidur_skpd(form.find('#idbidang3 option'), skpd.bidur3);
+	    											pesan_loading('UPDATE SKPD '+nmskpd, true);
 													relayAjax({
 														url: url_save,
 														type: "post",
@@ -2017,6 +2019,7 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 													var idbidang_utama = idbidang;
 													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2);
 													var idbidang3 = get_id_bidur_skpd(form.find('#idbidang3 option'), skpd.bidur3);
+	    											pesan_loading('SIMPAN SKPD '+nmskpd, true);
 													relayAjax({
 														url: url_save,
 														type: "post",
@@ -2141,6 +2144,7 @@ function update_save_unit_sipd(unit_sipd, code_skpd, cb){
 							var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
 							var kdunit = unit_sipd.id_skpd;
 							var nmunit = unit_sipd.nama_skpd;
+	    					pesan_loading('UPDATE UNIT '+nmunit, true);
 							relayAjax({
 								url: url_save,
 								type: "post",
@@ -2165,6 +2169,7 @@ function update_save_unit_sipd(unit_sipd, code_skpd, cb){
 							var idskpd = form.find('input[name="idskpd"]').val();
 							var kdunit = unit_sipd.id_skpd;
 							var nmunit = unit_sipd.nama_skpd;
+	    					pesan_loading('SIMPAN UNIT '+nmunit, true);
 							relayAjax({
 								url: url_save,
 								type: "post",
@@ -2183,6 +2188,7 @@ function update_save_unit_sipd(unit_sipd, code_skpd, cb){
 	    		}
 	    	})
 	    	.then(function(){
+	    		pesan_loading('PROSES SUB UNIT DARI '+unit_sipd.nama_skpd, true);
 	    		if(unit_sipd.sub_unit){
 		    		relayAjax({
 						url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_skpd+'&table=unit',
@@ -2254,6 +2260,7 @@ function update_save_sub_unit_sipd(sub_unit, unit_fmis, cb){
 										idskpd: unit_fmis.idskpd,
 										idunit: idunit
 									}).then(function(val){
+										pesan_loading('UPDATE SUB UNIT '+nmsubunit, true);
 										relayAjax({
 											url: url_save,
 											type: "post",
@@ -2298,6 +2305,7 @@ function update_save_sub_unit_sipd(sub_unit, unit_fmis, cb){
 										idskpd: unit_fmis.idskpd,
 										idunit: idunit
 									}).then(function(val){
+										pesan_loading('SIMPAN SUB UNIT '+nmsubunit, true);
 										relayAjax({
 											url: url_save,
 											type: "post",
@@ -2344,7 +2352,30 @@ function getIdSo(options){
 			relayAjax({
 				url: config.fmis_url+'/parameter/struktur-organisasi/chart?idunit='+options.idunit,
 				success: function(so){
-					if(so.struktur.title == options.uraian_so){
+					if(so.struktur == null){
+						relayAjax({
+							url: config.fmis_url+'/parameter/struktur-organisasi/form?idunit='+options.idunit+'&action=create',
+							success: function(form_create){
+								var url_save = form_create.form.split('action=\"')[1].split('\"')[0];
+								relayAjax({
+									url: url_save,
+									type: "post",
+						            data: {
+						                _token: _token,
+						                idunit: options.idunit,
+						                nm_so: options.uraian_so,
+						                status: 1,
+						                'table-so_length': 10
+						            },
+									success: function(res){
+										getIdSo(options).then(function(val){
+											resolve_reduce(val);
+										});
+									}
+								});
+							}
+						});
+					}else if(so.struktur.title == options.uraian_so){
 						options.idso = so.struktur.idso;
 						resolve_reduce(options);
 					}else{
@@ -3022,7 +3053,7 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 								var pilih_bidur = '';
 								data_skpd.map(function(b, i){
 									if(
-										b.isskpd == 1
+										b.is_skpd == 1
 										&& unit_fmis[b.nama_skpd]
 									){
 										// insert penunjang urusan bidang
@@ -4333,10 +4364,10 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 		        						_token: _token,
 		        						idsubkegiatan: master_sub_kegiatan[nama_sub_giat].id,
 		        						uraian: master_sub_kegiatan[nama_sub_giat].nama,
-		        						// pagu_tahun1: current_data.pagu_n_lalu,
-		        						pagu_tahun1: 0,
-		        						pagu_tahun2: current_data.pagu_keg,
-		        						pagu_tahun3: current_data.pagu_n_depan
+		        						pagu_tahun1: +current_data.pagu_n_lalu,
+		        						// pagu_tahun1: 0,
+		        						pagu_tahun2: +current_data.pagu_keg,
+		        						pagu_tahun3: +current_data.pagu_n_depan
 		        					};
 									if(!cek_exist && !cek_sub_kegiatan[nama_sub_giat]){
 										cek_sub_kegiatan[nama_sub_giat] = current_data;

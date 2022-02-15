@@ -80,12 +80,12 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 					if(bidur[bidur_sipd]){
 						b.code = bidur[bidur_sipd];
 					}
-					if(b.isskpd == 1){
+					if(b.is_skpd == 1){
 						var sub_unit = [];
 						sub_unit.push(b);
 						res.data.map(function(bb, ii){
 							if(
-								bb.isskpd == 0
+								bb.is_skpd == 0
 								&& bb.id_unit == b.id_skpd
 							){
 								sub_unit.push(bb);
