@@ -20,13 +20,16 @@ Semoga bermanfaat
 - Singkronisasi data SSH, SBU, HSPK dan ASB dari SIPD ke FMIS
 - Singkronisasi data SKPD dari SIPD ke FMIS
 - Singkronisasi data User SKPD dari SIPD ke FMIS
+- Singkronisasi SKPD Pelaksana RPJMD
+- Singkronisasi RENJA dan PRA RKA
+- Singkronisasi Program, Kegiatan, Sub Kegiatan dan RKA 
 
 ### Pengembangan berikutnya:
 - Melengkapi dokumentasi penggunaan di halaman wiki
 - Melengkapi video tutorial di youtube
 
 ### Video tutorial
-- ...
+- https://www.youtube.com/watch?v=8wDyFBXkWaM Video 1 (Integrasi WP-SIPD ke FMIS)
 
 ### Catatan
 - Informasi terkait progres pengembangan aplikasi dan cara pakainya bisa cek di https://smkasiyahhomeschooling.blogspot.com/2021/12/fmis-chrome-extension-untuk-integrasi.html

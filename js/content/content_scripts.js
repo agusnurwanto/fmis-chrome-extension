@@ -82,7 +82,6 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 					}
 					if(b.is_skpd == 1){
 						var sub_unit = [];
-						sub_unit.push(b);
 						res.data.map(function(bb, ii){
 							if(
 								bb.is_skpd == 0
@@ -91,6 +90,7 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 								sub_unit.push(bb);
 							}
 						});
+						sub_unit.push(b);
 						b.sub_unit = sub_unit;
 					}
 					data_skpd.push(b);
