@@ -3485,7 +3485,7 @@ function singkronisasi_program(sub_keg){
 					daftar_sub += ''
 						+'<tr>'
 							+'<td><input type="checkbox" value="'+b.kode_sbl+'"></td>'
-							+'<td>'+b.nama_program+'</td>'
+							+'<td>'+b.nama_skpd_data_unit+' - '+b.nama_program+'</td>'
 							+'<td>'+b.nama_giat+'</td>'
 							+'<td>'+b.nama_sub_giat+'</td>'
 						+'</tr>';
@@ -3493,7 +3493,7 @@ function singkronisasi_program(sub_keg){
 					daftar_sub += ''
 						+'<tr>'
 							+'<td><input type="checkbox" value="'+b.kode_sbl+'"> <b>EXISTING</b></td>'
-							+'<td>'+b.nama_program+'</td>'
+							+'<td>'+b.nama_skpd_data_unit+' - '+b.nama_program+'</td>'
 							+'<td>'+b.nama_giat+'</td>'
 							+'<td>'+b.nama_sub_giat+'</td>'
 						+'</tr>';
@@ -4612,7 +4612,7 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 												type: "post",
 									            data: data_post,
 									            success: function(res){
-									            	resolve_reduce(nextData);
+								        			resolve_reduce(nextData);
 									            },
 									            error: function(e){
 									            	console.log('Error kegiatan!', e, this.data);
@@ -4649,7 +4649,7 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 												type: "post",
 									            data: data_post,
 									            success: function(res){
-									            	resolve_reduce(nextData);
+								        			resolve_reduce(nextData);
 									            },
 									            error: function(e){
 									            	console.log('Error kegiatan!', e, this.data);
@@ -4679,7 +4679,56 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 		            });
 		        }, Promise.resolve(sub_kegiatan_filter_kegiatan[last]))
 		        .then(function(data_last){
-		        	resolve(sub_kegiatan_filter);
+		        	// start insert RKA
+		        	get_list_sub_kegiatan(kegiatan)
+					.then(function(sub_kegiatan_exist){
+						var last = sub_kegiatan_exist.data.length - 1;
+						sub_kegiatan_exist.data.reduce(function(sequence, nextData){
+				            return sequence.then(function(sub_kegiatan_fmis){
+				        		return new Promise(function(resolve_reduce, reject_reduce){
+				        			var sub_kegiatan_sipd = false;
+				        			sub_kegiatan_filter_kegiatan.map(function(current_data, i){
+				        				var nama_sub_giat = current_data.nama_sub_giat.split(' ');
+										nama_sub_giat.shift();
+										nama_sub_giat = nama_sub_giat.join(' ');
+										nama_sub_giat = nama_sub_giat.trim().toLowerCase();
+				        				if(
+				        					current_data.nama_giat == kegiatan.uraian.toLowerCase()
+				        					&& sub_kegiatan_fmis.uraian.trim().toLowerCase() == nama_sub_giat
+				        				){
+				        					current_data.sub_keg_fmis = sub_kegiatan_fmis;
+				        					sub_kegiatan_sipd = current_data;
+				        				}
+				        			});
+				        			if(sub_kegiatan_sipd){
+										window.ssh_not_found_global = [];
+						        		insert_update_rka(sub_kegiatan_sipd)
+						        		.then(function(){
+						        			resolve_reduce(nextData);
+						        			if(ssh_not_found_global.length >= 1){
+								        		var pesan_ssh = 'Data SSH tidak ditemukan dari PERKADA SSH { '+ssh_not_found_global.join('; ')+' }';
+								        		console.log(pesan_ssh);
+								        	}
+						        		});
+						        	}else{
+						        		console.log('SUB KEGIATAN tidak ditemukan di SIPD!', sub_kegiatan_fmis);
+						        		resolve_reduce(nextData);
+						        	}
+				        		})
+				                .catch(function(e){
+				                    console.log(e);
+				                    return Promise.resolve(nextData);
+				                });
+				            })
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData);
+				            });
+				        }, Promise.resolve(sub_kegiatan_exist.data[last]))
+				        .then(function(data_last){
+		        			resolve(sub_kegiatan_filter);
+		        		});
+		        	});
 		        });
 			});
 		});
@@ -4754,30 +4803,10 @@ function singkronisasi_rka_modal(id_code_kegiatan){
 		sub_kegiatan.reduce(function(sequence, nextData){
             return sequence.then(function(current_data){
         		return new Promise(function(resolve_reduce, reject_reduce){
-					pesan_loading('GET DATA RKA DI WP-SIPD UNTUK SUBKEGIATAN = '+current_data.sub_keg_fmis.uraian+', kode_sbl = '+current_data.kode_sbl, true);
-					get_rka_sipd(current_data.kode_sbl)
-					.then(function(rka_sipd){
-						new Promise(function(resolve, reject){
-							get_list_aktivitas(current_data.sub_keg_fmis)
-							.then(function(aktivitas_exist){
-								current_data.aktivitas = aktivitas_exist.data;
-								cek_insert_aktivitas_fmis(rka_sipd, current_data)
-								.then(function(){
-									resolve();
-								});
-							});
-						})
-						.then(function(){
-							get_list_aktivitas(current_data.sub_keg_fmis)
-							.then(function(aktivitas_exist){
-								current_data.aktivitas = aktivitas_exist.data;
-								cek_insert_rka_fmis(rka_sipd, current_data)
-								.then(function(){
-									resolve_reduce(nextData);
-								});
-							});
-						})
-					});
+        			insert_update_rka(current_data)
+        			.then(function(){
+        				resolve_reduce(nextData);
+        			});
         		})
                 .catch(function(e){
                     console.log(e, current_data);
@@ -4802,6 +4831,35 @@ function singkronisasi_rka_modal(id_code_kegiatan){
 	}else{
 		alert('Pilih sub kegiatan dulu!');
 	}
+}
+
+function insert_update_rka(sub_kegiatan_sipd){
+	return new Promise(function(resolve2, reject2){
+		pesan_loading('GET DATA RKA DI WP-SIPD UNTUK SUBKEGIATAN = '+sub_kegiatan_sipd.sub_keg_fmis.uraian+', kode_sbl = '+sub_kegiatan_sipd.kode_sbl, true);
+		get_rka_sipd(sub_kegiatan_sipd.kode_sbl)
+		.then(function(rka_sipd){
+			new Promise(function(resolve, reject){
+				get_list_aktivitas(sub_kegiatan_sipd.sub_keg_fmis)
+				.then(function(aktivitas_exist){
+					sub_kegiatan_sipd.aktivitas = aktivitas_exist.data;
+					cek_insert_aktivitas_fmis(rka_sipd, sub_kegiatan_sipd)
+					.then(function(){
+						resolve();
+					});
+				});
+			})
+			.then(function(){
+				get_list_aktivitas(sub_kegiatan_sipd.sub_keg_fmis)
+				.then(function(aktivitas_exist){
+					sub_kegiatan_sipd.aktivitas = aktivitas_exist.data;
+					cek_insert_rka_fmis(rka_sipd, sub_kegiatan_sipd)
+					.then(function(){
+						resolve2();
+					});
+				});
+			})
+		});
+	});
 }
 
 function get_master_sumberdana(options){
