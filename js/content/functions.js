@@ -1985,8 +1985,8 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 													var kdskpd = skpd.id_skpd;
 													var nmskpd = skpd.nama_skpd;
 													var idbidang_utama = form.find('input[name="idbidang_utama"]:checked').val();
-													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2);
-													var idbidang3 = get_id_bidur_skpd(form.find('#idbidang3 option'), skpd.bidur3);
+													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2_text);
+													var idbidang3 = get_id_bidur_skpd(form.find('#idbidang3 option'), skpd.bidur3_text);
 	    											pesan_loading('UPDATE SKPD '+nmskpd, true);
 													relayAjax({
 														url: url_save,
@@ -2017,8 +2017,8 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 													var kdskpd = skpd.id_skpd;
 													var nmskpd = skpd.nama_skpd;
 													var idbidang_utama = idbidang;
-													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2);
-													var idbidang3 = get_id_bidur_skpd(form.find('#idbidang3 option'), skpd.bidur3);
+													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2_text);
+													var idbidang3 = get_id_bidur_skpd(form.find('#idbidang3 option'), skpd.bidur3_text);
 	    											pesan_loading('SIMPAN SKPD '+nmskpd, true);
 													relayAjax({
 														url: url_save,
