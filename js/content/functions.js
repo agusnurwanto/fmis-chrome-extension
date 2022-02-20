@@ -1922,6 +1922,11 @@ function singkron_skpd_sipd_all(data_skpd){
 	}
 }
 
+function get_row_index(row_index){
+	var current_kdurut = (+row_index)-1;
+	return current_kdurut;
+}
+
 function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 	if(
 		url_tambah_skpd == ''
@@ -1952,10 +1957,15 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 					var _leng = 5;
 					var _data_all = [];
 					var _data = [];
+					var kdurut = 0;
 					data_skpd_selected.map(function(unit, i){
 						skpd.data.map(function(_unit, _i){
 							if(unit.nama_skpd == _unit.nmskpd){
 								unit.fmis = _unit;
+							}
+							var current_kdurut = +_unit.DT_RowIndex;
+							if(kdurut <= current_kdurut){
+								kdurut = current_kdurut;
 							}
 						});
 						_data.push(unit);
@@ -1982,7 +1992,7 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 												success: function(form_edit){
 													var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
 													var form = jQuery(form_edit.form);
-													var kdskpd = skpd.id_skpd;
+													var kdskpd = +skpd.fmis.DT_RowIndex;
 													var nmskpd = skpd.nama_skpd;
 													var idbidang_utama = form.find('input[name="idbidang_utama"]:checked').val();
 													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2_text);
@@ -2007,6 +2017,7 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 												}
 											});
 						        		}else{
+						        			kdurut++;
 						        			relayAjax({
 												url: url_tambah_skpd+'&action=create',
 												success: function(form_edit){
@@ -2014,7 +2025,7 @@ function singkron_skpd_sipd(url_tambah_skpd, data_skpd, cb){
 													var form = jQuery(form_edit.form);
 													var idbidang = form.find('input[name="idbidang"]').val();
 													var idpemda = form.find('input[name="idpemda"]').val();
-													var kdskpd = skpd.id_skpd;
+													var kdskpd = kdurut;
 													var nmskpd = skpd.nama_skpd;
 													var idbidang_utama = idbidang;
 													var idbidang2 = get_id_bidur_skpd(form.find('#idbidang2 option'), skpd.bidur2_text);
@@ -2129,9 +2140,14 @@ function update_save_unit_sipd(unit_sipd, code_skpd, cb){
 		url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_skpd+'&table=unit',
 		success: function(units){
 			var unit_fmis = false;
+			var kdurut = 0;
 			units.data.map(function(unit, ii){
 				if(unit_sipd.nama_skpd == unit.nmunit){
 					unit_fmis = unit
+				}
+				var current_kdurut = +unit.DT_RowIndex;
+				if(kdurut <= current_kdurut){
+					kdurut = current_kdurut;
 				}
 			});
 			new Promise(function(resolve_reduce, reject_reduce){
@@ -2142,7 +2158,7 @@ function update_save_unit_sipd(unit_sipd, code_skpd, cb){
 						url: url_edit+'&action=edit',
 						success: function(form_edit){
 							var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
-							var kdunit = unit_sipd.id_skpd;
+							var kdunit = +unit_fmis.DT_RowIndex;
 							var nmunit = unit_sipd.nama_skpd;
 	    					pesan_loading('UPDATE UNIT '+nmunit, true);
 							relayAjax({
@@ -2161,13 +2177,14 @@ function update_save_unit_sipd(unit_sipd, code_skpd, cb){
 						}
 					});
 	    		}else{
+	    			kdurut++;
 	    			relayAjax({
 						url: config.fmis_url+'/parameter/unit-organisasi/form?code='+code_skpd+'&table=unit&action=create',
 						success: function(form_edit){
 							var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
 							var form = jQuery(form_edit.form);
 							var idskpd = form.find('input[name="idskpd"]').val();
-							var kdunit = unit_sipd.id_skpd;
+							var kdunit = kdurut;
 							var nmunit = unit_sipd.nama_skpd;
 	    					pesan_loading('SIMPAN UNIT '+nmunit, true);
 							relayAjax({
@@ -2222,6 +2239,7 @@ function update_save_unit_sipd(unit_sipd, code_skpd, cb){
 function update_save_sub_unit_sipd(sub_unit, unit_fmis, cb){
 	var code_unit = unit_fmis.code;
 	var last = sub_unit.length - 1;
+	var kdurut = 0;
 	relayAjax({
 		url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_unit+'&table=subunit',
 		success: function(units){
@@ -2233,6 +2251,10 @@ function update_save_sub_unit_sipd(sub_unit, unit_fmis, cb){
 							if(sub_unit_sipd.nama_skpd == subunit.nmsubunit){
 								sub_unit_fmis = subunit
 							}
+							var current_kdurut = get_row_index(subunit.DT_RowIndex);
+							if(kdurut <= current_kdurut){
+								kdurut = current_kdurut;
+							}
 						});
 						if(sub_unit_fmis){
 				    		var url_edit = sub_unit_fmis.action.split('href=\"')[1].split('\"')[0];
@@ -2241,7 +2263,8 @@ function update_save_sub_unit_sipd(sub_unit, unit_fmis, cb){
 								url: url_edit+'&action=edit',
 								success: function(form_edit){
 									var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
-									var kdsubunit = sub_unit_sipd.id_skpd;
+									// var kdsubunit = sub_unit_sipd.id_skpd;
+									var kdsubunit = get_row_index(sub_unit_fmis.DT_RowIndex);
 									var nmsubunit = sub_unit_sipd.nama_skpd;
 									var form = jQuery(form_edit.form);
 									var idunit = form.find('input[name="idunit"]').val();
@@ -2282,11 +2305,13 @@ function update_save_sub_unit_sipd(sub_unit, unit_fmis, cb){
 								}
 							});
 		        		}else{
+		        			kdurut++;
 		        			relayAjax({
 								url: config.fmis_url+'/parameter/unit-organisasi/form?code='+code_unit+'&table=subunit&action=create',
 								success: function(form_edit){
 									var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
-									var kdsubunit = sub_unit_sipd.id_skpd;
+									// var kdsubunit = sub_unit_sipd.id_skpd;
+									var kdsubunit = kdurut;
 									var nmsubunit = sub_unit_sipd.nama_skpd;
 									var form = jQuery(form_edit.form);
 									var idunit = form.find('input[name="idunit"]').val();
@@ -2970,6 +2995,28 @@ function singkronisasi_user_sipd(data_skpd){
 	});
 }
 
+function generate_gl(data_skpd){
+	var pilih_bidur = '';
+	data_skpd.map(function(b, i){
+		pilih_bidur += ''
+			+'<tr>'
+				+'<td><input type="checkbox" value="'+b.id_skpd+'"></td>'
+				+'<td>-</td>'
+				+'<td>'+b.nama_skpd+'</td>'
+			+'</tr>';
+	});
+	run_script('jQuery("#konfirmasi-bidur-skpd").DataTable().destroy();');
+	jQuery('#konfirmasi-bidur-skpd tbody').html(pilih_bidur);
+	var table = jQuery('#konfirmasi-bidur-skpd');
+	table.attr('data-urut', urut);
+	table.attr('data-idbidkewenangan', idbidkewenangan);
+	table.attr('data-idrpjmdprogram', idrpjmdprogram);
+	table.attr('data-url-save', url_save_form);
+	table.attr('data-code-bidang', code_bidang);
+	run_script('jQuery("#konfirmasi-bidur-skpd").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]]});');
+	run_script('jQuery("#mod-konfirmasi-bidur-skpd").modal("show")');
+}
+
 function singkronisasi_bidur_skpd_rpjm(data_skpd){
 	var code_bidang = jQuery('#program-urbid a.btn-sm[title="Tambah Urusan"]').attr('href').split('code=')[1].split('&')[0];
 	// get bidang urusan
@@ -3065,7 +3112,7 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 												cek_exist = true;
 												bb.skpd_pelaksana.map(function(bbb, iii){
 													console.log('skpd_pelaksana', bbb);
-													if(bbb.skpd.kdskpd == b.id_skpd){
+													if(bbb.skpd.nmskpd == b.nama_skpd){
 														cek_exist_skpd = true;
 													}
 												});
@@ -3113,7 +3160,7 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 												if(bb.kdurbid == kode_bidang_sipd){
 													cek_exist = true;
 													bb.skpd_pelaksana.map(function(bbb, iii){
-														if(bbb.skpd.kdskpd == b.id_skpd){
+														if(bbb.skpd.nmskpd == b.nama_skpd){
 															cek_exist_skpd = true;
 														}
 													});
@@ -3165,7 +3212,7 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 												if(bb.kdurbid == kode_bidang_sipd){
 													cek_exist = true;
 													bb.skpd_pelaksana.map(function(bbb, iii){
-														if(bbb.skpd.kdskpd == b.id_skpd){
+														if(bbb.skpd.nmskpd == b.nama_skpd){
 															cek_exist_skpd = true;
 														}
 													});
@@ -3217,7 +3264,7 @@ function singkronisasi_bidur_skpd_rpjm(data_skpd){
 												if(bb.kdurbid == kode_bidang_sipd){
 													cek_exist = true;
 													bb.skpd_pelaksana.map(function(bbb, iii){
-														if(bbb.skpd.kdskpd == b.id_skpd){
+														if(bbb.skpd.nmskpd == b.nama_skpd){
 															cek_exist_skpd = true;
 														}
 													});

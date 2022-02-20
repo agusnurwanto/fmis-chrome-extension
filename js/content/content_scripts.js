@@ -61,6 +61,8 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
     			singkronisasi_user_sipd(res.data);
 			}else if(res.run == 'singkronisasi_bidur_skpd_rpjm'){
 		    	singkronisasi_bidur_skpd_rpjm(res.data);
+			}else if(res.run == 'generate_gl'){
+		    	generate_gl(res.data);
 			}else{
 				var bidur = {};
 				jQuery('li[data-type="bidang"]').map(function(i, b){

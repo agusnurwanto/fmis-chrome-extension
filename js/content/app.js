@@ -271,6 +271,23 @@ if(current_url.indexOf('parameter/rekening') != -1){
 		show_loading();
 		mapping_sumberdana();
     });
+}else if(current_url.indexOf('/importren') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-top: 5px;" id="generate-renstra">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Generate All RENSTRA'
+    +'</button>';
+    jQuery('a.btn-block[title="Tambah Data Renstra Metode 2 Garis Lurus"]').parent().append(btn);
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-top: 5px;" id="generate-renja">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Generate All RENJA'
+    +'</button>';
+    jQuery('a.btn-block[title="Tambah Data Renja Metode 2 Garis Lurus"]').parent().append(btn);
+    jQuery('#generate-renja').on('click', function(){
+		show_loading();
+    });
+    jQuery('#generate-renstra').on('click', function(){
+		show_loading();
+    });
 }else if(current_url.indexOf('/manajemen-user/user') != -1){
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-user">'
