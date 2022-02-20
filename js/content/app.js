@@ -272,21 +272,80 @@ if(current_url.indexOf('parameter/rekening') != -1){
 		mapping_sumberdana();
     });
 }else if(current_url.indexOf('/importren') != -1){
+	var modal_sub_keg = ''
+		+'<div class="modal fade" id="mod-konfirmasi-bidur-skpd" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
+	        +'<div class="modal-dialog modal-lg" role="document">'
+	            +'<div class="modal-content">'
+	                +'<div class="modal-header bgpanel-theme" style="background: #8997bd;">'
+	                    +'<h4 class="modal-title text-white" id="">Pilih SKPD Generate GL</h4>'
+	                    +'<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"><i class="mdi mdi-close-circle"></i></span></button>'
+	                +'</div>'
+	                +'<div class="modal-body">'
+	                	+'<div class="form-group row p-2">'
+	                		+'<label for="mod-rpjm" class="col-sm-3 col-form-label text-left font-weight-semibold border-bottom">Pilih Dokumen RPJMD</label>'
+	                		+'<select class="form-control col-sm-9" id="mod-rpjm"></select>'
+	                	+'</div>'
+	                	+'<div class="form-group row p-2">'
+	                		+'<label for="mod-type-gl" class="col-sm-3 col-form-label text-left font-weight-semibold border-bottom">Pilih Type GL</label>'
+	                		+'<select class="form-control col-sm-9" id="mod-type-gl">'
+	                			+'<option value="1">RENSTRA</option>'
+	                			+'<option value="2">RENJA</option>'
+	                		+'</select>'
+	                	+'</div>'
+	                  	+'<table class="table table-hover table-striped" id="konfirmasi-bidur-skpd">'
+	                      	+'<thead>'
+	                        	+'<tr style="background: #8997bd;">'
+	                          		+'<th class="text-white"><input type="checkbox" id="modal_cek_bidur_all"></th>'
+	                          		+'<th class="text-white" width"300">Nama SKPD</th>'
+	                        	+'</tr>'
+	                      	+'</thead>'
+	                      	+'<tbody></tbody>'
+	                  	+'</table>'
+	                +'</div>'
+	                +'<div class="modal-footer">'
+	                    +'<button type="button" class="btn btn-success" id="proses_modal">Proses</button>'
+	                    +'<button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>'
+	                +'</div>'
+	            +'</div>'
+	        +'</div>'
+	    +'</div>';
+	jQuery('body').append(modal_sub_keg);
 	var btn = ''
-	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-top: 5px;" id="generate-renstra">'
-        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Generate All RENSTRA'
-    +'</button>';
-    jQuery('a.btn-block[title="Tambah Data Renstra Metode 2 Garis Lurus"]').parent().append(btn);
-	var btn = ''
-	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-top: 5px;" id="generate-renja">'
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="display: block;" id="generate-renja">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Generate All RENJA'
     +'</button>';
-    jQuery('a.btn-block[title="Tambah Data Renja Metode 2 Garis Lurus"]').parent().append(btn);
+    jQuery('a.btn-block[title="Tambah Data Renja Metode 2 Garis Lurus"]')
+    	.closest('.card-body')
+    	.find('.row .col-auto')
+    	.append(btn);
+    jQuery('#modal_cek_bidur_all').on('click', function(){
+		var cek = jQuery(this).is(':checked');
+		jQuery('#konfirmasi-bidur-skpd tbody tr input[type="checkbox"]').prop('checked', cek);
+	});
     jQuery('#generate-renja').on('click', function(){
 		show_loading();
+		var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'get_skpd',
+						run: 'generate_gl',
+						tahun_anggaran: config.tahun_anggaran,
+						api_key: config.api_key
+					},
+	    			return: true
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
     });
-    jQuery('#generate-renstra').on('click', function(){
-		show_loading();
+    jQuery('#proses_modal').on('click', function(){
+    	generate_gl_modal();
     });
 }else if(current_url.indexOf('/manajemen-user/user') != -1){
 	var btn = ''

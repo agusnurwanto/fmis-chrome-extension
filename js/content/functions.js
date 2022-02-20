@@ -2996,25 +2996,113 @@ function singkronisasi_user_sipd(data_skpd){
 }
 
 function generate_gl(data_skpd){
+	window.data_bidur_skpd = {};
 	var pilih_bidur = '';
-	data_skpd.map(function(b, i){
-		pilih_bidur += ''
-			+'<tr>'
-				+'<td><input type="checkbox" value="'+b.id_skpd+'"></td>'
-				+'<td>-</td>'
-				+'<td>'+b.nama_skpd+'</td>'
-			+'</tr>';
+	pesan_loading('GET data ALL SKPD FMIS!', true);
+	relayAjax({
+		url: config.fmis_url+'/importren/scgl?action=renstra',
+		success: function(form_ret){
+			var skpd_selected_gl = [];
+			var form = jQuery(form_ret.form);
+			form.find('#id_unit option').map(function(i, b){
+				var nama_skpd_fmis = jQuery(b).text();
+				data_skpd.map(function(bb, ii){
+					if(bb.nama_skpd == nama_skpd_fmis){
+						bb.id_skpd_fmis = jQuery(b).attr('value');
+						skpd_selected_gl.push(bb);
+					}
+				});
+			});
+			skpd_selected_gl.map(function(b, i){
+				if(b.is_skpd == 1){
+					data_bidur_skpd[b.id_skpd] = b;
+					pilih_bidur += ''
+						+'<tr>'
+							+'<td><input type="checkbox" value="'+b.id_skpd+'"></td>'
+							+'<td>'+b.nama_skpd+'</td>'
+						+'</tr>';
+				}
+			});
+			jQuery('#mod-rpjm').html(form.find('#no_perda').html());
+			run_script('jQuery("#konfirmasi-bidur-skpd").DataTable().destroy();');
+			jQuery('#konfirmasi-bidur-skpd tbody').html(pilih_bidur);
+			run_script('jQuery("#konfirmasi-bidur-skpd").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]], "columnDefs": [{ "orderable": false, "targets": 0 } ]});');
+			run_script('jQuery("#mod-konfirmasi-bidur-skpd").modal("show")');
+			hide_loading();
+		}
 	});
-	run_script('jQuery("#konfirmasi-bidur-skpd").DataTable().destroy();');
-	jQuery('#konfirmasi-bidur-skpd tbody').html(pilih_bidur);
-	var table = jQuery('#konfirmasi-bidur-skpd');
-	table.attr('data-urut', urut);
-	table.attr('data-idbidkewenangan', idbidkewenangan);
-	table.attr('data-idrpjmdprogram', idrpjmdprogram);
-	table.attr('data-url-save', url_save_form);
-	table.attr('data-code-bidang', code_bidang);
-	run_script('jQuery("#konfirmasi-bidur-skpd").DataTable({lengthMenu: [[20, 50, 100, -1], [20, 50, 100, "All"]]});');
-	run_script('jQuery("#mod-konfirmasi-bidur-skpd").modal("show")');
+}
+
+function generate_gl_modal(){
+	var skpd_selected = [];
+	jQuery('#konfirmasi-bidur-skpd tbody tr input[type="checkbox"]').map(function(i, b){
+		var cek = jQuery(b).is(':checked');
+		if(cek){
+			var id = jQuery(b).val();
+			skpd_selected.push(data_bidur_skpd[id]);
+		}
+	});
+	if(skpd_selected.length >= 1){
+		var rpjm_id = jQuery('#mod-rpjm').val();
+		var type_gl = jQuery('#mod-type-gl').val();
+		if(rpjm_id == -1){
+			return alert('Dokumen RPJMD belum dipilih!');
+		}else if(
+			type_gl != 1
+			&& type_gl != 2
+		){
+			return alert('Type GL belum dipilih!');
+		}else if(confirm('Apakah anda yakin untuk menggenerate data dengan metode GL (Garis Lurus)?')){
+			show_loading();
+			console.log('skpd_selected', skpd_selected);
+			var last = skpd_selected.length - 1;
+			skpd_selected.reduce(function(sequence, nextData){
+	            return sequence.then(function(skpd){
+	        		return new Promise(function(resolve_reduce, reject_reduce){
+	        			if(type_gl == 1){
+		        			pesan_loading('Generate RENSTRA GL SKPD = '+skpd.nama_skpd, true);
+		        			var url = config.fmis_url+'/importren/save-renstragl?code=0';
+	        			}else if(type_gl == 2){
+		        			pesan_loading('Generate RENJA GL SKPD = '+skpd.nama_skpd, true);
+		        			var url = config.fmis_url+'/importren/save-renjagl?code=0';
+	        			}
+	        			// ajax tidak direlay karena jika data sudah digenerate maka responnya akan 500
+        				jQuery.ajax({
+							url: url,
+							data: {
+								_token: _token,
+								no_perda: rpjm_id,
+								id_unit: skpd.id_skpd_fmis
+							},
+							type: "post",
+							success: function(form_ret){
+        						resolve_reduce(nextData);
+							},
+							error: function(e){
+								console.log('error proses GL', e, this.data, skpd);
+        						resolve_reduce(nextData);
+							}
+        				});
+	        		})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(skpd_selected[last]))
+	        .then(function(data_last){
+				run_script('jQuery("#mod-konfirmasi-bidur-skpd").modal("hide")');
+				alert('Sukses generate metodde GL!');
+				hide_loading();
+	        });
+		}
+	}else{
+		alert('Pilih SKPD dulu!');
+	}
 }
 
 function singkronisasi_bidur_skpd_rpjm(data_skpd){
