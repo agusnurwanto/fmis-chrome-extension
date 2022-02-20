@@ -5278,9 +5278,13 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 						rka_sipd.reduce(function(sequence2, nextData2){
 				            return sequence2.then(function(current_data){
 				        		return new Promise(function(resolve_reduce2, reject_reduce2){
-				        			var nama_aktivitas = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
+				        			var sumber_dana_sipd = current_data.sumber_dana[0].nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
+									var nama_aktivitas = sumber_dana_sipd.substring(0, 500).trim();
+				        			// var nama_aktivitas = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
+
 			        				if(nama_aktivitas == aktivitas.uraian){
-			        					var nama_rincian = replace_string(current_data.nama_komponen+' | '+current_data.spek_komponen, false, false).substring(0, 500).trim();
+				        				var kelompok_keterangan = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
+			        					var nama_rincian = replace_string(kelompok_keterangan+' | '+current_data.nama_komponen+' | '+current_data.spek_komponen, false, false).substring(0, 500).trim();
 			        					var cek_exist = false;
 										data_rka.map(function(b, i){
 											var uraian_belanja = replace_string(b.uraian_belanja, false, false);
@@ -5419,7 +5423,11 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 				.then(function(satuan_fmis){
 					var all_aktivitas = [];
 					rka_sipd.map(function(b, i){
-						var nama_aktivitas = replace_string(b.subs_bl_teks+' | '+b.ket_bl_teks, true, true).substring(0, 500).trim();
+						var idsumberdana = '5';
+	        			var uraian_sumberdana = 'Pendapatan Transfer Pemerintah Pusat';
+	        			var sumber_dana_sipd = b.sumber_dana[0].nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
+						// var nama_aktivitas = replace_string(b.subs_bl_teks+' | '+b.ket_bl_teks, true, true).substring(0, 500).trim();
+						var nama_aktivitas = sumber_dana_sipd.substring(0, 500).trim();
 						var cek_exist = false;
 						var _aktivitas = false;
 						all_aktivitas.map(function(bb, ii){
@@ -5431,9 +5439,6 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 								}
 							}
 						});
-						var idsumberdana = '5';
-	        			var uraian_sumberdana = 'Pendapatan Transfer Pemerintah Pusat';
-	        			var sumber_dana_sipd = b.sumber_dana[0].nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
 	        			if(master_sumberdana[sumber_dana_sipd]){
 	        				idsumberdana = master_sumberdana[sumber_dana_sipd];
 	        				uraian_sumberdana = sumber_dana_sipd;
