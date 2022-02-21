@@ -5121,7 +5121,7 @@ function get_id_ssh_rka(rka, options){
 			window.master_ssh_rka_global = {};
 		}
 		if(typeof master_ssh_rka_global[unik_rincian] == 'undefined'){
-			var unik_rincian_search = unik_rincian.split('[')[0];
+			var unik_rincian_search = encodeURIComponent(unik_rincian.split('[')[0]);
 			if(_type_singkronisasi_rka == 'rka-opd'){
 				var url_ssh = config.fmis_url+'/anggaran/rka-belanja/belanja/datatable-ref?draw=1&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=uraian&columns%5B1%5D%5Bname%5D=uraian&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=nilai&columns%5B2%5D%5Bname%5D=nilai&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=uraian_satuan&columns%5B3%5D%5Bname%5D=uraian_satuan&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=true&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=spesifikasi&columns%5B4%5D%5Bname%5D=spesifikasi&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=true&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=10&search%5Bvalue%5D='+unik_rincian_search+'&search%5Bregex%5D=false';
 			}else{
