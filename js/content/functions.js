@@ -1040,6 +1040,7 @@ function replace_string(text, no_lowercase=false, no_replace=false){
 		text = text.replace(/¹/g, '1');
 		text = text.replace(/'/g, '`');
 		text = text.replace(/&/g, 'dan');
+		text = text.replace(/Â/g, '');
 	}
 	return text.trim();
 }
