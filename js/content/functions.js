@@ -6321,3 +6321,212 @@ function mapping_sub_kegiatan(){
 		});
 	});
 }
+
+function get_all_dokumen_rka(){
+	pesan_loading('GET ALL DOKUMEN', true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/anggaran/rka-opd/dokumen/datatable',
+	        success: function(rka){
+	        	resolve(rka.data);
+	        }
+	    });
+	})
+}
+
+function get_all_sasaran_rka(code){
+	pesan_loading('GET ALL SASARAN', true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/anggaran/rka-opd/sasaran/datatable?code='+code,
+	        success: function(sasaran){
+	        	resolve(sasaran.data);
+	        }
+	    });
+	})
+}
+
+function get_all_sasaran_rka_rpjmd(code){
+	pesan_loading('GET ALL SASARAN RPJMD', true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/anggaran/rka-opd/sasaran/datatable-rpjmd?code='+code,
+	        success: function(sasaran){
+	        	resolve(sasaran.data);
+	        }
+	    });
+	})
+}
+
+function get_all_tujuan_rka_renstra(code){
+	pesan_loading('GET ALL SASARAN RPJMD', true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/anggaran/rka-opd/sasaran/datatable-tujuan?code='+code,
+	        success: function(tujuan){
+	        	resolve(tujuan.data);
+	        }
+	    });
+	})
+}
+
+function gl_dokumen_rka(){
+	show_loading();
+	var url_save_dokumen = '';
+	var dokumen_rka = false;
+	return new Promise(function(resolve, reject){
+		get_all_dokumen_rka()
+		.then(function(dokumen){
+			if(dokumen.length == 0){
+				pesan_loading('GET FORM TAMBAH DOKUMEN', true);
+				relayAjax({
+					url: config.fmis_url+'/anggaran/rka-opd/dokumen/form?action=create',
+			        success: function(form_create){
+			    		var form = jQuery(form_create.form);
+			    		var idrapbd = false;
+			    		form.find('#idrapbd option').map(function(i, b){
+			    			var val = jQuery(b).attr('value');
+			    			if(val && !idrapbd){
+			    				idrapbd = val;
+			    			}
+			    		});
+			    		var no_rka = '';
+			    		var idrkpdrenja = false;
+			    		form.find('#idrkpdrenja option').map(function(i, b){
+			    			var val = jQuery(b).attr('value');
+			    			if(val && !idrkpdrenja){
+			    				idrkpdrenja = val;
+			    				no_rka = jQuery(b).text().replace(/RKPD/g, 'RKA-SKPD');
+			    			}
+			    		});
+			    		if(!idrapbd || !idrkpdrenja){
+			    			alert('Dokumen TAPD Referensi atau Dokumen Renja Referensi tidak ditemukan!');
+			    			reject();
+			    		}else{
+			    			var tgl_rka = form.find('#tgl_rka').val();
+			    			var sub_unit = jQuery('.nav-link .text-secondary').text().split('/ ')[2].trim();
+				    		var data_post = {
+				    			_token: _token,
+								idrapbd: idrapbd,
+								idrkpdrenja: idrkpdrenja, 
+								no_rka: no_rka,
+								tgl_rka: tgl_rka,
+								keterangan: 'RKA-SKPD '+sub_unit,
+								tdt_nama: 'Nama Pejabat',
+								tdt_nip: '11111111 111111 1 111',
+								tdt_jabatan: 'Kepala Dinas'
+				    		};
+			    			url_save_dokumen = form.attr('action');
+			    			resolve(data_post);
+				    	}
+			        }
+				});
+			}else{
+				dokumen_rka = dokumen;
+				return resolve(false);
+			}
+		});
+	})
+	.then(function(data_post){
+		return new Promise(function(resolve, reject){
+			if(data_post){
+				pesan_loading('SIMPAN DOKUMEN RKA METODE GL', true);
+				relayAjax({
+					url: url_save_dokumen,
+					data: data_post,
+					type: 'post',
+			        success: function(form_create){
+			        	get_all_dokumen_rka()
+						.then(function(dokumen){
+							dokumen_rka = dokumen;
+							return resolve();
+						});
+			        }
+				});
+			}else{
+				return resolve();
+			}
+		});
+	})
+	.then(function(data_post){
+		var last = dokumen_rka.length - 1;
+		dokumen_rka.reduce(function(sequence, nextData){
+            return sequence.then(function(dokumen){
+        		return new Promise(function(resolve_reduce, reject_reduce){
+                	var code_rka = dokumen.action.split('data-code="')[1].split('"')[0];
+                	get_all_sasaran_rka(code_rka)
+                	.then(function(sasaran){
+                		if(sasaran.length == 0){
+							pesan_loading('GET FORM TAMBAH DOKUMEN', true);
+							relayAjax({
+								url: config.fmis_url+'/anggaran/rka-opd/sasaran/form?action=create&code='+code_rka,
+						        success: function(form_create){
+						        	get_all_sasaran_rka_rpjmd(code_rka)
+						        	.then(function(sasaran_rpjm){
+						        		var idrapbdsasaran = false;
+						        		var uraian_sasaran_rapbd = false;
+						        		sasaran_rpjm.map(function(b, i){
+						        			uraian_sasaran_rapbd = b.uraian_sasaran;
+						        			idrapbdsasaran = b.action.split('data-id="')[1].split('"')[0];
+						        		});
+							        	get_all_tujuan_rka_renstra(code_rka)
+							        	.then(function(tujuan_renstra){
+							        		var idrenstratujuan = false;
+							        		var uraian_tujuan = false;
+							        		tujuan_renstra.map(function(b, i){
+							        			uraian_tujuan = b.uraian;
+							        			idrenstratujuan = b.action.split('data-id="')[1].split('"')[0];
+							        		});
+								        	var form = jQuery(form_create.form);
+								        	var data_post = {
+								        		_token: _token,
+												idrapbdrka: form.find('#idrapbdrka').val(),
+												idrapbdrkasasaran: '', 
+												uraian_sasaran_rapbd: uraian_sasaran_rapbd,
+												idrapbdsasaran: idrapbdsasaran, 
+												uraian_tujuan: uraian_tujuan,
+												idrenstratujuan: idrenstratujuan,
+												kdurut: 1,
+												uraian: uraian_tujuan.replace('Tujuan Renstra', 'Sasaran Renja'),
+												idrkpdrenjasasaran: '',
+												status_pelaksanaan: 4,
+								        	};
+								        	var url_save_sasaran = form.attr('action');
+				                			pesan_loading('SIMPAN SASARAN RKA METODE GL', true);
+											relayAjax({
+												url: url_save_sasaran,
+												data: data_post,
+												type: 'post',
+										        success: function(form_create){
+													return resolve_reduce(nextData);
+										        }
+											});
+							        	});
+						        	});
+								}
+							});
+                		}else{
+                			return resolve_reduce(nextData);
+                		}
+                	});
+                })
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(dokumen_rka[last]))
+        .then(function(data_last){
+        	run_script("initRenstraTable('dokumen');");
+        	alert('Sukses generate dokumen RKA!');
+			hide_loading();
+        });
+	})
+	.catch(function(e){
+		hide_loading();
+	});
+}

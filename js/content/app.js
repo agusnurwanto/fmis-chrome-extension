@@ -474,7 +474,10 @@ if(current_url.indexOf('parameter/rekening') != -1){
     });
 }else if(
 	current_url.indexOf('/perencanaan-tahunan/renja-murni') != -1
-	|| current_url.indexOf('/anggaran/rka-opd') != -1
+	|| (
+		current_url.indexOf('/anggaran/rka-opd') != -1
+		&& current_url.indexOf('/anggaran/rka-opd/laporan') == -1
+	)
 ){
 	window._type_singkronisasi_rka = 'renja-murni';
 	if(current_url.indexOf('/anggaran/rka-opd') != -1){
@@ -535,13 +538,21 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 10px; float: right;" id="delete-rka">'
         +'<i class="fa fa-trash fa-fw"></i> Delete RKA'
     +'</button>'
-	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 10px; float: right;" id="singkron-rka">'
+	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 10px; float: right; display: none;" id="singkron-rka">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi RKA WP-SIPD di tab Sub Kegiatan'
     +'</button>'
-	+'<button type="button" class="btn btn-outline-success btn-sm" style="float: right;" id="singkron-program">'
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 10px; float: right;" id="singkron-program">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Program WP-SIPD di tab Program'
+    +'</button>'
+	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 10px; float: right;" id="gl-dokumen-rka">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> GL Dokumen RKA'
     +'</button>';
     jQuery('.card-header.bg-light').prepend(btn);
+    jQuery('#gl-dokumen-rka').on('click', function(){
+    	if(confirm('Apakah anda yakin untuk membuat dokumen RKA dengan metode GL?')){
+    		gl_dokumen_rka();
+    	}
+    });
     jQuery('#delete-rka').on('click', function(){
 		show_loading();
 		var tambah_program = jQuery('a.btn-sm[title="Tambah Program"]');
