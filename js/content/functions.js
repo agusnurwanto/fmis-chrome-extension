@@ -6680,3 +6680,102 @@ function gl_dokumen_rka(){
 		hide_loading();
 	});
 }
+
+function to_number(text){
+	return +(text.split(',')[0].replace(/\./g, ''));
+}
+
+function tampil_pagu_sub_keg(){
+	show_loading();
+	window._type_singkronisasi_rka = 'rka-opd';
+	var sub_kegiatan = [];
+	jQuery('#table-subkegiatan tbody .btn-group-sm .btn.btn-success.my-1.tab-next').map(function(i, b){
+		var kode_sub = jQuery(b).attr('data-code');
+		sub_kegiatan.push({
+			code: kode_sub,
+			sub_keg: jQuery(b).attr('data-info'),
+			keg: jQuery(b).attr('data-keg'),
+			prog: jQuery(b).attr('data-prog')
+		});
+	});
+	var total = 0;
+	var last = sub_kegiatan.length - 1;
+	sub_kegiatan.reduce(function(sequence, nextData){
+        return sequence.then(function(sub){
+    		return new Promise(function(resolve_reduce, reject_reduce){
+    			pesan_loading('GET PAGU SUB KEGIATAN '+sub.sub_keg, true);
+    			var total_sub = 0;
+    			relayAjax({
+					url: config.fmis_url+'/anggaran/rka-belanja/aktivitas/datatable?code='+sub.code,
+			        success: function(aktivitas_exist){
+			        	var last2 = aktivitas_exist.data.length - 1;
+			        	aktivitas_exist.data.reduce(function(sequence2, nextData2){
+					        return sequence2.then(function(aktivitas){
+					    		return new Promise(function(resolve_reduce2, reject_reduce2){
+						        	get_rka_aktivitas(aktivitas)
+									.then(function(data_rka){
+										data_rka.map(function(b, i){
+											total_sub += to_number(b.jumlah);
+										});
+										return resolve_reduce2(nextData2);
+									});
+								})
+					            .catch(function(e){
+					                console.log(e);
+					                return Promise.resolve(nextData2);
+					            });
+					        })
+					        .catch(function(e){
+					            console.log(e);
+					            return Promise.resolve(nextData2);
+					        });
+					    }, Promise.resolve(aktivitas_exist.data[last2]))
+					    .then(function(data_last){
+					    	total += total_sub;
+					    	var td_prog = jQuery('td:contains("PROGRAM : '+sub.prog+'")');
+					    	var td_keg = jQuery('td:contains("KEGIATAN : '+sub.keg+'")');
+					    	var td_sub = jQuery('.btn.btn-success.my-1.tab-next[data-code="'+sub.code+'"]').closest('tr').find('td.text-left');
+					    	var text = ' <span class="badge badge-success" style="font-size: 15px !important;" data-pagu="0">Rp 0</span>';
+					    	if(td_prog.find('span.badge').length == 0){
+					    		td_prog.append(text);
+					    	}
+					    	if(td_keg.find('span.badge').length == 0){
+					    		td_keg.append(text);
+					    	}
+					    	if(td_sub.find('span.badge').length == 0){
+					    		td_sub.append(text);
+					    	}
+					    	var pagu_prog = +td_prog.find('span.badge').attr('data-pagu');
+					    	pagu_prog += total_sub;
+					    	var pagu_keg = +td_keg.find('span.badge').attr('data-pagu');
+					    	pagu_keg += total_sub;
+					    	var pagu_sub = +td_sub.find('span.badge').attr('data-pagu');
+					    	pagu_sub += total_sub;
+					    	td_prog.find('span.badge').attr('data-pagu', pagu_prog);
+					    	td_keg.find('span.badge').attr('data-pagu', pagu_keg);
+					    	td_sub.find('span.badge').attr('data-pagu', pagu_sub);
+					    	td_prog.find('span.badge').text('Rp '+formatMoney(pagu_prog, 0, ',', '.'));
+							td_keg.find('span.badge').text('Rp '+formatMoney(pagu_keg, 0, ',', '.'));
+							td_sub.find('span.badge').text('Rp '+formatMoney(pagu_sub, 0, ',', '.'));
+							return resolve_reduce(nextData);
+						});
+			        }
+				});
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        })
+        .catch(function(e){
+            console.log(e);
+            return Promise.resolve(nextData);
+        });
+    }, Promise.resolve(sub_kegiatan[last]))
+    .then(function(data_last){
+    	var pesan = 'Sukses get pagu sub kegiatan! Total pagu Rp '+formatMoney(total, 0, ',', '.');
+    	console.log(pesan);
+    	alert(pesan);
+		hide_loading();
+    });
+}

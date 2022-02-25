@@ -472,6 +472,15 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			});
 		}
     });
+}else if(current_url.indexOf('/anggaran/rka-belanja') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 10px; float: right;" id="tampil-pagu-sub-keg">'
+        +'<i class="fa fa-eye fa-fw"></i> Tampil Pagu Rincian Sub Kegiatan'
+    +'</button>';
+    jQuery('.card-header.bg-light').prepend(btn);
+    jQuery('#tampil-pagu-sub-keg').on('click', function(){
+    	tampil_pagu_sub_keg();
+    });
 }else if(
 	current_url.indexOf('/perencanaan-tahunan/renja-murni') != -1
 	|| (
