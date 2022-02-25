@@ -2824,6 +2824,8 @@ function singkronisasi_user_sipd(data_skpd){
 								skpd.user_fmis_p = u;
 							}else if(last == 'k'){
 								skpd.user_fmis_k = u;
+							}else if(last == 'b'){
+								skpd.user_fmis_b = u;
 							}
 						}
 					});
@@ -2851,6 +2853,77 @@ function singkronisasi_user_sipd(data_skpd){
 								return ret_cb();
 							}
 							var sendDataSub = [];
+							/*
+							// insert or update user bendahara
+							if(data.skpd.user_fmis_b){
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										var url_form = data.skpd.user_fmis_b.action.split('href=\"')[1].split('\"')[0];
+										relayAjax({
+											url: url_form+'?action=edit',
+											success: function(form_update){
+												var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_update,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'PUT',
+										                kduser: data.skpd.nipkepala+'b',
+										                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
+										                level: 'operator',
+										                status: 1,
+										                idunit: data.skpd.idunit_fmis,
+										                idsubunit: data.skpd.idsubunit_fmis,
+										                idgroup: [10], // Bendahara PD
+										                tahun: [config.tahun_anggaran],
+										            },
+													success: function(res){
+														ret_cb2();
+													}
+												});
+											}
+										});
+									}
+								});
+							}else{
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										relayAjax({
+											url: config.fmis_url+'/manajemen-user/user/store',
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'POST',
+								                kduser: data.skpd.nipkepala+'b',
+								                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+								                pwd: pass,
+								                pwd_confirmation: pass,
+								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
+								                level: 'operator',
+								                status: 1,
+								                idunit: data.skpd.idunit_fmis,
+								                idsubunit: data.skpd.idsubunit_fmis,
+								                idgroup: [10], // Perencanaan PD
+								                tahun: [config.tahun_anggaran],
+								            },
+											success: function(res){
+												ret_cb2();
+											}
+										});
+									}
+								});
+							}
+							*/
+
+							// insert or update user perencana
 							if(data.skpd.user_fmis_p){
 								sendDataSub.push({
 									param: {
@@ -2917,6 +2990,8 @@ function singkronisasi_user_sipd(data_skpd){
 									}
 								});
 							}
+
+							// insert or update user keuangan
 							if(data.skpd.user_fmis_k){
 								sendDataSub.push({
 									param: {
@@ -4688,6 +4763,20 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 			var code_subkegiatan = '';
 			get_master_sub_keg_fmis(kegiatan)
 			.then(function(master_sub_kegiatan){
+				var sub_kegiatan_total = [];
+				sub_kegiatan_filter_kegiatan.map(function(b, i){
+					var keyword = b.nama_giat+b.nama_sub_giat;
+					if(!sub_kegiatan_total[keyword]){
+						b.pagu_n_lalu = +b.pagu_n_lalu;
+						b.pagu_keg = +b.pagu_keg;
+						b.pagu_n_depan = +b.pagu_n_depan;
+						sub_kegiatan_total[keyword] = b;
+					}else{
+						sub_kegiatan_total[keyword].pagu_n_lalu += +b.pagu_n_lalu;
+						sub_kegiatan_total[keyword].pagu_keg += +b.pagu_keg;
+						sub_kegiatan_total[keyword].pagu_n_depan += +b.pagu_n_depan;
+					}
+				});
 				var cek_sub_kegiatan = {};
 				var last = sub_kegiatan_filter_kegiatan.length - 1;
 				sub_kegiatan_filter_kegiatan.reduce(function(sequence, nextData){
@@ -4717,14 +4806,15 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 									});
 									current_data.kegiatan_fmis = kegiatan;
 									sub_kegiatan_filter.push(current_data);
+									var keyword = current_data.nama_giat+current_data.nama_sub_giat;
 		        					var data_post = {
 		        						_token: _token,
 		        						idsubkegiatan: master_sub_kegiatan[nama_sub_giat].id,
 		        						uraian: master_sub_kegiatan[nama_sub_giat].nama,
-		        						pagu_tahun1: +current_data.pagu_n_lalu,
+		        						pagu_tahun1: +sub_kegiatan_total[keyword].pagu_n_lalu,
 		        						// pagu_tahun1: 0,
-		        						pagu_tahun2: +current_data.pagu_keg,
-		        						pagu_tahun3: +current_data.pagu_n_depan
+		        						pagu_tahun2: +sub_kegiatan_total[keyword].pagu_keg,
+		        						pagu_tahun3: +sub_kegiatan_total[keyword].pagu_n_depan
 		        					};
 									if(!cek_exist && !cek_sub_kegiatan[nama_sub_giat]){
 										cek_sub_kegiatan[nama_sub_giat] = current_data;
@@ -4760,6 +4850,7 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 											});
 			        					})
 			        				}else if(cek_exist && !cek_sub_kegiatan[nama_sub_giat]){
+										cek_sub_kegiatan[nama_sub_giat] = current_data;
 			        					data_post.kdurut = kdurut_exist;
 			        					pesan_loading('UPDATE SUB KEGIATAN '+nama_sub_giat, true);
 			        					new Promise(function(resolve3, reject3){
@@ -5005,42 +5096,32 @@ function insert_update_rka(sub_kegiatan_sipd){
 function get_master_sumberdana(options){
 	pesan_loading('GET MASTER SUMBER DANA DARI SUBKEGIATAN = '+options.uraian, true);
 	return new Promise(function(resolve, reject){
-		if(typeof master_sumberdana_global == 'undefined'){
-			window.master_sumberdana_global = {};
-		}
-		if(typeof master_sumberdana_global[options.idsubkegiatan] == 'undefined'){
-			if(_type_singkronisasi_rka == 'rka-opd'){
-				var code_subkegiatan = options.action.split('data-code="')[1].split('"')[0];
-				relayAjax({
-					url: config.fmis_url+'/anggaran/rka-opd/aktivitas/form?code='+code_subkegiatan+'&action=create',
-					success: function(form_tambah){
-						window.global_form_tambah_aktivitas = form_tambah.form;
-						var data = {};
-						jQuery(form_tambah.form).find('#idsumberdana1 option').map(function(i, b){
-							var val = jQuery(b).attr('value');
-							if(val != -1){
-								data[jQuery(b).text().trim()] = val;
-							}
-						});
-						master_sumberdana_global[options.idsubkegiatan] = data;
-						resolve(master_sumberdana_global[options.idsubkegiatan]);
-					}
-				});
-			}else{
-				relayAjax({
-					url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/pilih-data/'+options.idsubkegiatan+'?load=sumberdana1',
-					success: function(form_tambah){
-						var data = {};
-						jQuery(form_tambah).find('a.btn-choose-data-sumberdana1').map(function(i, b){
-							data[jQuery(b).attr('data-uraian')] = jQuery(b).attr('data-idsumberdana');
-						});
-						master_sumberdana_global[options.idsubkegiatan] = data;
-						resolve(master_sumberdana_global[options.idsubkegiatan]);
-					}
-				});
-			}
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			var code_subkegiatan = options.action.split('data-code="')[1].split('"')[0];
+			relayAjax({
+				url: config.fmis_url+'/anggaran/rka-opd/aktivitas/form?code='+code_subkegiatan+'&action=create',
+				success: function(form_tambah){
+					var data = {};
+					jQuery(form_tambah.form).find('#idsumberdana1 option').map(function(i, b){
+						var val = jQuery(b).attr('value');
+						if(val != -1){
+							data[jQuery(b).text().trim()] = val;
+						}
+					});
+					resolve(data);
+				}
+			});
 		}else{
-			resolve(master_sumberdana_global[options.idsubkegiatan]);
+			relayAjax({
+				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/pilih-data/'+options.idsubkegiatan+'?load=sumberdana1',
+				success: function(form_tambah){
+					var data = {};
+					jQuery(form_tambah).find('a.btn-choose-data-sumberdana1').map(function(i, b){
+						data[jQuery(b).attr('data-uraian')] = jQuery(b).attr('data-idsumberdana');
+					});
+					resolve(data);
+				}
+			});
 		}
 	});
 }
@@ -5272,7 +5353,11 @@ function get_master_rekening_rka(idrkpdrenjaaktivitas, idssh_4){
 }
 
 function replace_number(number){
-	return number.replace(/\./g, ',');
+	if(_type_singkronisasi_rka == 'rka-opd'){
+		return number.replace(/\./g, ',');
+	}else{
+		return number;
+	}
 }
 
 function cek_insert_rka_fmis(rka_sipd, sub_keg){
@@ -5525,19 +5610,25 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 									pesan_loading('SIMPAN AKTIVITAS '+current_data.aktivitas+' SUBKEGIATAN '+sub_keg.nama_sub_giat, true);
 									new Promise(function(resolve, reduce){
 					        			if(_type_singkronisasi_rka == 'rka-opd'){
-					        				var form = jQuery(global_form_tambah_aktivitas);
-					        				data_post.idrapbdrkaaktivitas = '';
-					        				data_post.idrapbdrkasubkegiatan = form.find('input[name="idrapbdrkasubkegiatan"]').val();
-					        				data_post.jn_asb = 0;
-					        				data_post.jn_rkud = 0;
-					        				data_post.status_luncuran = 0;
-					        				data_post.idasb = 0;
-					        				data_post.idpptk = '';
-					        				data_post.volume1 = 1;
-					        				data_post.volume2 = 0;
-					        				data_post.status_pelaksanaan = 4;
-					        				var url = form.attr('action');
-					        				resolve(url);
+					        				var code_subkegiatan = sub_keg.sub_keg_fmis.action.split('data-code="')[1].split('"')[0];
+											relayAjax({
+												url: config.fmis_url+'/anggaran/rka-opd/aktivitas/form?code='+code_subkegiatan+'&action=create',
+												success: function(form_tambah){
+							        				var form = jQuery(form_tambah.form);
+							        				data_post.idrapbdrkaaktivitas = '';
+							        				data_post.idrapbdrkasubkegiatan = form.find('input[name="idrapbdrkasubkegiatan"]').val();
+							        				data_post.jn_asb = 0;
+							        				data_post.jn_rkud = 0;
+							        				data_post.status_luncuran = 0;
+							        				data_post.idasb = 0;
+							        				data_post.idpptk = '';
+							        				data_post.volume1 = 1;
+							        				data_post.volume2 = 0;
+							        				data_post.status_pelaksanaan = 4;
+							        				var url = form.attr('action');
+							        				resolve(url);
+							        			}
+							        		});
 				        				}else{
 					        				data_post.uraian_sumberdana1 = uraian_sumberdana1;
 					        				data_post.uraian_sumberdana2 = uraian_sumberdana2;
