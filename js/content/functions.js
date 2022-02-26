@@ -3957,7 +3957,8 @@ function delete_rka_modal(idkegiatan){
 						            return sequence2.then(function(aktivitas){
 						        		return new Promise(function(resolve_reduce2, reject_reduce2){
 						        			get_rka_aktivitas(aktivitas)
-											.then(function(data_rka){
+											.then(function(rka){
+												var data_rka = rka.data;
 												var last3 = data_rka.length - 1;
 												data_rka.reduce(function(sequence3, nextData3){
 										            return sequence3.then(function(rka){
@@ -5134,11 +5135,11 @@ function get_rka_aktivitas(options){
 			relayAjax({
 				url: config.fmis_url+'/anggaran/rka-belanja/belanja/form?code='+code_aktivitas+'&action=create',
 				success: function(form_tambah){
-					window.global_form_tambah_rka = form_tambah.form;
 					relayAjax({
 						url: config.fmis_url+'/anggaran/rka-belanja/belanja/datatable?code='+code_aktivitas,
 						success: function(rka){
-							resolve(rka.data);
+							rka.form_tambah_rka = form_tambah.form;
+							resolve(rka);
 						},
 						error: function(e){
 							console.log('Error get RKA existing dari aktivitas', options);
@@ -5150,7 +5151,7 @@ function get_rka_aktivitas(options){
 			relayAjax({
 				url: config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/data/'+options.idrkpdrenjaaktivitas,
 				success: function(rka){
-					resolve(rka.data);
+					resolve(rka);
 				},
 				error: function(e){
 					console.log('Error get RKA existing dari aktivitas', options.idrkpdrenjaaktivitas);
@@ -5205,46 +5206,96 @@ function get_id_ssh_rka(rka, options){
 		var unik_rincian = replace_string(
 				(rka.harga_satuan+' '+rka.satuan+' '+rka.nama_komponen).substring(0, 250).trim()
 		, true);
-		if(typeof master_ssh_rka_global == 'undefined'){
-			window.master_ssh_rka_global = {};
+		// pencairan item ssh jika ada karakter [ atau ] di halaman tambah rincian tidak jalan. berbeda jika dicari di halman perkada lancar. maka perlu di split.
+		unik_rincian = unik_rincian.split('[')[0];
+		unik_rincian = unik_rincian.split('>')[0];
+		unik_rincian = unik_rincian.split('<')[0];
+		unik_rincian = unik_rincian.split('"')[0];
+		var unik_rincian_search = encodeURIComponent(unik_rincian);
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			var url_ssh = config.fmis_url+'/anggaran/rka-belanja/belanja/datatable-ref?draw=1&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=uraian&columns%5B1%5D%5Bname%5D=uraian&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=nilai&columns%5B2%5D%5Bname%5D=nilai&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=uraian_satuan&columns%5B3%5D%5Bname%5D=uraian_satuan&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=true&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=spesifikasi&columns%5B4%5D%5Bname%5D=spesifikasi&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=true&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=10&search%5Bvalue%5D='+unik_rincian_search+'&search%5Bregex%5D=false';
+		}else{
+			var url_ssh = config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/datassh4/'+options.idrkpdrenjaaktivitas+'?idrkpdrenjaaktivitas='+options.idrkpdrenjaaktivitas+'&draw=1&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=kdurut&columns%5B1%5D%5Bname%5D=kdurut&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=uraian&columns%5B2%5D%5Bname%5D=uraian&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=satuan&columns%5B3%5D%5Bname%5D=satuan&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=true&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=nilai&columns%5B4%5D%5Bname%5D=nilai&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=true&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B5%5D%5Bdata%5D=spesifikasi&columns%5B5%5D%5Bname%5D=spesifikasi&columns%5B5%5D%5Bsearchable%5D=true&columns%5B5%5D%5Borderable%5D=true&columns%5B5%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B5%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=10&search%5Bvalue%5D='+unik_rincian_search+'&search%5Bregex%5D=false';
 		}
-		if(typeof master_ssh_rka_global[unik_rincian] == 'undefined'){
-			// pencairan item ssh jika ada karakter [ atau ] di halaman tambah rincian tidak jalan. berbeda jika dicari di halman perkada lancar. maka perlu di split.
-			unik_rincian = unik_rincian.split('[')[0];
-			unik_rincian = unik_rincian.split('>')[0];
-			unik_rincian = unik_rincian.split('<')[0];
-			unik_rincian = unik_rincian.split('"')[0];
-			var unik_rincian_search = encodeURIComponent(unik_rincian);
-			if(_type_singkronisasi_rka == 'rka-opd'){
-				var url_ssh = config.fmis_url+'/anggaran/rka-belanja/belanja/datatable-ref?draw=1&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=uraian&columns%5B1%5D%5Bname%5D=uraian&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=nilai&columns%5B2%5D%5Bname%5D=nilai&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=uraian_satuan&columns%5B3%5D%5Bname%5D=uraian_satuan&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=true&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=spesifikasi&columns%5B4%5D%5Bname%5D=spesifikasi&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=true&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=10&search%5Bvalue%5D='+unik_rincian_search+'&search%5Bregex%5D=false';
-			}else{
-				var url_ssh = config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/datassh4/'+options.idrkpdrenjaaktivitas+'?idrkpdrenjaaktivitas='+options.idrkpdrenjaaktivitas+'&draw=1&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=kdurut&columns%5B1%5D%5Bname%5D=kdurut&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=uraian&columns%5B2%5D%5Bname%5D=uraian&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=satuan&columns%5B3%5D%5Bname%5D=satuan&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=true&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=nilai&columns%5B4%5D%5Bname%5D=nilai&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=true&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B5%5D%5Bdata%5D=spesifikasi&columns%5B5%5D%5Bname%5D=spesifikasi&columns%5B5%5D%5Bsearchable%5D=true&columns%5B5%5D%5Borderable%5D=true&columns%5B5%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B5%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=10&search%5Bvalue%5D='+unik_rincian_search+'&search%5Bregex%5D=false';
-			}
-			relayAjax({
-				url: url_ssh,
-				success: function(ssh){
-					if(ssh.data.length == 0){
-						console.log('Item SSH tidak ditemukan', unik_rincian, rka);
-						resolve(false);
+		relayAjax({
+			url: url_ssh,
+			success: function(ssh){
+				if(ssh.data.length == 0){
+					console.log('Item SSH tidak ditemukan', unik_rincian, rka);
+					resolve(false);
+				}else{
+					var data_ssh = ssh.data[0];
+					if(_type_singkronisasi_rka == 'rka-opd'){
+						data_ssh.idssh_4 = data_ssh.action.split('data-id="')[1].split('"')[0];
+						var form = jQuery(options.form_tambah_rka);
+						var idsub = form.find('input[name="idrapbdrkaaktivitas"]').val();
+						var url_rekening = config.fmis_url+'/anggaran/rka-belanja/belanja/datatable-rek?draw=2&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=kode_rekening&columns%5B1%5D%5Bname%5D=kode_rekening&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=nmrek6&columns%5B2%5D%5Bname%5D=nmrek6&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=10&search%5Bvalue%5D='+rka.kode_akun+'&search%5Bregex%5D=false&code='+data_ssh.idssh_4+'&idsub='+idsub;
 					}else{
-						var data_ssh = ssh.data[0];
-						if(_type_singkronisasi_rka == 'rka-opd'){
-							data_ssh.idssh_4 = data_ssh.action.split('data-id="')[1].split('"')[0];
-							var form = jQuery(global_form_tambah_rka);
-							var idsub = form.find('input[name="idrapbdrkaaktivitas"]').val();
-							var url_rekening = config.fmis_url+'/anggaran/rka-belanja/belanja/datatable-rek?draw=2&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=kode_rekening&columns%5B1%5D%5Bname%5D=kode_rekening&columns%5B1%5D%5Bsearchable%5D=true&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=nmrek6&columns%5B2%5D%5Bname%5D=nmrek6&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=0&order%5B0%5D%5Bdir%5D=asc&start=0&length=10&search%5Bvalue%5D='+rka.kode_akun+'&search%5Bregex%5D=false&code='+data_ssh.idssh_4+'&idsub='+idsub;
-						}else{
-							var url_rekening = config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/pilih-data/'+data_ssh.idssh_4+'?load=rekening&idrkpdrenjaaktivitas='+options.idrkpdrenjaaktivitas;
-						}
-						relayAjax({
-							url: url_rekening,
-							success: function(rekening_html){
-								var cek_rek = false;
-								if(_type_singkronisasi_rka == 'rka-opd'){
-									rekening_html.data.map(function(b, i){
-										if(rka.kode_akun == b.kode_rekening){
-											data_ssh.nama_akun = b.kode_rekening+' '+b.nmrek6;
-										    data_ssh.harga = data_ssh.action.split('data-harga="')[1].split('"')[0];
+						var url_rekening = config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/pilih-data/'+data_ssh.idssh_4+'?load=rekening&idrkpdrenjaaktivitas='+options.idrkpdrenjaaktivitas;
+					}
+					relayAjax({
+						url: url_rekening,
+						success: function(rekening_html){
+							var cek_rek = false;
+							if(_type_singkronisasi_rka == 'rka-opd'){
+								rekening_html.data.map(function(b, i){
+									if(rka.kode_akun == b.kode_rekening){
+										data_ssh.nama_akun = b.kode_rekening+' '+b.nmrek6;
+									    data_ssh.harga = data_ssh.action.split('data-harga="')[1].split('"')[0];
+									    data_ssh.kdrek1 = b.kdrek1;
+									    data_ssh.kdrek2 = b.kdrek2;
+									    data_ssh.kdrek3 = b.kdrek3;
+									    data_ssh.kdrek4 = b.kdrek4;
+									    data_ssh.kdrek5 = b.kdrek5;
+									    data_ssh.kdrek6 = b.kdrek6;
+									    data_ssh.uraian = data_ssh.uraian + '/' + b.nmrek6;
+									    data_ssh.satuan = data_ssh.idsatuan;
+									    cek_rek = true;
+									}
+								})
+							}else{
+								var rek_sipd = [];
+								rka.kode_akun.split('.').map(function(b, n){
+									rek_sipd.push(+b);
+								});
+								rek_sipd = rek_sipd.join('.');
+								jQuery(rekening_html).find('#table-pilih-rekening a.btn-choose-rekening').map(function(i, b){
+									var tr = jQuery(b).closest('tr');
+									var kode_akun = tr.find('td').eq(1).text().trim();
+									if(rek_sipd == kode_akun){
+										data_ssh.nama_akun = tr.find('td').eq(2).text().trim();
+									    data_ssh.harga = jQuery(b).data('harga');
+									    data_ssh.kdrek1 = jQuery(b).data('kdrek1');
+									    data_ssh.kdrek2 = jQuery(b).data('kdrek2');
+									    data_ssh.kdrek3 = jQuery(b).data('kdrek3');
+									    data_ssh.kdrek4 = jQuery(b).data('kdrek4');
+									    data_ssh.kdrek5 = jQuery(b).data('kdrek5');
+									    data_ssh.kdrek6 = jQuery(b).data('kdrek6');
+									    data_ssh.uraian = jQuery(b).data('uraian') + '/' + jQuery(b).data('nmrek6');
+									    data_ssh.satuan = jQuery(b).data('satuan');
+									    data_ssh.uraian_satuan = jQuery(b).data('uraian_satuan');
+									    cek_rek = true;
+									}
+								});
+							}
+							if(cek_rek){
+								resolve(data_ssh);
+							}else if(_type_singkronisasi_rka == 'rka-opd'){
+								console.log('Rekening tidak ditemukan untuk SSH', unik_rincian, rka, data_ssh);
+								resolve(false);
+							}else{
+								pesan_loading('DATA SSH "'+rka.nama_komponen+'" belum tersetting rekenginnya. Cari dari master rekenging.', true);
+								get_master_rekening_rka(options.idrkpdrenjaaktivitas, data_ssh.idssh_4)
+								.then(function(rekening){
+									var rek_sipd = [];
+									rka.kode_akun.split('.').map(function(b, n){
+										rek_sipd.push(+b);
+									});
+									rek_sipd = rek_sipd.join('.');
+									var cek_rek = false;
+									rekening.data.map(function(b, i){
+										if(rek_sipd == b.kode){
+											data_ssh.nama_akun = b.nmrek6;
 										    data_ssh.kdrek1 = b.kdrek1;
 										    data_ssh.kdrek2 = b.kdrek2;
 										    data_ssh.kdrek3 = b.kdrek3;
@@ -5252,87 +5303,28 @@ function get_id_ssh_rka(rka, options){
 										    data_ssh.kdrek5 = b.kdrek5;
 										    data_ssh.kdrek6 = b.kdrek6;
 										    data_ssh.uraian = data_ssh.uraian + '/' + b.nmrek6;
+										    data_ssh.harga = data_ssh.nilai;
+										    data_ssh.uraian_satuan = data_ssh.satuan;
 										    data_ssh.satuan = data_ssh.idsatuan;
 										    cek_rek = true;
 										}
-									})
-								}else{
-									var rek_sipd = [];
-									rka.kode_akun.split('.').map(function(b, n){
-										rek_sipd.push(+b);
 									});
-									rek_sipd = rek_sipd.join('.');
-									jQuery(rekening_html).find('#table-pilih-rekening a.btn-choose-rekening').map(function(i, b){
-										var tr = jQuery(b).closest('tr');
-										var kode_akun = tr.find('td').eq(1).text().trim();
-										if(rek_sipd == kode_akun){
-											data_ssh.nama_akun = tr.find('td').eq(2).text().trim();
-										    data_ssh.harga = jQuery(b).data('harga');
-										    data_ssh.kdrek1 = jQuery(b).data('kdrek1');
-										    data_ssh.kdrek2 = jQuery(b).data('kdrek2');
-										    data_ssh.kdrek3 = jQuery(b).data('kdrek3');
-										    data_ssh.kdrek4 = jQuery(b).data('kdrek4');
-										    data_ssh.kdrek5 = jQuery(b).data('kdrek5');
-										    data_ssh.kdrek6 = jQuery(b).data('kdrek6');
-										    data_ssh.uraian = jQuery(b).data('uraian') + '/' + jQuery(b).data('nmrek6');
-										    data_ssh.satuan = jQuery(b).data('satuan');
-										    data_ssh.uraian_satuan = jQuery(b).data('uraian_satuan');
-										    cek_rek = true;
-										}
-									});
-								}
-								if(cek_rek){
-									master_ssh_rka_global[unik_rincian] = data_ssh;
-									resolve(master_ssh_rka_global[unik_rincian]);
-								}else if(_type_singkronisasi_rka == 'rka-opd'){
-									console.log('Rekening tidak ditemukan untuk SSH', unik_rincian, rka, data_ssh);
-									resolve(false);
-								}else{
-									pesan_loading('DATA SSH "'+rka.nama_komponen+'" belum tersetting rekenginnya. Cari dari master rekenging.', true);
-									get_master_rekening_rka(options.idrkpdrenjaaktivitas, data_ssh.idssh_4)
-									.then(function(rekening){
-										var rek_sipd = [];
-										rka.kode_akun.split('.').map(function(b, n){
-											rek_sipd.push(+b);
-										});
-										rek_sipd = rek_sipd.join('.');
-										var cek_rek = false;
-										rekening.data.map(function(b, i){
-											if(rek_sipd == b.kode){
-												data_ssh.nama_akun = b.nmrek6;
-											    data_ssh.kdrek1 = b.kdrek1;
-											    data_ssh.kdrek2 = b.kdrek2;
-											    data_ssh.kdrek3 = b.kdrek3;
-											    data_ssh.kdrek4 = b.kdrek4;
-											    data_ssh.kdrek5 = b.kdrek5;
-											    data_ssh.kdrek6 = b.kdrek6;
-											    data_ssh.uraian = data_ssh.uraian + '/' + b.nmrek6;
-											    data_ssh.harga = data_ssh.nilai;
-											    data_ssh.uraian_satuan = data_ssh.satuan;
-											    data_ssh.satuan = data_ssh.idsatuan;
-											    cek_rek = true;
-											}
-										});
-										if(cek_rek){
-											master_ssh_rka_global[unik_rincian] = data_ssh;
-											resolve(master_ssh_rka_global[unik_rincian]);
-										}else{
-											console.log('Rekening tidak ditemukan untuk SSH', unik_rincian, rka, data_ssh);
-											resolve(false);
-										}
-									});
-								}
+									if(cek_rek){
+										resolve(data_ssh);
+									}else{
+										console.log('Rekening tidak ditemukan untuk SSH', unik_rincian, rka, data_ssh);
+										resolve(false);
+									}
+								});
 							}
-						});
-					}
-				},
-				error: function(e){
-					console.log('Error get RKA existing dari aktivitas', options.idrkpdrenjaaktivitas);
+						}
+					});
 				}
-			});
-		}else{
-			resolve(master_ssh_rka_global[unik_rincian]);
-		}
+			},
+			error: function(e){
+				console.log('Error get RKA existing dari aktivitas', options.idrkpdrenjaaktivitas);
+			}
+		});
 	});
 }
 
@@ -5368,7 +5360,11 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
             return sequence.then(function(aktivitas){
         		return new Promise(function(resolve_reduce, reject_reduce){
         			get_rka_aktivitas(aktivitas)
-					.then(function(data_rka){
+					.then(function(rka){
+						if(rka.form_tambah_rka){
+							aktivitas.form_tambah_rka = rka.form_tambah_rka;
+						}
+						var data_rka = rka.data;
 						var last = rka_sipd.length - 1;
 						var kdurut = 0;
 						console.log('Insert RKA untuk aktivitas = '+aktivitas.uraian, sub_keg.nama_sub_giat);
@@ -5421,7 +5417,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 							        				pesan_loading('SIMPAN RINCIAN "'+ssh.uraian+'" AKTIVITAS "'+aktivitas.uraian+'" SUBKEGIATAN "'+sub_keg.nama_sub_giat+'"', true);
 							        				new Promise(function(resolve3, reject3){
 								        				if(_type_singkronisasi_rka == 'rka-opd'){
-								        					var form = jQuery(global_form_tambah_rka);
+								        					var form = jQuery(aktivitas.form_tambah_rka);
 								        					data_post.idrapbdrkabelanja = '';
 								        					data_post.idrapbdrkaaktivitas = form.find('input[name="idrapbdrkaaktivitas"]').val();
 								        					data_post.uraian = ssh.uraian;
@@ -6698,12 +6694,12 @@ function tampil_pagu_sub_keg(){
 			prog: jQuery(b).attr('data-prog')
 		});
 	});
+	jQuery('#table-subkegiatan tbody td span.badge.badge-success').attr('data-pagu', 0);
 	var total = 0;
 	var last = sub_kegiatan.length - 1;
 	sub_kegiatan.reduce(function(sequence, nextData){
         return sequence.then(function(sub){
     		return new Promise(function(resolve_reduce, reject_reduce){
-    			pesan_loading('GET PAGU SUB KEGIATAN '+sub.sub_keg, true);
     			var total_sub = 0;
     			relayAjax({
 					url: config.fmis_url+'/anggaran/rka-belanja/aktivitas/datatable?code='+sub.code,
@@ -6713,7 +6709,8 @@ function tampil_pagu_sub_keg(){
 					        return sequence2.then(function(aktivitas){
 					    		return new Promise(function(resolve_reduce2, reject_reduce2){
 						        	get_rka_aktivitas(aktivitas)
-									.then(function(data_rka){
+									.then(function(rka){
+										var data_rka = rka.data;
 										data_rka.map(function(b, i){
 											total_sub += to_number(b.jumlah);
 										});
@@ -6757,6 +6754,7 @@ function tampil_pagu_sub_keg(){
 					    	td_prog.find('span.badge').text('Rp '+formatMoney(pagu_prog, 0, ',', '.'));
 							td_keg.find('span.badge').text('Rp '+formatMoney(pagu_keg, 0, ',', '.'));
 							td_sub.find('span.badge').text('Rp '+formatMoney(pagu_sub, 0, ',', '.'));
+    						pesan_loading('GET PAGU SUB KEGIATAN '+sub.sub_keg+' = '+pagu_sub, true);
 							return resolve_reduce(nextData);
 						});
 			        }
