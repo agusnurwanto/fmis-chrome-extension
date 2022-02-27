@@ -49,7 +49,13 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 		}else if(res.action == 'get_sub_keg'){
 			_alert = false;
 			cek_hide_loading = false;
-			if(res.run == 'singkronisasi_program'){
+			if(res.run == 'singkronisasi_program_all_skpd'){
+				options_all_skpd.sub_kegiatan = res.data;
+				singkronisasi_program_modal(options_all_skpd, function(){
+					// resolve singkron all skpd
+					lanjut_singkron_rka_all_skpd(nextData_all_skpd);
+				});
+			}else if(res.run == 'singkronisasi_program'){
 				singkronisasi_program(res.data);
 			}else if(res.run == 'singkronisasi_rka'){
 				singkronisasi_rka(res.data);

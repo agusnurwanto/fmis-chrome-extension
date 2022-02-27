@@ -21,7 +21,6 @@ Semoga bermanfaat
 - Singkronisasi data SKPD dari SIPD ke FMIS
 - Singkronisasi data User SKPD dari SIPD ke FMIS
 - Singkronisasi SKPD Pelaksana RPJMD
-- Singkronisasi RENJA dan PRA RKA
 - Singkronisasi Program, Kegiatan, Sub Kegiatan dan RKA 
 
 ### Pengembangan berikutnya:

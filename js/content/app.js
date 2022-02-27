@@ -348,14 +348,64 @@ if(current_url.indexOf('parameter/rekening') != -1){
     	generate_gl_modal();
     });
 }else if(current_url.indexOf('/manajemen-user/user') != -1){
+	window._type_singkronisasi_rka = 'rka-opd';
+	var modal_sub_keg = ''
+		+'<div class="modal fade" id="mod-konfirmasi" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
+	        +'<div class="modal-dialog modal-lg" role="document">'
+	            +'<div class="modal-content">'
+	                +'<div class="modal-header bgpanel-theme" style="background: #8997bd;">'
+	                    +'<h4 class="modal-title text-white" id="">Pilih SKPD yang akan disingkronisasi</h4>'
+	                    +'<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"><i class="mdi mdi-close-circle"></i></span></button>'
+	                +'</div>'
+	                +'<div class="modal-body">'
+	                	+'<div class="form-group row p-2">'
+	                		+'<h4>Catatan:</h4>'
+	                		+'<ul>'
+	                			+'<li>Dokumen RKA yang akan dipilih adalah dokumen pertama.</li>'
+	                			+'<li>Sasaran Renja RKA yang akan dipilih adalah sasaran pertama.</li>'
+	                			+'<li>Jika Dokumen dan Sasaran masih kosong akan otomatis dibuat oleh sistem.</li>'
+	                			+'<li>Dokumen RKA adalah per Unit SKPD. Untuk data sub unit akan dibuat dalam RKA Unit nya dan dipisah berdasarkan Aktivitas di rincian belanja.</li>'
+	                		+'</ul>'
+	                	+'</div>'
+	                  	+'<table class="table table-hover table-striped" id="konfirmasi-skpd">'
+	                      	+'<thead>'
+	                        	+'<tr style="background: #8997bd;">'
+	                          		+'<th class="text-white"><input type="checkbox" id="modal_cek_all"></th>'
+	                          		+'<th class="text-white" width="300">Nama Unit SKPD</th>'
+	                        	+'</tr>'
+	                      	+'</thead>'
+	                      	+'<tbody></tbody>'
+	                  	+'</table>'
+	                +'</div>'
+	                +'<div class="modal-footer">'
+	                    +'<button type="button" class="btn btn-success" id="singkron_all_skpd">Proses</button>'
+	                    +'<button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>'
+	                +'</div>'
+	            +'</div>'
+	        +'</div>'
+	    +'</div>';
+	jQuery('body').append(modal_sub_keg);
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-user">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi User SIPD dari WP-SIPD'
     +'</button>'
 	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 3px;" id="singkron-skpd">'
         +'<i class="fa fa-cloud-download-alt fa-fw"></i> Mapping SKPD FMIS ke WP-SIPD'
+    +'</button>'
+	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 3px;" id="singkron-rka-all-skpd">'
+        +'<i class="fa fa-cloud-download-alt fa-fw"></i> Singkronisasi RKA All SKPD dari WP-SIPD'
     +'</button>';
     jQuery('a.btn-sm[title="Tambah Pengguna"]').parent().append(btn);
+	jQuery('#modal_cek_all').on('click', function(){
+		var cek = jQuery(this).is(':checked');
+		jQuery('#konfirmasi-skpd tbody tr input[type="checkbox"]').prop('checked', cek);
+	});
+    jQuery('#singkron-rka-all-skpd').on('click', function(){
+    	singkron_rka_all_skpd();
+    });
+    jQuery('#singkron_all_skpd').on('click', function(){
+    	singkron_rka_all_skpd_modal();
+    });
     jQuery('#singkron-user').on('click', function(){
     	if(confirm('Apakah anda yakin untuk menggenerate data user FMIS dari SIPD?')){
 			show_loading();
