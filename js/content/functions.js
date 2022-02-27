@@ -5361,28 +5361,68 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
         		return new Promise(function(resolve_reduce, reject_reduce){
         			get_rka_aktivitas(aktivitas)
 					.then(function(rka){
+						// inisiasi form tambah rka fmis dalam aktivitas yang dipilih
 						if(rka.form_tambah_rka){
 							aktivitas.form_tambah_rka = rka.form_tambah_rka;
 						}
+
+						// inisiasi data rincian unik sipd
+						var rka_unik = {};
+						rka_sipd.map(function(b, i){
+							var kelompok_keterangan = replace_string(b.subs_bl_teks+' | '+b.ket_bl_teks, true, true).substring(0, 500).trim();
+        					var nama_rincian = replace_string(kelompok_keterangan+' | '+b.nama_komponen+' | '+b.spek_komponen, false, false).substring(0, 500).trim()+b.kode_akun+b.total_harga;
+        					if(!rka_unik[nama_rincian]){
+        						rka_unik[nama_rincian] = {
+        							jml_sipd: 1,
+        							jml_fmis: 0
+        						};
+        					}else{
+        						rka_unik[nama_rincian].jml_sipd++;
+        					}
+						});
+
+						// inisiasi data rincian unik fmis
 						var data_rka = rka.data;
+						data_rka.map(function(b, i){
+							var uraian_belanja = replace_string(b.uraian_belanja, false, false);
+							var uraian_belanja_unik = uraian_belanja+b.kode_rekening+to_number(b.jumlah);
+							if(!rka_unik[uraian_belanja_unik]){
+        						rka_unik[uraian_belanja_unik] = {
+        							jml_sipd: 0,
+        							jml_fmis: 1
+        						};
+        					}else{
+        						rka_unik[uraian_belanja_unik].jml_fmis++;
+        					}
+						});
+						console.log('rka_unik', rka_unik);
+
 						var last = rka_sipd.length - 1;
 						var kdurut = 0;
-						console.log('Insert RKA untuk aktivitas = '+aktivitas.uraian, sub_keg.nama_sub_giat);
+						console.log('Insert RKA untuk aktivitas = '+aktivitas.uraian, sub_keg.nama_sub_giat, data_rka);
 						rka_sipd.reduce(function(sequence2, nextData2){
 				            return sequence2.then(function(current_data){
 				        		return new Promise(function(resolve_reduce2, reject_reduce2){
 				        			var sumber_dana_sipd = current_data.sumber_dana[0].nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
 									var nama_aktivitas = (sumber_dana_sipd+' | '+sub_keg.nama_sub_skpd).substring(0, 500).trim();
-				        			// var nama_aktivitas = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
 
 			        				if(nama_aktivitas == aktivitas.uraian){
 				        				var kelompok_keterangan = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
 			        					var nama_rincian = replace_string(kelompok_keterangan+' | '+current_data.nama_komponen+' | '+current_data.spek_komponen, false, false).substring(0, 500).trim();
+										var nama_rincian_unik = nama_rincian+current_data.kode_akun+current_data.total_harga;
 			        					var cek_exist = false;
 										data_rka.map(function(b, i){
 											var uraian_belanja = replace_string(b.uraian_belanja, false, false);
-											if(uraian_belanja == nama_rincian){
-												cek_exist = true;
+											var uraian_belanja_unik = uraian_belanja+b.kode_rekening+to_number(b.jumlah);
+
+											// cek jika nama unik sudah terinsert atau belum
+											if(uraian_belanja_unik == nama_rincian_unik){
+												// cek jika jumlah rincian unik fmis sudah sama dengan jumlah rincian sipd
+												if(rka_unik[uraian_belanja_unik].jml_fmis >= rka_unik[uraian_belanja_unik].jml_sipd){
+													cek_exist = true;
+												}else{
+													rka_unik[uraian_belanja_unik].jml_fmis++;
+												}
 											}
 											if(kdurut <= +b.kdurut){
 												kdurut = +b.kdurut;
@@ -5466,7 +5506,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 												}
 					        				});
 				        				}else{
-				        					console.log('Item belanja "'+nama_rincian+'" sudah ada!');
+				        					console.log('Item belanja "'+nama_rincian_unik+'" sudah ada!');
 			        						resolve_reduce2(nextData2);
 				        				}
 			        				}else{
