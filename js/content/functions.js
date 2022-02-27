@@ -6605,7 +6605,7 @@ function get_all_tujuan_rka_renstra(code){
 	})
 }
 
-function gl_dokumen_rka(cb){
+function gl_dokumen_rka(cb, options_skpd){
 	if(typeof cb != 'function'){
 		show_loading();
 	}
@@ -6641,7 +6641,11 @@ function gl_dokumen_rka(cb){
 			    			reject();
 			    		}else{
 			    			var tgl_rka = form.find('#tgl_rka').val();
-			    			var sub_unit = jQuery('.nav-link .text-secondary').text().split('/ ')[2].trim();
+			    			if(typeof cb != 'function'){
+			    				var sub_unit = jQuery('.nav-link .text-secondary').text().split('/ ')[2].trim();
+			    			}else{
+			    				sub_unit = options_skpd.nama;
+			    			}
 				    		var data_post = {
 				    			_token: _token,
 								idrapbd: idrapbd,
@@ -7027,7 +7031,7 @@ function singkron_rka_all_skpd_modal(){
 											chrome.runtime.sendMessage(data, function(response) {
 											    console.log('responeMessage', response);
 											});
-			    						});
+			    						}, skpd);
 			    					})
 								}else{
 									pesan_loading('USER '+user.nama+' tidak ditemukan di FMIS!', true);
