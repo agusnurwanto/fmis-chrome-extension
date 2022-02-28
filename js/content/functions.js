@@ -1041,7 +1041,7 @@ function replace_string(text, no_lowercase=false, no_replace=false){
 		text = text.replace(/'/g, '`');
 		text = text.replace(/&/g, 'dan');
 		text = text.replace(/Â/g, '');
-		text = text.replace(/â/g, '`');
+		text = text.replace(/â/g, '’');
 		text = text.replace(/€/g, '');
 		text = text.replace(/™/g, '');
 		text = text.replace(/˜/g, '');
@@ -6129,10 +6129,18 @@ function singkronisasi_program_modal(options, cb){
 				});
 			}
 		}else{
-			alert('Pilih sub kegiatan dulu!');
+			if(typeof cb != 'function'){
+				alert('Pilih sub kegiatan dulu!');
+			}else{
+				cb();
+			}
 		}
 	}else{
-		alert('Pilih program RKPD dulu!');
+		if(typeof cb != 'function'){
+			alert('Pilih program RKPD dulu!');
+		}else{
+			cb();
+		}
 	}
 }
 
