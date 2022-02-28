@@ -4371,7 +4371,22 @@ function get_id_unit_fmis(){
 			url: url_unit,
 			success: function(renja){
 				if(renja.data.length >= 1){
-					resolve(renja.data[0].idunit);
+					if(_type_singkronisasi_rka == 'rka-opd'){
+						var nama_dokumen = jQuery('.info-dokumen strong').eq(0).text().trim();
+						var idunit = false;
+						renja.data.map(function(b, i){
+							if(nama_dokumen == b.no_rka){
+								idunit = b.idunit;
+							}
+						});
+						if(idunit){
+							resolve(idunit);
+						}else{
+							reject();
+						}
+					}else{
+						resolve(renja.data[0].idunit);
+					}
 				}else{
 					reject();
 				}
@@ -6645,7 +6660,13 @@ function gl_dokumen_rka(cb, options_skpd){
 			    			}
 			    		});
 			    		if(!idrapbd || !idrkpdrenja){
-			    			alert('Dokumen TAPD Referensi atau Dokumen Renja Referensi tidak ditemukan!');
+			    			var pesan = 'Dokumen TAPD Referensi atau Dokumen Renja Referensi tidak ditemukan!';
+			    			if(typeof cb != 'function'){
+			    				alert(pesan);
+			    			}else{
+			    				pesan_loading(pesan, true);
+			    				cb(false);
+			    			}
 			    			reject();
 			    		}else{
 			    			var tgl_rka = form.find('#tgl_rka').val();
@@ -6700,11 +6721,13 @@ function gl_dokumen_rka(cb, options_skpd){
 	.then(function(data_post){
 		var code_rka_first = false;
 		var last = dokumen_rka.length - 1;
+		var no = 0;
 		dokumen_rka.reduce(function(sequence, nextData){
             return sequence.then(function(dokumen){
         		return new Promise(function(resolve_reduce, reject_reduce){
+                	no++;
                 	var code_rka = dokumen.action.split('data-code="')[1].split('"')[0];
-        			if(!code_rka_first){
+        			if(!code_rka_first || no==2){
         				code_rka_first = code_rka;
         			}
                 	get_all_sasaran_rka(code_rka)
@@ -6802,7 +6825,9 @@ function gl_dokumen_rka(cb, options_skpd){
         });
 	})
 	.catch(function(e){
-		hide_loading();
+		if(typeof cb != 'function'){
+			hide_loading();
+		}
 	});
 }
 
@@ -7010,35 +7035,39 @@ function singkron_rka_all_skpd_modal(){
 			    					})
 			    					.then(function(res){
 			    						gl_dokumen_rka(function(res_dokumen){
-			    							window.options_all_skpd = {
-			    								idrkpdranwalprogram: res_dokumen.idrkpdranwalprogram,
-			    								uraian_rkpd: res_dokumen.uraian_rkpd,
-			    								code_sasaran: res_dokumen.code_sasaran,
-			    								sub_kegiatan: []
-			    							};
-			    							window.lanjut_singkron_rka_all_skpd = resolve_reduce;
-			    							window.nextData_all_skpd = nextData;
-			    							var data = {
-											    message:{
-											        type: "get-url",
-											        content: {
-													    url: config.url_server_lokal,
-													    type: 'post',
-													    data: { 
-															action: 'get_sub_keg',
-															run: 'singkronisasi_program_all_skpd',
-															tahun_anggaran: config.tahun_anggaran,
-															id_skpd_fmis: skpd.id,
-															idsumber: 1,
-															api_key: config.api_key
-														},
-										    			return: true
-													}
-											    }
-											};
-											chrome.runtime.sendMessage(data, function(response) {
-											    console.log('responeMessage', response);
-											});
+			    							if(!res_dokumen){
+			    								resolve_reduce(nextData);
+			    							}else{
+				    							window.options_all_skpd = {
+				    								idrkpdranwalprogram: res_dokumen.idrkpdranwalprogram,
+				    								uraian_rkpd: res_dokumen.uraian_rkpd,
+				    								code_sasaran: res_dokumen.code_sasaran,
+				    								sub_kegiatan: []
+				    							};
+				    							window.lanjut_singkron_rka_all_skpd = resolve_reduce;
+				    							window.nextData_all_skpd = nextData;
+				    							var data = {
+												    message:{
+												        type: "get-url",
+												        content: {
+														    url: config.url_server_lokal,
+														    type: 'post',
+														    data: { 
+																action: 'get_sub_keg',
+																run: 'singkronisasi_program_all_skpd',
+																tahun_anggaran: config.tahun_anggaran,
+																id_skpd_fmis: skpd.id,
+																idsumber: 1,
+																api_key: config.api_key
+															},
+											    			return: true
+														}
+												    }
+												};
+												chrome.runtime.sendMessage(data, function(response) {
+												    console.log('responeMessage', response);
+												});
+											}
 			    						}, skpd);
 			    					})
 								}else{
