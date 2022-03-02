@@ -358,6 +358,9 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	                    +'<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"><i class="mdi mdi-close-circle"></i></span></button>'
 	                +'</div>'
 	                +'<div class="modal-body">'
+                		+'<style>'
+                			+'.list-options-sipd li { display: inline; margin: 0 10px; }'
+                		+'</style>'
 	                	+'<div class="form-group row p-2">'
 	                		+'<h4>Catatan:</h4>'
 	                		+'<ul>'
@@ -365,6 +368,18 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	                			+'<li>Sasaran Renja RKA yang akan dipilih adalah sasaran pertama.</li>'
 	                			+'<li>Jika Dokumen dan Sasaran masih kosong akan otomatis dibuat oleh sistem.</li>'
 	                			+'<li>Dokumen RKA adalah per Unit SKPD. Untuk data sub unit akan dibuat dalam RKA Unit nya dan dipisah berdasarkan Aktivitas di rincian belanja.</li>'
+	                		+'</ul>'
+	                		+'<h4 style="width:100%;">Jenis APBD:</h4>'
+	                		+'<ul class="list-options-sipd" style="list-style: none;">'
+	                			+'<li><label><input type="radio" value="1" name="jenis-data" checked> Belanja</label></li>'
+	                			+'<li><label><input type="radio" value="2" name="jenis-data"> Pendapatan</label></li>'
+	                			+'<li><label><input type="radio" value="3" name="jenis-data"> Pembiayaan</label></li>'
+	                		+'</ul>'
+	                		+'<h4 style="width:100%;">Lingkup data yang akan disingkronisasi:</h4>'
+	                		+'<ul class="list-options-sipd" style="list-style: none;">'
+	                			+'<li><label><input type="radio" value="1" name="data-singkron" checked> Rincian Belanja</label></li>'
+	                			+'<li><label><input type="radio" value="2" name="data-singkron"> Program, Kegiatan dan Sub Kegiatan</label></li>'
+	                			+'<li style="width: 100%; margin-top: 10px; display: block;"><label><input value="1" type="checkbox" name="pagu-sub-keg" checked> Pagu sub kegiatan disamakan dengan pagu rincian belanja. Jika tidak dichecklist maka pagu sub kegiatan diambil dari data pagu validasi sub kegiatan SIPD.</label></li>'
 	                		+'</ul>'
 	                	+'</div>'
 	                  	+'<table class="table table-hover table-striped" id="konfirmasi-skpd">'
@@ -650,7 +665,8 @@ if(current_url.indexOf('parameter/rekening') != -1){
 					}
 				}
 				if(tambah_program.length >= 1){
-					var idsumber = prompt('Masukan ID sumber RKA: 1=WP-SIPD (RKA terbaru), 2=SIMDA PINK (APBD Murni)', 1);
+					// var idsumber = prompt('Masukan ID sumber RKA: 1=WP-SIPD (RKA terbaru), 2=SIMDA PINK (APBD Murni)', 1);
+					var idsumber = 1;
 					if(idsumber >= 1){
 						var data = {
 						    message:{
@@ -702,7 +718,8 @@ if(current_url.indexOf('parameter/rekening') != -1){
 					}
 				}
 				if(tambah_sub_kegiatan.length >= 1){
-					var idsumber = prompt('Masukan ID sumber RKA: 1=WP-SIPD (RKA terbaru), 2=SIMDA PINK (APBD Murni)', 1);
+					// var idsumber = prompt('Masukan ID sumber RKA: 1=WP-SIPD (RKA terbaru), 2=SIMDA PINK (APBD Murni)', 1);
+					var idsumber = 1;
 					if(idsumber >= 1){
 						var data = {
 						    message:{
