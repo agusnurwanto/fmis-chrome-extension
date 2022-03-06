@@ -1,15 +1,5 @@
 console.log('Salam semangat!');
 
-window.db = openDatabase('SIPD', '1.0', 'fmis database', 50 * 1024 * 1024);
-db.transaction(function (tx) {
-	tx.executeSql('CREATE TABLE IF NOT EXISTS fmis (key, data)', [], function(tx, success){
-		// console.log('success', success);
-	}, function(tx, error){
-		console.log('error', error);
-	});
-});
-
-
 chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 	console.log('request', request);
 	var type = request.message.type;
@@ -63,7 +53,7 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 		        console.log(ret);
 		    },
 		    error:function(){
-		        alert("Error");
+		        console.log("Error AJAX");
 		    }      
 		});
 	}

@@ -1,95 +1,3 @@
-function setDB(options){
-    return new Promise(function(resolve, reject){
-        db.transaction(function (tx) {
-            var where = 'key="'+options.key+'"';
-            if(options.post_id){
-                where += ' AND post_id="'+options.post_id+'"';
-            }
-            if(options.active){
-                where += ' AND active="'+options.active+'"';
-            }
-            tx.executeSql('SELECT data FROM fmis where '+where, [], function (tx, results) {
-                try{
-                    var data = results.rows.item(0).data;
-
-                    tx.executeSql('UPDATE fmis SET data="'+encodeURIComponent(JSON.stringify(options.data))+'" WHERE '+where);
-                }catch(e){
-                    var column = ['key', 'data'];
-                    if(data){
-                        data = encodeURIComponent(JSON.stringify(options.data));
-                    }else{
-                        data = false;
-                    }
-                    var value = [options.key, data];
-                    tx.executeSql('INSERT INTO fmis ('+column.join(', ')+') VALUES ("'+value.join('", "')+'")');
-                }
-                return resolve(true);
-            });
-        });
-    })
-    .catch(function(e){
-        console.log('error', e);
-        return Promise.resolve(false);
-    })
-}
-
-function getDB(options){
-    return new Promise(function(resolve, reject){
-        db.transaction(function (tx) {
-            var where = '';
-            if(options.key){
-                where = ' where key="'+options.key+'"';
-            }
-            var data = false;
-            tx.executeSql('SELECT * FROM fmis'+where, [], function (tx, results) {
-                try{
-                    if(options.key){
-                        data = decodeURIComponent(results.rows.item(0).data);
-                        try{
-                            data = JSON.parse(data);
-                        }catch(e){
-                            console.log(e);
-                        }
-                    }else{
-                        data = results.rows;
-                    }
-                }catch(e){
-                    console.log(e);
-                }
-                if(options.debug){
-                    console.log('data', data);
-                }
-                return resolve(data);
-            }, function(transaction, error) {
-                console.log("Error : " + error.message, error);
-                return resolve(data);
-            });
-        });
-    })
-    .catch(function(e){
-        console.log('error', e);
-        return Promise.resolve([]);
-    })
-}
-
-function rmDB(options){
-    return new Promise(function(resolve, reject){
-        db.transaction(function (tx) {
-            if(options.keys){
-                var where = 'key IN ("'+options.keys.join('","')+'")';
-            }else{
-                var where = 'key="'+options.key+'"';
-            }
-            tx.executeSql('DELETE FROM fmis where '+where);
-            return resolve(true);
-        });
-    })
-    .catch(function(e){
-        console.log('error', e);
-        return Promise.resolve(false);
-    })
-}
-
 function sendMessageAll(data, cb){
     console.log('data', data);
     chrome.runtime.sendMessage(data, function(response) {
@@ -120,7 +28,7 @@ function sendMessageTabActive(data, cb, nodebug){
     }
 }
 
-function relayAjax(options, retries=20, delay=10000, timeout=90000){
+function relayAjax_lama(options, retries=20, delay=10000, timeout=90000){
     options.timeout = timeout;
     jQuery.ajax(options)
     .fail(function(){
@@ -132,5 +40,73 @@ function relayAjax(options, retries=20, delay=10000, timeout=90000){
         } else {
             alert('Capek. Sudah dicoba berkali-kali error terus. Maaf, berhenti mencoba.');
         }
+    });
+}
+
+// https://stackoverflow.com/questions/46946380/fetch-api-request-timeout
+function timeoutAjax(ms, promise) {
+    return new Promise((resolve, reject) => {
+        const timer = setTimeout(() => {
+            reject(new Error('TIMEOUT'))
+        }, ms)
+
+        promise
+        .then(value => {
+            clearTimeout(timer)
+            resolve(value)
+        })
+        .catch(reason => {
+            clearTimeout(timer)
+            reject(reason)
+        })
+    })
+}
+
+function relayAjax(options, retries=20, delay=10000, timeout=90000){
+    timeoutAjax(timeout, postData(options.url, options.data))
+    .then(data => {
+        options.success(data);
+    })
+    .catch((error) => {
+        console.log('pesan error', error);
+        options.error();
+        if (retries > 0) {
+            console.log('Koneksi error. Coba lagi '+retries);
+            setTimeout(function(){ 
+                relayAjax(options, --retries, delay, timeout);
+            },delay);
+        } else {
+            console.log('Capek. Sudah dicoba berkali-kali error terus. Maaf, berhenti mencoba.');
+        }
+    });
+}
+
+// https://developer.mozilla.org/en-US/docs/Web/API/Fetch_API/Using_Fetch
+function postData(url = '', data = {}) {
+    var formdata = new FormData();
+    for(var i in data){
+        if(typeof data[i] == 'string'){
+            var val = data[i];
+        }else{
+            var val = JSON.stringify(data[i]);
+        }
+        formdata.append(i, val);
+    }
+    var parameter = {
+        method: 'POST',
+        mode: 'no-cors',
+        cache: 'no-cache',
+        credentials: 'include',
+        redirect: 'follow',
+        referrerPolicy: 'strict-origin-when-cross-origin',
+        body: formdata
+    };
+
+    return fetch(url, parameter)
+    .then(response => {
+        return response.text();
+    })
+    .then((data) => {
+        return (data ? JSON.parse(data) : {});
     });
 }

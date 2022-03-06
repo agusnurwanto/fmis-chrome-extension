@@ -5,11 +5,11 @@ function injectScript(file, node) {
     var s = document.createElement('script');
     s.setAttribute('type', 'text/javascript');
     s.setAttribute('src', file);
-    // th.appendChild(s);
     th.insertBefore(s, th.firstChild);
 }
-injectScript( chrome.extension.getURL('/config.js'), 'html');
-injectScript( chrome.extension.getURL('/js/content/content_inject.js'), 'html');
+injectScript( chrome.runtime.getURL('/content_message.js'), 'html');
+injectScript( chrome.runtime.getURL('/config.js'), 'html');
+injectScript( chrome.runtime.getURL('/js/content/content_inject.js'), 'html');
 window.data_temp_onmessage = {};
 
 chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
@@ -41,6 +41,10 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			singkronisasi_sumberdana(res);
+		}else if(res.action == 'get_data_pendapatan'){
+			_alert = false;
+			cek_hide_loading = false;
+			singkronisasi_pendapatan(res);
 		}else if(res.action == 'get_sub_keg_rka'){
 			_alert = false;
 			cek_hide_loading = false;

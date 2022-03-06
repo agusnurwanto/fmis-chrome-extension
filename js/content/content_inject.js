@@ -1,4 +1,4 @@
-$(document).on('show.bs.modal', '#modal', function(event) { 
+jQuery(document).on('show.bs.modal', '#modal', function(event) { 
 	var title = $(event.relatedTarget).attr('title');
 	if(title == 'Tambah Data Tarif Item'){
 		var btn = ''

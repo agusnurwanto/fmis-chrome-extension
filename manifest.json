@@ -1,22 +1,15 @@
 {
-	"manifest_version": 2,
+	"manifest_version": 3,
 	"name": "FMIS tools",
 	"description": "Chrome extension untuk mempermudah manajemen data di web fmis.bpkp.go.id",
-	"version": "1.1.8",
+	"version": "1.1.9",
 	"icons": {
 		"16": "img/logo-small.png",
 		"48": "img/logo-small.png",
 		"128": "img/logo-small.png"
 	},
 	"background": {
-		"persistent": true,
-		"scripts": [
-			"config.js",
-			"js/jquery.min.js",
-			"js/background/promise.js",
-			"js/background/bg-functions.js",
-			"js/background/background.js"
-		]
+		"service_worker": "background_all.js"
 	},
 	"content_scripts": [
 		{
@@ -37,28 +30,26 @@
 				"js/content/app.js"
 			],
 			"run_at": "document_end"
-		},
-		{
-			"matches": [
-				"https://fmis.bpkp.go.id/*"
-			],
-			"js": [
-				"js/content/document_start.js"
-			],
-			"run_at": "document_start"
 		}
 	],
 	"web_accessible_resources": [
-		"/config.js",
-		"/js/*",
-		"/img/*",
-		"/excel/*"
+		{
+			"resources": [
+				"/config.js",
+				"/content_message.js",
+				"/js/*",
+				"/img/*",
+				"/excel/*"
+			],
+			"matches": [
+				"https://fmis.bpkp.go.id/*",
+				"https://*.fmis.id/*"
+			]
+		}
 	],
+	"host_permissions": ["<all_urls>"],
 	"permissions": [
 		"webRequest",
-		"webRequestBlocking",
-		"https://*/",
-		"http://*/",
 		"activeTab",
 		"storage",
 		"tabs"
