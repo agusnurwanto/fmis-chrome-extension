@@ -41,7 +41,10 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			singkronisasi_sumberdana(res);
-		}else if(res.action == 'get_data_pendapatan'){
+		}else if(
+			res.action == 'get_data_pendapatan'
+			|| res.action == 'get_data_pembiayaan'
+		){
 			_alert = false;
 			cek_hide_loading = false;
 			singkronisasi_pendapatan(res);

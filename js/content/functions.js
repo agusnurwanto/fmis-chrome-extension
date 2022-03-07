@@ -128,6 +128,7 @@ function singkronisasi_ssh(options){
 			if(
 				options.type == 'dari_rka'
 				|| b.kelompok == 9
+				|| b.kelompok == 7
 			){
 				var golongan = b.kode_gol_standar_harga;
 				var kelompok = replace_string(b.kode_kel_standar_harga, true);
@@ -6936,7 +6937,10 @@ function gl_dokumen_rka(cb, options_skpd){
 	        			){
 		        			current_sasaran = sasaran;
 		        		}else if(
-		        			jenis_apbd_global == 2
+		        			(
+		        				jenis_apbd_global == 2
+		        				|| jenis_apbd_global == 3
+		        			)
 		        			&& uraian.indexOf('pendapatan & pembiayaan') != -1
 		        		){
 		        			current_sasaran = sasaran;
@@ -7286,6 +7290,8 @@ function singkron_rka_all_skpd_modal(){
 			cek_jenis = 'Belanja';
 		}else if(jenis_apbd_global == 2){
 			cek_jenis = 'Pendapatan';
+		}else if(jenis_apbd_global == 3){
+			cek_jenis = 'Pembiayaan';
 		}
 		if(
 			cek_jenis 
@@ -7401,6 +7407,26 @@ function singkron_rka_all_skpd_modal(){
 													chrome.runtime.sendMessage(data, function(response) {
 													    console.log('responeMessage', response);
 													});
+			    								}else if(jenis_apbd_global == 3){
+			    									var data = {
+													    message:{
+													        type: "get-url",
+													        content: {
+															    url: config.url_server_lokal,
+															    type: 'post',
+															    data: { 
+																	action: 'get_data_pembiayaan',
+																	tahun_anggaran: config.tahun_anggaran,
+																	id_skpd_fmis: skpd.id,
+																	api_key: config.api_key
+																},
+												    			return: true
+															}
+													    }
+													};
+													chrome.runtime.sendMessage(data, function(response) {
+													    console.log('responeMessage', response);
+													});
 												}else{
 													pesan_loading('Jenis APBD = '+jenis_apbd_global+' masih dalam pengembangan!');
 													resolve_reduce(nextData);
@@ -7439,8 +7465,7 @@ function singkron_rka_all_skpd_modal(){
 }
 
 function singkronisasi_pendapatan(data){
-	// options_all_skpd;
-	console.log('data pendapatan', data);
+	console.log('data pendapatan', data, 'options_all_skpd', options_all_skpd);
 	if(_type_singkronisasi_rka != 'rka-opd'){
 		pesan_loading('PROGRAM PENDAPATAN dan PEMBIAYAAN di RENJA tidak perlu dibuat!', true);
 		return lanjut_singkron_rka_all_skpd(nextData_all_skpd);
@@ -7451,11 +7476,12 @@ function singkronisasi_pendapatan(data){
 	var kegiatan_exist_global = [];
 	var sub_kegiatan_exist_global = [];
 	var aktivitas_exist_global = [];
-	get_list_program(code_sasaran)
+	get_list_program(options_all_skpd)
 	.then(function(program_exist){
 		var cek_program_pendapatan = false;
 		var cek_program_pembiayaan_penerimaan = false;
 		var cek_program_pembiayaan_pengeluaran = false;
+		var kdurut = 0;
 		program_exist.data.map(function(b, i){
 			if(b.jns_program == 1){
 				cek_program_pendapatan = b;
@@ -7463,6 +7489,9 @@ function singkronisasi_pendapatan(data){
 				cek_program_pembiayaan_penerimaan = b;
 			}else if(b.jns_program == 3){
 				cek_program_pembiayaan_pengeluaran = b;
+			}
+			if(kdurut <= +b.kdurut){
+				kdurut = +b.kdurut;
 			}
 		});
 		return new Promise(function(resolve, reject){
@@ -7472,7 +7501,6 @@ function singkronisasi_pendapatan(data){
 				var nama_program = 'Non Program';
 				var data_post = {
 					_token: _token,
-					kdurut: kdurut,
 					idprogram: master_program.program[nama_program].id,
 					uraian: nama_program,
 				}
@@ -7484,25 +7512,31 @@ function singkronisasi_pendapatan(data){
 				data_post.status_pelaksanaan = 4;
 				var url = form.attr('action');
 				if(
-					lingkup_rka_global == 2 
+					jenis_apbd_global == 2 
 					&& !cek_program_pendapatan
 				){
+					kdurut++;
+					data_post.kdurut = kdurut;
 					data_post.jns_program = 1;
 					pesan_loading('SIMPAN PROGRAM PENDAPATAN '+data_post.uraian, true);
 					sendData.push(save_program(url, data_post));
 				}
 				if(
-					lingkup_rka_global == 3 
+					jenis_apbd_global == 3 
 					&& !cek_program_pembiayaan_penerimaan
 				){
+					kdurut++;
+					data_post.kdurut = kdurut;
 					data_post.jns_program = 2;
 					pesan_loading('SIMPAN PROGRAM PEMBIAYAAN PENERIMAAN '+data_post.uraian, true);
 					sendData.push(save_program(url, data_post));
 				}
 				if(
-					lingkup_rka_global == 3 
+					jenis_apbd_global == 3 
 					&& !cek_program_pembiayaan_pengeluaran
 				){
+					kdurut++;
+					data_post.kdurut = kdurut;
 					data_post.jns_program = 3;
 					pesan_loading('SIMPAN PROGRAM PEMBIAYAAN PENGELUARAN '+data_post.uraian, true);
 					sendData.push(save_program(url, data_post));
@@ -7517,7 +7551,7 @@ function singkronisasi_pendapatan(data){
 	// cek insert kegiatan
 	.then(function(){
 		return new Promise(function(resolve, reject){
-			get_list_program(code_sasaran)
+			get_list_program(options_all_skpd)
 			.then(function(program_exist){
 				var last = program_exist.data.length - 1;
 				program_exist.data.reduce(function(sequence, nextData){
@@ -7563,7 +7597,7 @@ function singkronisasi_pendapatan(data){
 								});
 							})
 							.then(function(filter_kegiatan){
-								filter_kegiatan.map(function(b, i){
+								filter_kegiatan.data.map(function(b, i){
 									kegiatan_exist_global.push(b);
 								});
 								resolve_reduce(nextData);
@@ -7588,7 +7622,7 @@ function singkronisasi_pendapatan(data){
 	// cek insert sub kegiatan
 	.then(function(){
 		return new Promise(function(resolve, reject){
-			var last = kegiatan_exist_global.length;
+			var last = kegiatan_exist_global.length - 1;
 			kegiatan_exist_global.reduce(function(sequence, nextData){
 	            return sequence.then(function(kegiatan){
 	        		return new Promise(function(resolve_reduce, reject_reduce){
@@ -7606,7 +7640,6 @@ function singkronisasi_pendapatan(data){
 		        						pagu_tahun2: 0,
 		        						pagu_tahun3: 0
 		        					};
-				        			kdurut++;
 		        					data_post.kdurut = 1;
 		        					pesan_loading('SIMPAN SUB KEGIATAN '+nama_sub_giat, true);
 		        					new Promise(function(resolve3, reject3){
@@ -7663,7 +7696,14 @@ function singkronisasi_pendapatan(data){
 	})
 	.then(function(){
 		hide_loading();
-		alert('Sukses generate pendapatan sampai sub kegiatan');
+		var cek_jenis = '';
+		if(jenis_apbd_global == 2){
+			cek_jenis = 'Pendapatan';
+		}else if(jenis_apbd_global == 3){
+			cek_jenis = 'Pembiayaan';
+		}
+		alert('Sukses generate '+cek_jenis+' sampai sub kegiatan');
+		run_script('custom_dt_skpd_hide');
 	});
 }
 

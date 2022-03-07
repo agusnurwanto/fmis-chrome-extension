@@ -58,7 +58,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	jQuery('#golongan .btn-outline-dark').parent().append(btn);
 	jQuery('#singkron-ssh-sipd').on('click', function(){
     	if(confirm('Apakah anda yakin untuk melakukan singkronisasi data Struktur SSH dari WP-SIPD ke FMIS?')){
-			var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
+			var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 7=Pendapatan & Pembiayaan, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
 			if(idkelompok >= 1){
 				show_loading();
 				jQuery('#persen-loading').attr('persen', 0);
@@ -762,7 +762,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
     if(confirm('Apakah anda yakin untuk melakukan singkronisasi data tarif SSH dari WP-SIPD ke FMIS?')){
-		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
+		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 7=Pendapatan & Pembiayaan, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
 		if(idkelompok >= 1){
 			show_loading();
 			jQuery('#persen-loading').attr('persen', 0);
