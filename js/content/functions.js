@@ -3681,6 +3681,7 @@ function singkronisasi_program(sub_keg){
 	var sub_keg_fmis = {};
 	get_list_program()
 	.then(function(program){
+		run_script('program_destroy');
 		var last = program.data.length - 1;
 		program.data.reduce(function(sequence, nextData){
             return sequence.then(function(current_data){
@@ -3729,7 +3730,6 @@ function singkronisasi_program(sub_keg){
             });
         }, Promise.resolve(program.data[last]))
         .then(function(data_last){
-			run_script('program_destroy');
 			var daftar_sub = '';
 			sub_keg_renja.map(function(b, i){
 				var sub_giat = b.nama_sub_giat.split(' ');
@@ -3843,6 +3843,7 @@ function delete_rka(sub_keg){
 	get_list_program()
 	.then(function(program_exist){
 		if(program_exist.data.length >= 1){
+	        run_script('program_destroy');
 			var last = program_exist.data.length - 1;
 			program_exist.data.reduce(function(sequence, nextData){
 	            return sequence.then(function(program){
@@ -3920,7 +3921,6 @@ function delete_rka(sub_keg){
 	            });
 	        }, Promise.resolve(program_exist.data[last]))
 	        .then(function(data_last){
-	        	run_script('program_destroy');
 				jQuery('#mod-konfirmasi-program .modal-title').text('Delete RKA per sub kegiatan');
 				jQuery('#konfirmasi-program tbody').html(daftar_sub);
 				jQuery('#mod-program-rkpd').parent().hide();
@@ -5609,7 +5609,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 							        					kdrek6 : ssh.kdrek6,
 							        					uraian_belanja : nama_rincian,
 							        					idsatuan1 : ssh.idsatuan,
-							        					volume_1 : replace_number(current_data.volum1),
+							        					volume_1 : replace_number(current_data.volume),
 							        					idsatuan2 : '',
 							        					volume_2 : '',
 							        					idsatuan3 : '',
@@ -5630,18 +5630,30 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 								        					data_post.harga_renja = 1;
 								        					data_post.jml_volume_renja = 0;
 								        					data_post.jumlah_renja = 0;
-								        					data_post.volume_2 = 1;
+								        					if(current_data.totalpajak != 0){
+								        						data_post.volume_2 = '1,1';
+								        						data_post.idsatuan2 = ssh.idsatuan;
+								        					}else{
+								        						data_post.volume_2 = 1;
+								        					}
 								        					data_post.volume_3 = 1;
-								        					data_post.jml_volume = replace_number(current_data.volum1);
+								        					data_post.jml_volume = replace_number(current_data.volume);
 								        					data_post.jumlah = replace_number(current_data.total_harga);
 								        					data_post.status_pelaksanaan = 4;
 								        					var url = form.attr('action');
 								        					resolve3(url);
 								        				}else{
+								        					if(current_data.totalpajak != 0){
+								        						data_post.volume_2 = '1,1';
+								        						data_post.idsatuan2 = ssh.idsatuan;
+								        						data_post.uraian_satuan2 = ssh.uraian_satuan;
+								        					}else{
+								        						data_post.volume_2 = '';
+								        						data_post.uraian_satuan2 = '';
+								        					}
 							        						data_post.uraian_idssh_4 = ssh.uraian;
 							        						data_post.idsatuanindikator = '';
 								        					data_post.uraian_satuan1 = ssh.uraian_satuan;
-								        					data_post.uraian_satuan2 = '';
 								        					data_post.uraian_satuan3 = '';
 								        					var url = config.fmis_url+'/perencanaan-tahunan/renja-murni/aktivitas/rincbelanja/create/'+aktivitas.idrkpdrenjaaktivitas;
 								        					resolve3(url);
@@ -6960,7 +6972,8 @@ function gl_dokumen_rka(cb, options_skpd){
 				        		cb({
 				        			code_sasaran: code_sasaran,
 				        			idrkpdranwalprogram: program.val(),
-									uraian_rkpd: program.text().trim()
+									uraian_rkpd: program.text().trim(),
+									html_program_rkpd: html_program_rkpd
 				        		});
 				        	});
 						}
@@ -7358,6 +7371,7 @@ function singkron_rka_all_skpd_modal(){
 				    								idrkpdranwalprogram: res_dokumen.idrkpdranwalprogram,
 				    								uraian_rkpd: res_dokumen.uraian_rkpd,
 				    								code_sasaran: res_dokumen.code_sasaran,
+				    								html_program_rkpd: res_dokumen.html_program_rkpd,
 				    								sub_kegiatan: []
 				    							};
 				    							window.lanjut_singkron_rka_all_skpd = resolve_reduce;
@@ -7473,6 +7487,7 @@ function singkronisasi_pendapatan(data){
 	var code_sasaran = options_all_skpd.code_sasaran;
 	var uraian_rkpd = options_all_skpd.uraian_rkpd;
 	var idrkpdranwalprogram = options_all_skpd.idrkpdranwalprogram;
+	var html_program_rkpd = options_all_skpd.html_program_rkpd;
 	var kegiatan_exist_global = [];
 	var sub_kegiatan_exist_global = [];
 	var aktivitas_exist_global = [];
@@ -7501,14 +7516,12 @@ function singkronisasi_pendapatan(data){
 				var nama_program = 'Non Program';
 				var data_post = {
 					_token: _token,
-					idprogram: master_program.program[nama_program].id,
-					uraian: nama_program,
-				}
+					idprogram: master_program.program[nama_program].id
+				};
+				data_post.uraian = nama_program;
 				var form = jQuery(program_exist.form_tambah_program);
 				data_post.idrapbdrkaprogram = form.find('input[name="idrapbdrkaprogram"]').val();
 				data_post.idrapbdrkasasaran = form.find('input[name="idrapbdrkasasaran"]').val();
-				data_post.uraian_rkpd = uraian_rkpd;
-				data_post.idrapbdprogram = idrkpdranwalprogram;
 				data_post.status_pelaksanaan = 4;
 				var url = form.attr('action');
 				if(
@@ -7516,6 +7529,15 @@ function singkronisasi_pendapatan(data){
 					&& !cek_program_pendapatan
 				){
 					kdurut++;
+					jQuery('<select>'+html_program_rkpd+'</select>').find('option').map(function(i, b){
+						var text = jQuery(b).text().trim();
+						if(text.indexOf('Pendapatan') != -1){
+							uraian_rkpd = text;
+							idrkpdranwalprogram = jQuery(b).val();
+						}
+					});
+					data_post.uraian_rkpd = uraian_rkpd;
+					data_post.idrapbdprogram = idrkpdranwalprogram;
 					data_post.kdurut = kdurut;
 					data_post.jns_program = 1;
 					pesan_loading('SIMPAN PROGRAM PENDAPATAN '+data_post.uraian, true);
@@ -7526,6 +7548,15 @@ function singkronisasi_pendapatan(data){
 					&& !cek_program_pembiayaan_penerimaan
 				){
 					kdurut++;
+					jQuery('<select>'+html_program_rkpd+'</select>').find('option').map(function(i, b){
+						var text = jQuery(b).text().trim();
+						if(text.indexOf('Penerimaan Pembiayaan') != -1){
+							uraian_rkpd = text;
+							idrkpdranwalprogram = jQuery(b).val();
+						}
+					});
+					data_post.uraian_rkpd = uraian_rkpd;
+					data_post.idrapbdprogram = idrkpdranwalprogram;
 					data_post.kdurut = kdurut;
 					data_post.jns_program = 2;
 					pesan_loading('SIMPAN PROGRAM PEMBIAYAAN PENERIMAAN '+data_post.uraian, true);
@@ -7536,6 +7567,15 @@ function singkronisasi_pendapatan(data){
 					&& !cek_program_pembiayaan_pengeluaran
 				){
 					kdurut++;
+					jQuery('<select>'+html_program_rkpd+'</select>').find('option').map(function(i, b){
+						var text = jQuery(b).text().trim();
+						if(text.indexOf('Pengeluaran Pembiayaan') != -1){
+							uraian_rkpd = text;
+							idrkpdranwalprogram = jQuery(b).val();
+						}
+					});
+					data_post.uraian_rkpd = uraian_rkpd;
+					data_post.idrapbdprogram = idrkpdranwalprogram;
 					data_post.kdurut = kdurut;
 					data_post.jns_program = 3;
 					pesan_loading('SIMPAN PROGRAM PEMBIAYAAN PENGELUARAN '+data_post.uraian, true);
@@ -7575,7 +7615,7 @@ function singkronisasi_pendapatan(data){
 											data_post.idrapbdrkakegiatan = '';
 											data_post.idrapbdrkaprogram = form.find('input[name="idrapbdrkaprogram"]').val();
 											data_post.status_pelaksanaan = 4;
-											var url = form.attr('action');
+											var url_simpan = form.attr('action');
 				        					relayAjax({
 												url: url_simpan,
 												type: "post",
@@ -7631,7 +7671,7 @@ function singkronisasi_pendapatan(data){
 							if(sub_kegiatan_exist.data.length == 0){
 								get_master_sub_keg_fmis(kegiatan)
 								.then(function(master_sub_kegiatan){
-									var nama_sub_giat = 'Non Kegiatan';
+									var nama_sub_giat = 'Non Sub Kegiatan'.toLowerCase();
 									var data_post = {
 		        						_token: _token,
 		        						idsubkegiatan: master_sub_kegiatan[nama_sub_giat].id,
