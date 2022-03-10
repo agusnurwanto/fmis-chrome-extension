@@ -7779,6 +7779,7 @@ function singkronisasi_pendapatan(data_sipd){
 											});
 											if(!cek_exist){
 												aktivitas_sipd.push({
+													nama_skpd: b.nama_skpd,
 													uraian: nama_aktivitas,
 													id_mapping: b.id_mapping,
 													idsumberdana: master_sumberdana[b.nama_akun]
@@ -7795,7 +7796,7 @@ function singkronisasi_pendapatan(data_sipd){
 										aktivitas_sipd.reduce(function(sequence2, nextData2){
 								            return sequence2.then(function(current_aktivitas){
 								        		return new Promise(function(resolve_reduce2, reject_reduce2){
-								        			get_id_sub_unit_fmis(sub_kegiatan_fmis, current_aktivitas.id_mapping, sub_kegiatan_fmis.uraian)
+								        			get_id_sub_unit_fmis(sub_kegiatan_fmis, current_aktivitas.id_mapping, current_aktivitas.nama_skpd)
 													.then(function(id_sub_unit){
 														var aktivitas_sipd = replace_string(current_aktivitas.uraian, true, true);
 														var cek_exist = false;
@@ -8106,15 +8107,7 @@ function singkronisasi_pendapatan(data_sipd){
 		}
 	})
 	.then(function(){
-		hide_loading();
-		var cek_jenis = '';
-		if(jenis_apbd_global == 2){
-			cek_jenis = 'Pendapatan';
-		}else if(jenis_apbd_global == 3){
-			cek_jenis = 'Pembiayaan';
-		}
-		alert('Sukses singkronisasi data '+cek_jenis+' dari WP-SIPD!');
-		run_script('custom_dt_skpd_hide');
+		return lanjut_singkron_rka_all_skpd(nextData_all_skpd);
 	});
 }
 
