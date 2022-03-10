@@ -5030,96 +5030,10 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 		        		typeof pagu_sub_keg_global != 'undefined'
 		        		&& pagu_sub_keg_global == 1
 		        	){
-		        		get_list_sub_kegiatan(kegiatan)
-						.then(function(sub_kegiatan_exist){
-							var last = sub_kegiatan_exist.data.length - 1;
-							sub_kegiatan_exist.data.reduce(function(sequence, nextData){
-					            return sequence.then(function(sub_keg_fmis){
-					        		return new Promise(function(resolve_reduce, reject_reduce){
-					        			get_list_aktivitas(sub_keg_fmis)
-										.then(function(aktivitas_exist){
-											var pagu_rincian = 0;
-											new Promise(function(resolve3, reject3){
-												var sendData = aktivitas_exist.data.map(function(b, i){
-													return new Promise(function(resolve4, reject4){
-														get_rka_aktivitas(b)
-														.then(function(rka){
-															rka.data.map(function(d, n){
-																pagu_rincian += to_number(d.jumlah);
-															});
-															resolve4();
-								        				});
-													});
-												});
-												Promise.all(sendData)
-												.then(function(){
-													resolve3();
-												})
-											})
-											.then(function(){
-												var nama_sub_giat = sub_keg_fmis.uraian;
-												var data_post = {
-					        						_token: _token,
-					        						_method: 'PUT',
-					        						kdurut: sub_keg_fmis.kdurut,
-					        						idsubkegiatan: sub_keg_fmis.idsubkegiatan,
-					        						uraian: nama_sub_giat,
-					        						pagu_tahun1: to_number(sub_keg_fmis.pagu_tahun1),
-					        						pagu_tahun2: pagu_rincian,
-					        						pagu_tahun3: to_number(sub_keg_fmis.pagu_tahun3)
-					        					};
-												pesan_loading('UPDATE PAGU RINCIAN SUB KEGIATAN '+nama_sub_giat, true);
-					        					new Promise(function(resolve3, reject3){
-						        					if(_type_singkronisasi_rka == 'rka-opd'){
-						        						var code_subkegiatan = sub_keg_fmis.action.split('data-code="')[1].split('"')[0];
-						        						relayAjax({
-															url: config.fmis_url+'/anggaran/rka-opd/subkegiatan/form?code='+code_subkegiatan+'&action=edit',
-															success: function(form_edit){
-																var form = jQuery(form_edit.form);
-							        							data_post.bln1 = 1;
-							        							data_post.bln2 = 12;
-							        							data_post.status_pelaksanaan = 4;
-							        							data_post.idrapbdrkasubkegiatan = form.find('input[name="idrapbdrkasubkegiatan"]').val();
-							        							data_post.idrapbdrkakegiatan = form.find('input[name="idrapbdrkakegiatan"]').val();
-																var url = form.attr('action');
-								        						resolve3(url);
-								        					}
-								        				});
-						        					}else{
-						        						var url = config.fmis_url+'/perencanaan-tahunan/renja-murni/subkegiatan/update/'+sub_keg_fmis.idrkpdrenjasubkegiatan;
-						        						resolve3(url);
-							        				}
-					        					})
-					        					.then(function(url_proses){
-						        					relayAjax({
-														url: url_proses,
-														type: "post",
-											            data: data_post,
-											            success: function(res){
-										        			resolve_reduce(nextData);
-											            },
-											            error: function(e){
-											            	console.log('Error update sub kegiatan!', e, this.data);
-											            }
-													});
-						        				});
-											});
-										});
-					        		})
-					                .catch(function(e){
-					                    console.log(e);
-					                    return Promise.resolve(nextData);
-					                });
-					            })
-					            .catch(function(e){
-					                console.log(e);
-					                return Promise.resolve(nextData);
-					            });
-					        }, Promise.resolve(sub_kegiatan_exist.data[last]))
-					        .then(function(data_last){
-			        			resolve(sub_kegiatan_filter);
-			        		});
-					    });
+		        		update_pagu_sub_from_rincian(kegiatan)
+		        		.then(function(){
+		        			resolve(sub_kegiatan_filter);
+		        		});
 		        	}else{
 		        		resolve(sub_kegiatan_filter);
 		        	}
@@ -7734,57 +7648,73 @@ function singkronisasi_pendapatan(data_sipd){
 	        		return new Promise(function(resolve_reduce, reject_reduce){
 						get_list_sub_kegiatan(kegiatan)
 						.then(function(sub_kegiatan_exist){
-							if(sub_kegiatan_exist.data.length == 0){
-								get_master_sub_keg_fmis(kegiatan)
-								.then(function(master_sub_kegiatan){
-									var nama_sub_giat = 'Non Sub Kegiatan'.toLowerCase();
-									var data_post = {
-		        						_token: _token,
-		        						idsubkegiatan: master_sub_kegiatan[nama_sub_giat].id,
-		        						uraian: master_sub_kegiatan[nama_sub_giat].nama,
-		        						pagu_tahun1: 0,
-		        						pagu_tahun2: 0,
-		        						pagu_tahun3: 0
-		        					};
-		        					data_post.kdurut = 1;
-		        					pesan_loading('SIMPAN SUB KEGIATAN '+nama_sub_giat, true);
-		        					new Promise(function(resolve3, reject3){
-	        							var form = jQuery(global_form_tambah_subkegiatan);
-	        							data_post.bln1 = 1;
-	        							data_post.bln2 = 12;
-	        							data_post.status_pelaksanaan = 4;
-	        							data_post.idrapbdrkakegiatan = form.find('input[name="idrapbdrkakegiatan"]').val();
-										var url = form.attr('action');
-		        						resolve3(url);
-		        					})
-		        					.then(function(url_proses){
-			        					relayAjax({
-											url: url_proses,
-											type: "post",
-								            data: data_post,
-								            success: function(res){
-								            	get_list_sub_kegiatan(kegiatan)
-												.then(function(sub_kegiatan_exist){
-													sub_kegiatan_exist.data.map(function(b, i){
-														b.kegiatan_fmis = kegiatan;
-														sub_kegiatan_exist_global.push(b);
-													});
-							        				resolve_reduce(nextData);
-							        			});
-								            },
-								            error: function(e){
-								            	console.log('Error kegiatan!', e, this.data);
-								            }
-										});
-		        					});
-								});
-							}else{
-								sub_kegiatan_exist.data.map(function(b, i){
-									b.kegiatan_fmis = kegiatan;
-									sub_kegiatan_exist_global.push(b);
-								});
-								resolve_reduce(nextData);
-							}
+							new Promise(function(resolve3, reject3){
+								if(sub_kegiatan_exist.data.length == 0){
+									get_master_sub_keg_fmis(kegiatan)
+									.then(function(master_sub_kegiatan){
+										var nama_sub_giat = 'Non Sub Kegiatan'.toLowerCase();
+										var data_post = {
+			        						_token: _token,
+			        						idsubkegiatan: master_sub_kegiatan[nama_sub_giat].id,
+			        						uraian: master_sub_kegiatan[nama_sub_giat].nama,
+			        						pagu_tahun1: 0,
+			        						pagu_tahun2: 0,
+			        						pagu_tahun3: 0
+			        					};
+			        					data_post.kdurut = 1;
+			        					pesan_loading('SIMPAN SUB KEGIATAN '+nama_sub_giat, true);
+			        					new Promise(function(resolve3, reject3){
+		        							var form = jQuery(global_form_tambah_subkegiatan);
+		        							data_post.bln1 = 1;
+		        							data_post.bln2 = 12;
+		        							data_post.status_pelaksanaan = 4;
+		        							data_post.idrapbdrkakegiatan = form.find('input[name="idrapbdrkakegiatan"]').val();
+											var url = form.attr('action');
+			        						resolve3(url);
+			        					})
+			        					.then(function(url_proses){
+				        					relayAjax({
+												url: url_proses,
+												type: "post",
+									            data: data_post,
+									            success: function(res){
+									            	get_list_sub_kegiatan(kegiatan)
+													.then(function(sub_kegiatan_exist){
+														sub_kegiatan_exist.data.map(function(b, i){
+															b.kegiatan_fmis = kegiatan;
+															sub_kegiatan_exist_global.push(b);
+														});
+								        				resolve3();
+								        			});
+									            },
+									            error: function(e){
+									            	console.log('Error kegiatan!', e, this.data);
+									            }
+											});
+			        					});
+									});
+								}else{
+									sub_kegiatan_exist.data.map(function(b, i){
+										b.kegiatan_fmis = kegiatan;
+										sub_kegiatan_exist_global.push(b);
+									});
+									resolve3();
+								}
+							})
+							.then(function(){
+					        	// cek apakah perlu update pagu sub kegiatan sesuai pagu rincian
+					        	if(
+					        		typeof pagu_sub_keg_global != 'undefined'
+					        		&& pagu_sub_keg_global == 1
+					        	){
+					        		update_pagu_sub_from_rincian(kegiatan)
+						        	.then(function(){
+						        		resolve_reduce(nextData);
+						        	});
+					        	}else{
+						        	resolve_reduce(nextData);
+					        	}
+							})
 						});
 	        		})
 	                .catch(function(e){
@@ -7820,10 +7750,10 @@ function singkronisasi_pendapatan(data_sipd){
 										data: {}
 									})
 									.then(function(satuan_fmis){
-					        			var nama_jenis_program = get_nama_jenis_program(jenis_program);
 										var aktivitas_sipd = [];
 										var rka_sipd = [];
 								        var jenis_program = sub_kegiatan_fmis.kegiatan_fmis.program_fmis.jns_program;
+					        			var nama_jenis_program = get_nama_jenis_program(jenis_program);
 										data_sipd.data.map(function(b, i){
 											// jika pembiayaan penerimaan
 									        if(
@@ -7942,7 +7872,14 @@ function singkronisasi_pendapatan(data_sipd){
 								            });
 								        }, Promise.resolve(aktivitas_sipd[last2]))
 								        .then(function(data_last){
-								        	resolve_reduce(nextData);
+								        	get_list_aktivitas(sub_kegiatan_fmis)
+											.then(function(aktivitas_exist){
+												aktivitas_exist.data.map(function(b, i){
+													b.sub_kegiatan_fmis = sub_kegiatan_fmis;
+													aktivitas_exist_global.push(b);
+												});
+								        		resolve_reduce(nextData);
+								        	});
 								        });
 								    });
 							    });
@@ -7964,6 +7901,210 @@ function singkronisasi_pendapatan(data_sipd){
 			});
 		}
 	})
+	// cek insert rincian
+	.then(function(){
+		if(lingkup_rka_global == 2){
+			return Promise.resolve();
+		}else{
+			return new Promise(function(resolve, reject){
+				var last = aktivitas_exist_global.length - 1;
+				aktivitas_exist_global.reduce(function(sequence, nextData){
+		            return sequence.then(function(aktivitas_fmis){
+		        		return new Promise(function(resolve_reduce, reject_reduce){
+	        				var jenis_program = aktivitas_fmis.sub_kegiatan_fmis.kegiatan_fmis.program_fmis.jns_program;
+	        				var nama_jenis_program = get_nama_jenis_program(jenis_program);
+							console.log('cek dan insert RKA '+nama_jenis_program, aktivitas_fmis, data_sipd);
+		        			get_rka_aktivitas(aktivitas_fmis)
+							.then(function(rka){
+								// inisiasi form tambah rka fmis dalam aktivitas yang dipilih
+								if(rka.form_tambah_rka){
+									aktivitas_fmis.form_tambah_rka = rka.form_tambah_rka;
+								}
+
+								// inisiasi data rincian unik sipd
+								var rka_sipd = [];
+								var rka_unik = {};
+								data_sipd.data.map(function(b, i){
+									// jika pembiayaan penerimaan
+							        if(
+										jenis_apbd_global == 3 
+				        				&& jenis_program == 2
+				        				&& b.type != 'penerimaan'
+			        				){
+							        	return;
+									// jika pembiayaan pengeluaran
+							        }else if(
+							        	jenis_apbd_global == 3 
+				        				&& jenis_program == 3
+				        				&& b.type != 'pengeluaran'
+							        ){
+							        	return;
+							        }
+									var nama_aktivitas = b.nama_akun+' | '+b.nama_skpd;
+									if(nama_aktivitas == aktivitas_fmis.uraian){
+										b.sumber_dana = [{
+											nama_dana: '[] - '+b.nama_akun
+										}];
+										rka_sipd.push(b);
+			        				}
+			        				var nama_rincian = replace_string(b.total+' Rupiah '+b.uraian, false, false).substring(0, 500).trim();
+			        				var nama_unik_rincian = nama_rincian+b.kode_akun;
+		        					if(!rka_unik[nama_unik_rincian]){
+		        						rka_unik[nama_unik_rincian] = {
+		        							jml_sipd: 1,
+		        							jml_fmis: 0
+		        						};
+		        					}else{
+		        						rka_unik[nama_unik_rincian].jml_sipd++;
+		        					}
+								});
+
+								// inisiasi data rincian unik fmis
+								var data_rka = rka.data;
+								data_rka.map(function(b, i){
+									var uraian_belanja = replace_string(b.uraian_belanja, false, false);
+									var uraian_belanja_unik = uraian_belanja+b.kode_rekening;
+									if(!rka_unik[uraian_belanja_unik]){
+		        						rka_unik[uraian_belanja_unik] = {
+		        							jml_sipd: 0,
+		        							jml_fmis: 1
+		        						};
+		        					}else{
+		        						rka_unik[uraian_belanja_unik].jml_fmis++;
+		        					}
+								});
+								console.log('rka_unik', rka_unik);
+
+								if(rka_sipd.length >= 1){
+									console.log('Insert RKA untuk aktivitas = '+aktivitas_fmis.uraian, aktivitas_fmis, rka_sipd);
+									var last = rka_sipd.length - 1;
+									var kdurut = 0;
+									rka_sipd.reduce(function(sequence2, nextData2){
+							            return sequence2.then(function(current_data){
+							        		return new Promise(function(resolve_reduce2, reject_reduce2){
+					        					var nama_rincian = replace_string(current_data.total+' Rupiah '+current_data.uraian, false, false).substring(0, 500).trim();
+					        					var nama_rincian_unik = nama_rincian+current_data.kode_akun;
+					        					var cek_exist = false;
+												data_rka.map(function(b, i){
+													var uraian_belanja = replace_string(b.uraian_belanja, false, false);
+													var uraian_belanja_unik = uraian_belanja+b.kode_rekening;
+													// cek jika nama unik sudah terinsert atau belum
+													if(uraian_belanja_unik == nama_rincian_unik){
+														// cek jika jumlah rincian unik fmis sudah sama dengan jumlah rincian sipd
+														if(rka_unik[uraian_belanja_unik].jml_fmis >= rka_unik[uraian_belanja_unik].jml_sipd){
+															cek_exist = b;
+														}else{
+															rka_unik[uraian_belanja_unik].jml_fmis++;
+														}
+													}
+													if(kdurut <= +b.kdurut){
+														kdurut = +b.kdurut;
+													}
+												});
+												if(!cek_exist){
+													current_data.nama_rincian = nama_rincian;
+													current_data.nama_komponen = current_data.uraian;
+													current_data.spek_komponen = current_data.keterangan;
+													current_data.harga_satuan = current_data.total;
+													current_data.satuan = 'Rupiah';
+													get_id_ssh_rka(current_data, aktivitas_fmis)
+													.then(function(ssh){
+														if(ssh){
+															kdurut++;
+									        				var data_post = {
+									        					_token: _token,
+									        					idsumberdana : aktivitas_fmis.idsumberdana1,
+									        					kdurut : kdurut,
+									        					idssh_4 : ssh.idssh_4,
+									        					kdrek1 : ssh.kdrek1,
+									        					kdrek2 : ssh.kdrek2,
+									        					kdrek3 : ssh.kdrek3,
+									        					kdrek4 : ssh.kdrek4,
+									        					kdrek5 : ssh.kdrek5,
+									        					kdrek6 : ssh.kdrek6,
+									        					uraian_belanja : nama_rincian,
+									        					idsatuan1 : ssh.idsatuan,
+									        					volume_1 : 1,
+									        					idsatuan2 : '',
+									        					volume_2 : '',
+									        					idsatuan3 : '',
+									        					volume_3 : '',
+									        					harga : replace_number(ssh.harga),
+									        				}
+									        				pesan_loading('SIMPAN '+nama_jenis_program+' RINCIAN "'+ssh.uraian+'" AKTIVITAS "'+aktivitas_fmis.uraian+'"', true);
+								        					var form = jQuery(aktivitas_fmis.form_tambah_rka);
+								        					data_post.idrapbdrkabelanja = '';
+								        					data_post.idrapbdrkaaktivitas = form.find('input[name="idrapbdrkaaktivitas"]').val();
+								        					data_post.uraian = ssh.uraian;
+								        					data_post.uraian_rekening = ssh.nama_akun;
+								        					data_post.volume_renja1 = 0;
+								        					data_post.volume_renja2 = 0;
+								        					data_post.volume_renja3 = 0;
+								        					data_post.harga_renja = 1;
+								        					data_post.jml_volume_renja = 0;
+								        					data_post.jumlah_renja = 0;
+								        					data_post.volume_2 = 1;
+								        					data_post.volume_3 = 1;
+								        					data_post.jml_volume = 1;
+								        					data_post.jumlah = replace_number(current_data.total);
+								        					data_post.status_pelaksanaan = 4;
+								        					var url_simpan = form.attr('action');
+								        					relayAjax({
+																url: url_simpan,
+																type: "post",
+													            data: data_post,
+													            success: function(res){
+													            	resolve_reduce2(nextData2);
+													            },
+													            error: function(e){
+													            	console.log('Error save rincian!', e, this.data);
+													            }
+															});
+														}else{
+															console.log('item SSH tidak ditemukan ', nama_rincian);
+															resolve_reduce2(nextData2);
+														}
+							        				});
+						        				}else{
+						        					console.log('Item belanja "'+nama_rincian+'" sudah ada!');
+					        						resolve_reduce2(nextData2);
+						        				}
+							        		})
+							                .catch(function(e){
+							                    console.log(e);
+							                    return Promise.resolve(nextData2);
+							                });
+							            })
+							            .catch(function(e){
+							                console.log(e);
+							                return Promise.resolve(nextData2);
+							            });
+							        }, Promise.resolve(rka_sipd[last]))
+							        .then(function(data_last){
+							        	resolve_reduce(nextData);
+							        });
+							    }else{
+							    	pesan_loading('RKA untuk '+nama_jenis_program+' aktivitas = '+aktivitas_fmis.uraian+' tidak ditemukan!');
+							    	resolve_reduce(nextData);
+							    }
+							});
+						})
+		                .catch(function(e){
+		                    console.log(e);
+		                    return Promise.resolve(nextData);
+		                });
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData);
+		            });
+		        }, Promise.resolve(aktivitas_exist_global[last]))
+		        .then(function(data_last){
+		        	resolve();
+		        });
+		    });
+		}
+	})
 	.then(function(){
 		hide_loading();
 		var cek_jenis = '';
@@ -7972,9 +8113,104 @@ function singkronisasi_pendapatan(data_sipd){
 		}else if(jenis_apbd_global == 3){
 			cek_jenis = 'Pembiayaan';
 		}
-		alert('Sukses generate '+cek_jenis+' sampai sub kegiatan');
+		alert('Sukses singkronisasi data '+cek_jenis+' dari WP-SIPD!');
 		run_script('custom_dt_skpd_hide');
 	});
+}
+
+function update_pagu_sub_from_rincian(kegiatan){
+	return new Promise(function(resolve, reject){
+		get_list_sub_kegiatan(kegiatan)
+		.then(function(sub_kegiatan_exist){
+			var last = sub_kegiatan_exist.data.length - 1;
+			sub_kegiatan_exist.data.reduce(function(sequence, nextData){
+	            return sequence.then(function(sub_keg_fmis){
+	        		return new Promise(function(resolve_reduce, reject_reduce){
+	        			get_list_aktivitas(sub_keg_fmis)
+						.then(function(aktivitas_exist){
+							var pagu_rincian = 0;
+							new Promise(function(resolve3, reject3){
+								var sendData = aktivitas_exist.data.map(function(b, i){
+									return new Promise(function(resolve4, reject4){
+										get_rka_aktivitas(b)
+										.then(function(rka){
+											rka.data.map(function(d, n){
+												pagu_rincian += to_number(d.jumlah);
+											});
+											resolve4();
+				        				});
+									});
+								});
+								Promise.all(sendData)
+								.then(function(){
+									resolve3();
+								})
+							})
+							.then(function(){
+								var nama_sub_giat = sub_keg_fmis.uraian;
+								var data_post = {
+	        						_token: _token,
+	        						_method: 'PUT',
+	        						kdurut: sub_keg_fmis.kdurut,
+	        						idsubkegiatan: sub_keg_fmis.idsubkegiatan,
+	        						uraian: nama_sub_giat,
+	        						pagu_tahun1: to_number(sub_keg_fmis.pagu_tahun1),
+	        						pagu_tahun2: pagu_rincian,
+	        						pagu_tahun3: to_number(sub_keg_fmis.pagu_tahun3)
+	        					};
+								pesan_loading('UPDATE PAGU RINCIAN SUB KEGIATAN '+nama_sub_giat, true);
+	        					new Promise(function(resolve3, reject3){
+		        					if(_type_singkronisasi_rka == 'rka-opd'){
+		        						var code_subkegiatan = sub_keg_fmis.action.split('data-code="')[1].split('"')[0];
+		        						relayAjax({
+											url: config.fmis_url+'/anggaran/rka-opd/subkegiatan/form?code='+code_subkegiatan+'&action=edit',
+											success: function(form_edit){
+												var form = jQuery(form_edit.form);
+			        							data_post.bln1 = 1;
+			        							data_post.bln2 = 12;
+			        							data_post.status_pelaksanaan = 4;
+			        							data_post.idrapbdrkasubkegiatan = form.find('input[name="idrapbdrkasubkegiatan"]').val();
+			        							data_post.idrapbdrkakegiatan = form.find('input[name="idrapbdrkakegiatan"]').val();
+												var url = form.attr('action');
+				        						resolve3(url);
+				        					}
+				        				});
+		        					}else{
+		        						var url = config.fmis_url+'/perencanaan-tahunan/renja-murni/subkegiatan/update/'+sub_keg_fmis.idrkpdrenjasubkegiatan;
+		        						resolve3(url);
+			        				}
+	        					})
+	        					.then(function(url_proses){
+		        					relayAjax({
+										url: url_proses,
+										type: "post",
+							            data: data_post,
+							            success: function(res){
+						        			resolve_reduce(nextData);
+							            },
+							            error: function(e){
+							            	console.log('Error update sub kegiatan!', e, this.data);
+							            }
+									});
+		        				});
+							});
+						});
+	        		})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(sub_kegiatan_exist.data[last]))
+	        .then(function(data_last){
+    			resolve();
+    		});
+	    });
+	})
 }
 
 function save_program(url, data_post){
