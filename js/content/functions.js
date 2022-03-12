@@ -363,7 +363,7 @@ function singkronisasi_ssh_tarif(data_ssh, cb, options){
 				            data_post[idssh_fmis] = {};
 		        			current_data.map(function(b, i){
 								var id_fmis = b.nilai.split('idperkadatarif[')[1].split(']')[0];
-								data_post.nilai[id_fmis] = +(b.harga)+',00';
+								data_post.nilai[id_fmis] = ((+b.harga)+'').replace(/\./g, ',');
 								data_post.idperkadatarif[id_fmis] = '';
 								data_post[idssh_fmis][id_fmis] = id_fmis;
 								no++;
@@ -5647,7 +5647,7 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 						var idsumberdana = '5';
 	        			var uraian_sumberdana = 'Pendapatan Transfer Pemerintah Pusat';
 	        			var sumber_dana_sipd = b.sumber_dana[0].nama_dana.split('] - ');
-	        			if(sumber_dana_sipd.length > 1){
+	        			if(sumber_dana_sipd.length == 1){
 	        				sumber_dana_sipd = sumber_dana_sipd[0].replace(/ - /g,'-').trim();
 	        			}else{
 	        				sumber_dana_sipd = sumber_dana_sipd[1].replace(/ - /g,'-').trim();
@@ -7255,6 +7255,8 @@ function singkron_rka_all_skpd_modal(){
 			cek_jenis = 'Pendapatan';
 		}else if(jenis_apbd_global == 3){
 			cek_jenis = 'Pembiayaan';
+		}else if(jenis_apbd_global == 4){
+			cek_jenis = 'Anggaran Kas';
 		}
 		if(
 			cek_jenis 
@@ -7380,6 +7382,26 @@ function singkron_rka_all_skpd_modal(){
 															    type: 'post',
 															    data: { 
 																	action: 'get_data_pembiayaan',
+																	tahun_anggaran: config.tahun_anggaran,
+																	id_skpd_fmis: skpd.id,
+																	api_key: config.api_key
+																},
+												    			return: true
+															}
+													    }
+													};
+													chrome.runtime.sendMessage(data, function(response) {
+													    console.log('responeMessage', response);
+													});
+			    								}else if(jenis_apbd_global == 4){
+			    									var data = {
+													    message:{
+													        type: "get-url",
+													        content: {
+															    url: config.url_server_lokal,
+															    type: 'post',
+															    data: { 
+																	action: 'get_kas_fmis',
 																	tahun_anggaran: config.tahun_anggaran,
 																	id_skpd_fmis: skpd.id,
 																	api_key: config.api_key
