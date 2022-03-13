@@ -6955,8 +6955,8 @@ function cek_insert_sasaran_rka(options){
 		        		var idrapbdsasaran_p = false;
 		        		var uraian_sasaran_rapbd_p = false;
 		        		sasaran_rpjm.map(function(b, i){
-		        			var uraian_sasaran = replace_string(b.uraian_sasaran, true, true);
-		        			if(uraian_sasaran.indexOf('hasil proses Generated Data Perencanaan') != -1){
+		        			var uraian_sasaran = replace_string(b.uraian_sasaran, false, true);
+		        			if(uraian_sasaran.indexOf('generated data perencanaan') != -1){
 			        			uraian_sasaran_rapbd = uraian_sasaran;
 			        			idrapbdsasaran = b.action.split('data-id="')[1].split('"')[0];
 			        		}else if(uraian_sasaran.indexOf('Pendapatan & Pembiayaan') != -1){
@@ -6972,7 +6972,7 @@ function cek_insert_sasaran_rka(options){
 			        		var uraian_tujuan_p = false;
 			        		tujuan_renstra.map(function(b, i){
 			        			var uraian = replace_string(b.uraian, false, true);
-			        			if(uraian.indexOf('hasil proses generated data perencanaan') != -1){
+			        			if(uraian.indexOf('generated data perencanaan') != -1){
 				        			uraian_tujuan = uraian;
 				        			idrenstratujuan = b.action.split('data-id="')[1].split('"')[0];
 				        		}else if(uraian.indexOf('pendapatan & pembiayaan') != -1){

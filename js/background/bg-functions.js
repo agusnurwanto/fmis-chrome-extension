@@ -62,7 +62,7 @@ function timeoutAjax(ms, promise) {
     })
 }
 
-function relayAjax(options, retries=20, delay=10000, timeout=90000){
+function relayAjax(options, retries=20, delay=10000, timeout=9000000){
     timeoutAjax(timeout, postData(options.url, options.data))
     .then(data => {
         options.success(data);
