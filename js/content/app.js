@@ -375,6 +375,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	                			+'<li><label><input type="radio" value="2" name="jenis-data"> Pendapatan</label></li>'
 	                			+'<li><label><input type="radio" value="3" name="jenis-data"> Pembiayaan</label></li>'
 	                			+'<li><label><input type="radio" value="4" name="jenis-data"> Anggaran Kas</label></li>'
+	                			+'<li><label><input type="radio" value="5" name="jenis-data"> Anggaran Kas SIMDA</label></li>'
 	                		+'</ul>'
 	                		+'<h4 style="width:100%;">Lingkup data yang akan disingkronisasi:</h4>'
 	                		+'<ul class="list-options-sipd" style="list-style: none;">'
