@@ -6959,7 +6959,7 @@ function cek_insert_sasaran_rka(options){
 		        			if(uraian_sasaran.indexOf('generated data perencanaan') != -1){
 			        			uraian_sasaran_rapbd = uraian_sasaran;
 			        			idrapbdsasaran = b.action.split('data-id="')[1].split('"')[0];
-			        		}else if(uraian_sasaran.indexOf('Pendapatan & Pembiayaan') != -1){
+			        		}else if(uraian_sasaran.indexOf('pendapatan & pembiayaan') != -1){
 			        			uraian_sasaran_rapbd_p = uraian_sasaran;
 			        			idrapbdsasaran_p = b.action.split('data-id="')[1].split('"')[0];
 			        		}
