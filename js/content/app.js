@@ -24,7 +24,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	jQuery('#mapping-rek-sipd').on('click', function(){
 		show_loading();
 		pesan_loading('GET DATA REKENING FMIS', true);
-		getMasterRek(5).then(function(rek){
+		getMasterRek().then(function(rek){
 			pesan_loading('SEND MAPPING DATA REKENING KE WP-SIPD', true);
 			var data = {
 			    message:{
