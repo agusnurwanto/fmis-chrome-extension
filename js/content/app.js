@@ -424,27 +424,48 @@ if(current_url.indexOf('parameter/rekening') != -1){
     	singkron_rka_all_skpd_modal();
     });
     jQuery('#singkron-user').on('click', function(){
-    	if(confirm('Apakah anda yakin untuk menggenerate data user FMIS dari SIPD?')){
-			show_loading();
-			var data = {
-			    message:{
-			        type: "get-url",
-			        content: {
-					    url: config.url_server_lokal,
-					    type: 'post',
-					    data: { 
-							action: 'get_skpd',
-							run: 'singkronisasi_user_sipd',
-							tahun_anggaran: config.tahun_anggaran,
-							api_key: config.api_key
-						},
-		    			return: true
+    	if(confirm('Apakah anda yakin untuk menggenerate data user SKPD FMIS dari SIPD?')){
+    		window.jenis_level_user = prompt('Pilih level user! 3=Perencana PD, 5=Anggaran PD, 10=Bendahara PD');
+    		if(
+    			jenis_level_user == 3
+    			|| jenis_level_user == 5
+    			|| jenis_level_user == 10
+    		){
+    			new Promise(function(resolve, reject){
+	    			if(jenis_level_user == 10){
+		    			get_level_user(10, 'Bendahara PD')
+						.then(function(all_level){
+							resolve();
+						});
+					}else{
+						resolve();
 					}
-			    }
-			};
-			chrome.runtime.sendMessage(data, function(response) {
-			    console.log('responeMessage', response);
-			});
+				})
+    			.then(function(){
+					show_loading();
+					var data = {
+					    message:{
+					        type: "get-url",
+					        content: {
+							    url: config.url_server_lokal,
+							    type: 'post',
+							    data: { 
+									action: 'get_skpd',
+									run: 'singkronisasi_user_sipd',
+									tahun_anggaran: config.tahun_anggaran,
+									api_key: config.api_key
+								},
+				    			return: true
+							}
+					    }
+					};
+					chrome.runtime.sendMessage(data, function(response) {
+					    console.log('responeMessage', response);
+					});
+				});
+			}else{
+				alert('Pilih level user dulu!');
+			}
 		}
     });
     jQuery('#singkron-skpd').on('click', function(){

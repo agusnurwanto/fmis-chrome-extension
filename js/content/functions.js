@@ -2836,6 +2836,43 @@ function get_all_user_fmis(username){
 	});
 }
 
+function get_level_user(id_level = false, nmgroup = false){
+	return new Promise(function(resolve, reject){
+		pesan_loading('GET LEVEL USER', true);
+		relayAjax({
+			url: config.fmis_url+'/manajemen-user/group/datatable',
+			success: function(level){
+				var all_level = {};
+				level.data.map(function(b, i){
+					all_level[b.DT_RowIndex] = b.nmgroup;
+				});
+				if(
+					id_level 
+					&& !all_level[id_level]
+				){
+					relayAjax({
+						url: config.fmis_url+'/manajemen-user/group',
+						type: 'post',
+						data: {
+							_token: _token,
+							_method: 'POST',
+							nmgroup: nmgroup
+						},
+						success: function(){
+							get_level_user()
+							.then(function(val){
+								resolve(val);
+							});
+						}
+					});
+				}else{
+					resolve(all_level);
+				}
+			}
+		});
+	});
+}
+
 function singkronisasi_user_sipd(data_skpd){
 	var pass = prompt('Masukan password default untuk user dari SIPD!');
 	get_all_user_fmis()
@@ -2880,210 +2917,211 @@ function singkronisasi_user_sipd(data_skpd){
 							return ret_cb();
 						}
 						var sendDataSub = [];
-						/*
-						// insert or update user bendahara
-						if(data.skpd.user_fmis_b){
-							sendDataSub.push({
-								param: {
-									skpd: data.skpd
-								},
-								cb: function(data, ret_cb2){
-									var url_form = data.skpd.user_fmis_b.action.split('href=\"')[1].split('\"')[0];
-									relayAjax({
-										url: url_form+'?action=edit',
-										success: function(form_update){
-											var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
-											relayAjax({
-												url: url_update,
-												type: "post",
-									            data: {
-									                _token: _token,
-									                _method: 'PUT',
-									                kduser: data.skpd.nipkepala+'b',
-									                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
-									                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
-									                level: 'operator',
-									                status: 1,
-									                idunit: data.skpd.idunit_fmis,
-									                idsubunit: data.skpd.idsubunit_fmis,
-									                idgroup: [10], // Bendahara PD
-									                tahun: [config.tahun_anggaran],
-									            },
-												success: function(res){
-													ret_cb2();
-												}
-											});
-										}
-									});
-								}
-							});
-						}else{
-							sendDataSub.push({
-								param: {
-									skpd: data.skpd
-								},
-								cb: function(data, ret_cb2){
-									relayAjax({
-										url: config.fmis_url+'/manajemen-user/user/store',
-										type: "post",
-							            data: {
-							                _token: _token,
-							                _method: 'POST',
-							                kduser: data.skpd.nipkepala+'b',
-							                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
-							                pwd: pass,
-							                pwd_confirmation: pass,
-							                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
-							                level: 'operator',
-							                status: 1,
-							                idunit: data.skpd.idunit_fmis,
-							                idsubunit: data.skpd.idsubunit_fmis,
-							                idgroup: [10], // Perencanaan PD
-							                tahun: [config.tahun_anggaran],
-							            },
-										success: function(res){
-											ret_cb2();
-										}
-									});
-								}
-							});
-						}
-						*/
 
-						// insert or update user perencana
-						if(data.skpd.user_fmis_p){
-							sendDataSub.push({
-								param: {
-									skpd: data.skpd
-								},
-								cb: function(data, ret_cb2){
-									var url_form = data.skpd.user_fmis_p.action.split('href=\"')[1].split('\"')[0];
-									relayAjax({
-										url: url_form+'?action=edit',
-										success: function(form_update){
-											var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
-											relayAjax({
-												url: url_update,
-												type: "post",
-									            data: {
-									                _token: _token,
-									                _method: 'PUT',
-									                kduser: data.skpd.nipkepala+'p',
-									                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
-									                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
-									                level: 'operator',
-									                status: 1,
-									                idunit: data.skpd.idunit_fmis,
-									                idsubunit: data.skpd.idsubunit_fmis,
-									                idgroup: [3], // Perencanaan PD
-									                tahun: [config.tahun_anggaran],
-									            },
-												success: function(res){
-													ret_cb2();
-												}
-											});
-										}
-									});
-								}
-							});
-						}else{
-							sendDataSub.push({
-								param: {
-									skpd: data.skpd
-								},
-								cb: function(data, ret_cb2){
-									relayAjax({
-										url: config.fmis_url+'/manajemen-user/user/store',
-										type: "post",
-							            data: {
-							                _token: _token,
-							                _method: 'POST',
-							                kduser: data.skpd.nipkepala+'p',
-							                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
-							                pwd: pass,
-							                pwd_confirmation: pass,
-							                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
-							                level: 'operator',
-							                status: 1,
-							                idunit: data.skpd.idunit_fmis,
-							                idsubunit: data.skpd.idsubunit_fmis,
-							                idgroup: [3], // Perencanaan PD
-							                tahun: [config.tahun_anggaran],
-							            },
-										success: function(res){
-											ret_cb2();
-										}
-									});
-								}
-							});
-						}
-
-						// insert or update user keuangan
-						if(data.skpd.user_fmis_k){
-							sendDataSub.push({
-								param: {
-									skpd: data.skpd
-								},
-								cb: function(data, ret_cb2){
-									var url_form = data.skpd.user_fmis_k.action.split('href=\"')[1].split('\"')[0];
-									relayAjax({
-										url: url_form+'?action=edit',
-										success: function(form_update){
-											var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
-											relayAjax({
-												url: url_update,
-												type: "post",
-									            data: {
-									                _token: _token,
-									                _method: 'PUT',
-									                kduser: data.skpd.nipkepala+'k',
-									                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
-									                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
-									                level: 'operator',
-									                status: 1,
-									                idunit: data.skpd.idunit_fmis,
-									                idsubunit: data.skpd.idsubunit_fmis,
-							                		idgroup: [5], // Anggaran PD
-									                tahun: [config.tahun_anggaran],
-									            },
-												success: function(res){
-													ret_cb2();
-												}
-											});
-										}
-									});
-								}
-							});
-						}else{
-							sendDataSub.push({
-								param: {
-									skpd: data.skpd
-								},
-								cb: function(data, ret_cb2){
-									relayAjax({
-										url: config.fmis_url+'/manajemen-user/user/store',
-										type: "post",
-							            data: {
-							                _token: _token,
-							                _method: 'POST',
-							                kduser: data.skpd.nipkepala+'k',
-							                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
-							                pwd: pass,
-							                pwd_confirmation: pass,
-							                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
-							                level: 'operator',
-							                status: 1,
-							                idunit: data.skpd.idunit_fmis,
-							                idsubunit: data.skpd.idsubunit_fmis,
-							                idgroup: [5], // Anggaran PD
-							                tahun: [config.tahun_anggaran],
-							            },
-										success: function(res){
-											ret_cb2();
-										}
-									});
-								}
-							});
+						if(jenis_level_user == 10){
+							// insert or update user bendahara
+							if(data.skpd.user_fmis_b){
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										var url_form = data.skpd.user_fmis_b.action.split('href=\"')[1].split('\"')[0];
+										relayAjax({
+											url: url_form+'?action=edit',
+											success: function(form_update){
+												var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_update,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'PUT',
+										                kduser: data.skpd.nipkepala+'b',
+										                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
+										                level: 'operator',
+										                status: 1,
+										                idunit: data.skpd.idunit_fmis,
+										                idsubunit: data.skpd.idsubunit_fmis,
+										                idgroup: [10], // Bendahara PD
+										                tahun: [config.tahun_anggaran],
+										            },
+													success: function(res){
+														ret_cb2();
+													}
+												});
+											}
+										});
+									}
+								});
+							}else{
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										relayAjax({
+											url: config.fmis_url+'/manajemen-user/user/store',
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'POST',
+								                kduser: data.skpd.nipkepala+'b',
+								                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+								                pwd: pass,
+								                pwd_confirmation: pass,
+								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
+								                level: 'operator',
+								                status: 1,
+								                idunit: data.skpd.idunit_fmis,
+								                idsubunit: data.skpd.idsubunit_fmis,
+								                idgroup: [10], // Perencanaan PD
+								                tahun: [config.tahun_anggaran],
+								            },
+											success: function(res){
+												ret_cb2();
+											}
+										});
+									}
+								});
+							}
+						}else if(jenis_level_user == 3){
+							// insert or update user perencana
+							if(data.skpd.user_fmis_p){
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										var url_form = data.skpd.user_fmis_p.action.split('href=\"')[1].split('\"')[0];
+										relayAjax({
+											url: url_form+'?action=edit',
+											success: function(form_update){
+												var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_update,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'PUT',
+										                kduser: data.skpd.nipkepala+'p',
+										                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
+										                level: 'operator',
+										                status: 1,
+										                idunit: data.skpd.idunit_fmis,
+										                idsubunit: data.skpd.idsubunit_fmis,
+										                idgroup: [3], // Perencanaan PD
+										                tahun: [config.tahun_anggaran],
+										            },
+													success: function(res){
+														ret_cb2();
+													}
+												});
+											}
+										});
+									}
+								});
+							}else{
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										relayAjax({
+											url: config.fmis_url+'/manajemen-user/user/store',
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'POST',
+								                kduser: data.skpd.nipkepala+'p',
+								                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+								                pwd: pass,
+								                pwd_confirmation: pass,
+								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
+								                level: 'operator',
+								                status: 1,
+								                idunit: data.skpd.idunit_fmis,
+								                idsubunit: data.skpd.idsubunit_fmis,
+								                idgroup: [3], // Perencanaan PD
+								                tahun: [config.tahun_anggaran],
+								            },
+											success: function(res){
+												ret_cb2();
+											}
+										});
+									}
+								});
+							}
+						}else if(jenis_level_user == 5){
+							// insert or update user keuangan
+							if(data.skpd.user_fmis_k){
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										var url_form = data.skpd.user_fmis_k.action.split('href=\"')[1].split('\"')[0];
+										relayAjax({
+											url: url_form+'?action=edit',
+											success: function(form_update){
+												var url_update = form_update.form.split('action=\"')[1].split('\"')[0];
+												relayAjax({
+													url: url_update,
+													type: "post",
+										            data: {
+										                _token: _token,
+										                _method: 'PUT',
+										                kduser: data.skpd.nipkepala+'k',
+										                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+										                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
+										                level: 'operator',
+										                status: 1,
+										                idunit: data.skpd.idunit_fmis,
+										                idsubunit: data.skpd.idsubunit_fmis,
+								                		idgroup: [5], // Anggaran PD
+										                tahun: [config.tahun_anggaran],
+										            },
+													success: function(res){
+														ret_cb2();
+													}
+												});
+											}
+										});
+									}
+								});
+							}else{
+								sendDataSub.push({
+									param: {
+										skpd: data.skpd
+									},
+									cb: function(data, ret_cb2){
+										relayAjax({
+											url: config.fmis_url+'/manajemen-user/user/store',
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'POST',
+								                kduser: data.skpd.nipkepala+'k',
+								                nmuser: (data.skpd.namakepala).substring(0, 50).trim(),
+								                pwd: pass,
+								                pwd_confirmation: pass,
+								                nmket: (data.skpd.kode_skpd+' '+data.skpd.nama_skpd).substring(0, 50).trim(),
+								                level: 'operator',
+								                status: 1,
+								                idunit: data.skpd.idunit_fmis,
+								                idsubunit: data.skpd.idsubunit_fmis,
+								                idgroup: [5], // Anggaran PD
+								                tahun: [config.tahun_anggaran],
+								            },
+											success: function(res){
+												ret_cb2();
+											}
+										});
+									}
+								});
+							}
 						}
 
 						reduce_promise(sendDataSub, function(val_all){
