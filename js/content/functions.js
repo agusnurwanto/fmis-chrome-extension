@@ -8073,7 +8073,7 @@ function singkronisasi_pendapatan(data_sipd){
 													nama_skpd: b.nama_skpd,
 													uraian: nama_aktivitas,
 													id_mapping: b.id_mapping,
-													idsumberdana: master_sumberdana[b.nama_akun]
+													idsumberdana: master_sumberdana[b.nama_akun.substring(0, 150).trim()]
 												});
 											}
 											b.sumber_dana = [{
