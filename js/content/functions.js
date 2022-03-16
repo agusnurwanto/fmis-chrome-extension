@@ -5517,7 +5517,12 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 						rka_sipd.reduce(function(sequence2, nextData2){
 				            return sequence2.then(function(current_data){
 				        		return new Promise(function(resolve_reduce2, reject_reduce2){
-				        			var sumber_dana_sipd = current_data.sumber_dana[0].nama_dana.split('] - ')[1].replace(/ - /g,'-').trim();
+				        			var sumber_dana_sipd = current_data.sumber_dana[0].nama_dana.split('] - ');
+				        			if(sumber_dana_sipd.length > 1){
+					    				sumber_dana_sipd = sumber_dana_sipd[1].replace(/ - /g,'-').trim();
+					    			}else{
+					    				sumber_dana_sipd = sumber_dana_sipd[0].replace(/ - /g,'-').trim();
+					    			}
 									var nama_aktivitas = (sumber_dana_sipd+' | '+sub_keg.nama_sub_skpd).substring(0, 500).trim();
 
 			        				if(nama_aktivitas == aktivitas.uraian){
@@ -5703,9 +5708,10 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 								}
 							}
 						});
-	        			if(master_sumberdana[sumber_dana_sipd]){
-	        				idsumberdana = master_sumberdana[sumber_dana_sipd];
-	        				uraian_sumberdana = sumber_dana_sipd;
+						var sumber_dana_sipd_master = sumber_dana_sipd.substring(0, 150).trim();
+	        			if(master_sumberdana[sumber_dana_sipd_master]){
+	        				idsumberdana = master_sumberdana[sumber_dana_sipd_master];
+	        				uraian_sumberdana = sumber_dana_sipd_master;
 	        			}
 						if(!cek_exist){
 	        				var data = {
@@ -6456,6 +6462,7 @@ function singkronisasi_sumberdana(res){
     			}else{
     				nama_sd_sipd = nama_sd_sipd[0].replace(/ - /g,'-').trim();
     			}
+    			nama_sd_sipd = nama_sd_sipd.substring(0, 150).trim();
 				sd_belum_ada[nama_sd_sipd] = current_data;
 				nama_sd_belum_ada.push(nama_sd_sipd);
 				var kdsd1 = '';
@@ -6501,7 +6508,7 @@ function singkronisasi_sumberdana(res){
 					|| current_data.jenis == 'penerimaan'
 					|| current_data.jenis == 'pengeluaran'
 				){
-					data_post.uraian_rekening = current_data.kode_dana+' '+current_data.nama_dana;
+					data_post.uraian_rekening = current_data.kode_dana+' - '+current_data.nama_dana;
 					data_post.kdrek = current_data.kode_dana;
 				}
 				var kd_sipd = [];
