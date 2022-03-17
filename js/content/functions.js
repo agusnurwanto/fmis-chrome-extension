@@ -3140,6 +3140,7 @@ function singkronisasi_user_sipd(data_skpd){
 }
 
 function generate_gl(data_skpd){
+	console.log('data_skpd', data_skpd);
 	window.data_bidur_skpd = {};
 	var pilih_bidur = '';
 	pesan_loading('GET data ALL SKPD FMIS!', true);
@@ -3150,20 +3151,37 @@ function generate_gl(data_skpd){
 			var form = jQuery(form_ret.form);
 			form.find('#id_unit option').map(function(i, b){
 				var nama_skpd_fmis = jQuery(b).text();
+				var id_skpd_fmis = jQuery(b).attr('value');
 				data_skpd.map(function(bb, ii){
-					if(bb.nama_skpd == nama_skpd_fmis){
-						bb.id_skpd_fmis = jQuery(b).attr('value');
+					// cek berdasarkan id mapping
+					if(bb.id_mapping){
+						var id_mapping = bb.id_mapping.split('.');
+						if(id_mapping[0] == id_skpd_fmis){
+							console.log('id_mapping == id_skpd_fmis ', id_mapping[0]+'=='+id_skpd_fmis);
+							bb.id_skpd_fmis = id_skpd_fmis;
+							bb.nama_skpd_fmis = nama_skpd_fmis;
+							skpd_selected_gl.push(bb);
+						}
+					}
+
+					// jika masih tidak ditemukan, cek berdasarkan nama skpd
+					if(
+						!bb.id_skpd_fmis
+						&& bb.nama_skpd == nama_skpd_fmis
+					){
+						bb.id_skpd_fmis = id_skpd_fmis;
+						bb.nama_skpd_fmis = nama_skpd_fmis;
 						skpd_selected_gl.push(bb);
 					}
 				});
 			});
 			skpd_selected_gl.map(function(b, i){
-				if(b.is_skpd == 1){
-					data_bidur_skpd[b.id_skpd] = b;
+				if(!data_bidur_skpd[b.id_skpd_fmis]){
+					data_bidur_skpd[b.id_skpd_fmis] = b;
 					pilih_bidur += ''
 						+'<tr>'
-							+'<td><input type="checkbox" value="'+b.id_skpd+'"></td>'
-							+'<td>'+b.nama_skpd+'</td>'
+							+'<td><input type="checkbox" value="'+b.id_skpd_fmis+'"></td>'
+							+'<td>'+b.nama_skpd_fmis+'</td>'
 						+'</tr>';
 				}
 			});
