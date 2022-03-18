@@ -8018,18 +8018,7 @@ function singkronisasi_pendapatan(data_sipd){
 								}
 							})
 							.then(function(){
-					        	// cek apakah perlu update pagu sub kegiatan sesuai pagu rincian
-					        	if(
-					        		typeof pagu_sub_keg_global != 'undefined'
-					        		&& pagu_sub_keg_global == 1
-					        	){
-					        		update_pagu_sub_from_rincian(kegiatan)
-						        	.then(function(){
-						        		resolve_reduce(nextData);
-						        	});
-					        	}else{
-						        	resolve_reduce(nextData);
-					        	}
+						        resolve_reduce(nextData);
 							})
 						});
 	        		})
@@ -8422,6 +8411,40 @@ function singkronisasi_pendapatan(data_sipd){
 		    });
 		}
 	})
+	// cek apakah perlu update pagu sub kegiatan sesuai pagu rincian
+	.then(function(){
+		return new Promise(function(resolve, reject){
+			if(
+	    		typeof pagu_sub_keg_global != 'undefined'
+	    		&& pagu_sub_keg_global == 1
+	    	){
+				var last = kegiatan_exist_global.length - 1;
+				kegiatan_exist_global.reduce(function(sequence, nextData){
+		            return sequence.then(function(kegiatan){
+		        		return new Promise(function(resolve_reduce, reject_reduce){
+							update_pagu_sub_from_rincian(kegiatan)
+				        	.then(function(){
+				        		resolve_reduce(nextData);
+				        	});
+				        })
+		                .catch(function(e){
+		                    console.log(e);
+		                    return Promise.resolve(nextData);
+		                });
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData);
+		            });
+		        }, Promise.resolve(kegiatan_exist_global[last]))
+		        .then(function(data_last){
+		        	resolve();
+		        });
+			}else{
+				resolve();
+			}
+		});
+	})
 	.then(function(){
 		return lanjut_singkron_rka_all_skpd(nextData_all_skpd);
 	});
@@ -8439,12 +8462,24 @@ function update_pagu_sub_from_rincian(kegiatan){
 						.then(function(aktivitas_exist){
 							var pagu_rincian = 0;
 							new Promise(function(resolve3, reject3){
+								var pagu_sub_keg_sipd = {};
 								var sendData = aktivitas_exist.data.map(function(b, i){
 									return new Promise(function(resolve4, reject4){
+										if(!pagu_sub_keg_sipd[b.idsubunit]){
+											pagu_sub_keg_sipd[b.idsubunit] = {
+												idsubunit: b.idsubunit,
+												idunit: b.idunit,
+												sub_kegiatan: sub_keg_fmis.uraian,
+												rincian: [],
+												total: 0
+											};
+										}
 										get_rka_aktivitas(b)
 										.then(function(rka){
 											rka.data.map(function(d, n){
 												pagu_rincian += to_number(d.jumlah);
+												pagu_sub_keg_sipd[b.idsubunit].total += to_number(d.jumlah);
+												pagu_sub_keg_sipd[b.idsubunit].rincian.push(d);
 											});
 											resolve4();
 				        				});
@@ -8453,6 +8488,27 @@ function update_pagu_sub_from_rincian(kegiatan){
 								Promise.all(sendData)
 								.then(function(){
 									resolve3();
+
+									// send data pagu sub keg fmis ke wp-sipd
+									var data = {
+									    message:{
+									        type: "get-url",
+									        content: {
+											    url: config.url_server_lokal,
+											    type: 'post',
+											    data: { 
+													action: 'singkroniasi_total_sub_keg_fmis',
+													tahun_anggaran: config.tahun_anggaran,
+													api_key: config.api_key,
+													data: pagu_sub_keg_sipd
+												},
+								    			return: false
+											}
+									    }
+									};
+									chrome.runtime.sendMessage(data, function(response) {
+									    console.log('responeMessage', response);
+									});
 								})
 							})
 							.then(function(){
