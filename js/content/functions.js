@@ -7535,8 +7535,15 @@ function singkronisasi_anggaran_kas(data_sipd){
 	var kas_unik = {};
 	data_sipd.data.map(function(b, i){
 		var nama_sub = get_text_bidur(b.nama_sub_giat);
-		var nama_skpd = b.nama_skpd_data_unit;
-		kas_unik[nama_sub+nama_skpd] = b;
+		if(b.id_mapping){
+			var id_skpd_fmis = b.id_mapping.split('.');
+			if(id_skpd_fmis.length > 1){
+				id_skpd_fmis = id_skpd_fmis[1];
+			}else{
+				id_skpd_fmis = id_skpd_fmis[0];
+			}
+			kas_unik[replace_string(nama_sub+id_skpd_fmis)] = b;
+		}
 	});
 	console.log('kas_unik', kas_unik);
 	get_aktivitas_kas()
@@ -7555,8 +7562,8 @@ function singkronisasi_anggaran_kas(data_sipd){
         				nama_skpd_fmis = nama_skpd_fmis[0];
         			}
         			// cek apakah aktivitas fmis ada di sipd
-        			if(kas_unik[nama_sub_fmis+nama_skpd_fmis]){
-        				var aktivitas_sipd = kas_unik[nama_sub_fmis+nama_skpd_fmis];
+        			if(kas_unik[replace_string(nama_sub_fmis+aktivitas.idsubunit)]){
+        				var aktivitas_sipd = kas_unik[replace_string(nama_sub_fmis+aktivitas.idsubunit)];
 	        			var code_aktivitas = aktivitas.action.split('data-code="')[1].split('"')[0];
 	        			relayAjax({
 							url: config.fmis_url+'/anggaran/rka-renkas/rincian/form?code='+code_aktivitas+'&action=create',
@@ -7610,11 +7617,11 @@ function singkronisasi_anggaran_kas(data_sipd){
 
 function cek_insert_akun_rak(aktivitas_sipd, akun_fmis){
 	return new Promise(function(resolve, reject){
-		pesan_loading('Get anggaran kas existing!', true);
-		console.log('aktivitas_sipd', aktivitas_sipd);
+		pesan_loading('Get anggaran kas existing per rekening!', true);
 		relayAjax({
 			url: config.fmis_url+'/anggaran/rka-renkas/rincian/datatable?code='+aktivitas_sipd.code_aktivitas,
             success: function(akun_exist){
+				console.log('aktivitas_sipd, akun_exist', aktivitas_sipd, akun_exist);
             	var last = akun_fmis.length - 1;
 				akun_fmis.reduce(function(sequence, nextData){
 		            return sequence.then(function(akun){
