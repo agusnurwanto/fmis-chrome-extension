@@ -8263,6 +8263,16 @@ function singkronisasi_pendapatan(data_sipd){
 		        					}else{
 		        						rka_unik[nama_unik_rincian].jml_sipd++;
 		        					}
+			        				var nama_rincian_baru = replace_string(b.total+' Rupiah '+b.uraian+' | '+b.keterangan, false, false).substring(0, 500).trim();
+		        					var nama_rincian_unik_baru = nama_rincian_baru+b.kode_akun;
+		        					if(!rka_unik[nama_rincian_unik_baru]){
+		        						rka_unik[nama_rincian_unik_baru] = {
+		        							jml_sipd: 1,
+		        							jml_fmis: 0
+		        						};
+		        					}else{
+		        						rka_unik[nama_rincian_unik_baru].jml_sipd++;
+		        					}
 								});
 
 								// inisiasi data rincian unik fmis
@@ -8290,13 +8300,23 @@ function singkronisasi_pendapatan(data_sipd){
 							        		return new Promise(function(resolve_reduce2, reject_reduce2){
 					        					var nama_rincian = replace_string(current_data.total+' Rupiah '+current_data.uraian, false, false).substring(0, 500).trim();
 					        					var nama_rincian_unik = nama_rincian+current_data.kode_akun;
+					        					var nama_rincian_baru = replace_string(current_data.total+' Rupiah '+current_data.uraian+' | '+current_data.keterangan, false, false).substring(0, 500).trim();
+					        					var nama_rincian_unik_baru = nama_rincian_baru+current_data.kode_akun;
 					        					var cek_exist = false;
+					        					var cek_exist_update = false;
 												data_rka.map(function(b, i){
 													var uraian_belanja = replace_string(b.uraian_belanja, false, false);
 													var uraian_belanja_unik = uraian_belanja+b.kode_rekening;
 													// cek jika nama unik sudah terinsert atau belum
 													if(uraian_belanja_unik == nama_rincian_unik){
 														// cek jika jumlah rincian unik fmis sudah sama dengan jumlah rincian sipd
+														if(rka_unik[uraian_belanja_unik].jml_fmis >= rka_unik[uraian_belanja_unik].jml_sipd){
+															cek_exist = b;
+															cek_exist_update = b;
+														}else{
+															rka_unik[uraian_belanja_unik].jml_fmis++;
+														}
+													}else if(uraian_belanja_unik == nama_rincian_unik_baru){
 														if(rka_unik[uraian_belanja_unik].jml_fmis >= rka_unik[uraian_belanja_unik].jml_sipd){
 															cek_exist = b;
 														}else{
@@ -8307,6 +8327,7 @@ function singkronisasi_pendapatan(data_sipd){
 														kdurut = +b.kdurut;
 													}
 												});
+												var nama_rincian_asli = replace_string(current_data.total+' Rupiah '+current_data.uraian+' | '+current_data.keterangan, true, false).substring(0, 500).trim();
 												if(!cek_exist){
 													current_data.nama_rincian = nama_rincian;
 													current_data.nama_komponen = current_data.uraian;
@@ -8328,7 +8349,7 @@ function singkronisasi_pendapatan(data_sipd){
 									        					kdrek4 : ssh.kdrek4,
 									        					kdrek5 : ssh.kdrek5,
 									        					kdrek6 : ssh.kdrek6,
-									        					uraian_belanja : nama_rincian,
+									        					uraian_belanja : nama_rincian_asli,
 									        					idsatuan1 : ssh.idsatuan,
 									        					volume_1 : 1,
 									        					idsatuan2 : '',
@@ -8371,6 +8392,65 @@ function singkronisasi_pendapatan(data_sipd){
 															resolve_reduce2(nextData2);
 														}
 							        				});
+							        			// jika item rincian sudah ada dan perlu diupdate rinciannya
+						        				}else if(cek_exist_update){
+							        				var data_post = {
+							        					_method: 'PUT',
+							        					_token: _token,
+							        					idsumberdana : cek_exist_update.idsumberdana,
+							        					kdurut : cek_exist_update.kdurut,
+							        					idssh_4 : cek_exist_update.idssh_4,
+							        					kdrek1 : cek_exist_update.kdrek1,
+							        					kdrek2 : cek_exist_update.kdrek2,
+							        					kdrek3 : cek_exist_update.kdrek3,
+							        					kdrek4 : cek_exist_update.kdrek4,
+							        					kdrek5 : cek_exist_update.kdrek5,
+							        					kdrek6 : cek_exist_update.kdrek6,
+							        					uraian_belanja : nama_rincian_asli,
+							        					idsatuan1 : cek_exist_update.idsatuan1,
+							        					volume_1 : cek_exist_update.volume_1,
+							        					idsatuan2 : cek_exist_update.idsatuan2,
+							        					volume_2 : cek_exist_update.volume_2,
+							        					idsatuan3 : cek_exist_update.idsatuan3,
+							        					volume_3 : cek_exist_update.volume_3,
+							        					harga : to_number(cek_exist_update.harga)
+							        				}
+						        					var code_rincian = cek_exist_update.action.split('code=')[1].split('"')[0];
+						        					relayAjax({
+														url: config.fmis_url+'/anggaran/rka-belanja/belanja/form?code='+code_rincian+'&action=edit',
+											            success: function(form_edit){
+								        					var form = jQuery(form_edit.form);
+						        							data_post.idrapbdrkaaktivitas = form.find('input[name="idrapbdrkaaktivitas"]').val();
+								        					data_post.uraian = form.find('input[name="uraian"]').val();
+								        					data_post.idrapbdrkabelanja = form.find('input[name="idrapbdrkabelanja"]').val();
+								        					data_post.uraian_rekening = cek_exist_update.rekening_display;
+								        					data_post.volume_renja1 = 0;
+								        					data_post.volume_renja2 = 0;
+								        					data_post.volume_renja3 = 0;
+								        					data_post.harga_renja = 1;
+								        					data_post.jml_volume_renja = 0;
+								        					data_post.jumlah_renja = 0;
+								        					data_post.jml_volume = 1;
+								        					data_post.jumlah = to_number(cek_exist_update.jumlah);
+								        					data_post.status_pelaksanaan = 4;
+									        				pesan_loading('UPDATE '+nama_jenis_program+' RINCIAN "'+cek_exist_update.uraian_belanja+'" AKTIVITAS "'+aktivitas_fmis.uraian+'"', true);
+								        					var url_simpan = form.attr('action');
+								        					relayAjax({
+																url: url_simpan,
+																type: "post",
+													            data: data_post,
+													            success: function(res){
+													            	resolve_reduce2(nextData2);
+													            },
+													            error: function(e){
+													            	console.log('Error save rincian!', e, this.data);
+													            }
+															});
+											            },
+											            error: function(e){
+											            	console.log('Error save rincian!', e, this.data);
+											            }
+													});
 						        				}else{
 						        					console.log('Item belanja "'+nama_rincian+'" sudah ada!');
 					        						resolve_reduce2(nextData2);
@@ -8474,11 +8554,17 @@ function update_pagu_sub_from_rincian(kegiatan){
 												total: 0
 											};
 										}
+										var id_aktivitas = b.DT_RowId.split('row_aktivitas_')[1];
 										get_rka_aktivitas(b)
 										.then(function(rka){
 											rka.data.map(function(d, n){
 												pagu_rincian += to_number(d.jumlah);
 												pagu_sub_keg_sipd[b.idsubunit].total += to_number(d.jumlah);
+												d.action = '';
+												d.idaktivitas = id_aktivitas;
+												d.aktivitas = b.uraian;
+												d.jumlah = to_number(d.jumlah);
+												d.harga = to_number(d.harga);
 												pagu_sub_keg_sipd[b.idsubunit].rincian.push(d);
 											});
 											resolve4();
