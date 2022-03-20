@@ -5918,6 +5918,7 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 
 function singkronisasi_program_modal(options, cb){
 	var sub_kegiatan = [];
+	window.pagu_sub_keg_global = jQuery('input[name="pagu-sub-keg"]:checked').val();
 	if(typeof cb != 'function'){
 		var idrkpdranwalprogram = jQuery('#mod-program-rkpd').val();
 		var uraian_rkpd = jQuery('#mod-program-rkpd option:selected').text();

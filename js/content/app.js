@@ -595,6 +595,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	                	+'<div class="form-group row p-2">'
 	                		+'<label for="mod-program-rkpd" class="col-sm-3 col-form-label text-left font-weight-semibold border-bottom">Pilih Program RKPD</label>'
 	                		+'<select class="form-control col-sm-9" id="mod-program-rkpd"></select>'
+	                		+'<label class="col-form-label text-left font-weight-semibold border-bottom" style="margin-left: 10px; margin-top: 10px;"><input value="1" type="checkbox" name="pagu-sub-keg"> Pagu sub kegiatan disamakan dengan pagu rincian belanja. Jika tidak dichecklist maka pagu sub kegiatan diambil dari data pagu validasi sub kegiatan SIPD.</label>'
 	                	+'</div>'
 	                  	+'<table class="table table-hover table-striped" id="konfirmasi-program">'
 	                      	+'<thead>'
