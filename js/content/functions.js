@@ -5543,7 +5543,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 					    			}
 									var nama_aktivitas = (sumber_dana_sipd+' | '+sub_keg.nama_sub_skpd).substring(0, 500).trim();
 
-			        				if(nama_aktivitas == aktivitas.uraian){
+			        				if(nama_aktivitas == replace_string(aktivitas.uraian, true, true)){
 				        				var kelompok_keterangan = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
 			        					var nama_rincian = replace_string(kelompok_keterangan+' | '+current_data.nama_komponen+' | '+current_data.spek_komponen, false, false).substring(0, 500).trim();
 										var nama_rincian_unik = nama_rincian+current_data.kode_akun+current_data.total_harga;
@@ -8248,7 +8248,7 @@ function singkronisasi_pendapatan(data_sipd){
 							        	return;
 							        }
 									var nama_aktivitas = b.nama_akun+' | '+b.nama_skpd;
-									if(nama_aktivitas == aktivitas_fmis.uraian){
+									if(nama_aktivitas == replace_string(aktivitas_fmis.uraian, true, true)){
 										b.sumber_dana = [{
 											nama_dana: '[] - '+b.nama_akun
 										}];
