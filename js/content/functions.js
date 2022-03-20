@@ -8551,6 +8551,8 @@ function update_pagu_sub_from_rincian(kegiatan){
 												idsubunit: b.idsubunit,
 												idunit: b.idunit,
 												sub_kegiatan: sub_keg_fmis.uraian,
+												kegiatan: sub_keg_fmis.nmkegiatan,
+												program: sub_keg_fmis.nmprogram,
 												rincian: [],
 												total: 0
 											};
