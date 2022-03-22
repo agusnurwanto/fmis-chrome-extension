@@ -8086,7 +8086,7 @@ function singkronisasi_pendapatan(data_sipd){
 											if(!cek_exist){
 												aktivitas_sipd.push({
 													nama_skpd: b.nama_skpd,
-													uraian: nama_aktivitas,
+													uraian: replace_string(nama_aktivitas, true, true),
 													id_mapping: b.id_mapping,
 													idsumberdana: master_sumberdana[b.nama_akun.substring(0, 150).trim()]
 												});
@@ -8104,11 +8104,10 @@ function singkronisasi_pendapatan(data_sipd){
 								        		return new Promise(function(resolve_reduce2, reject_reduce2){
 								        			get_id_sub_unit_fmis(sub_kegiatan_fmis, current_aktivitas.id_mapping, current_aktivitas.nama_skpd)
 													.then(function(id_sub_unit){
-														var aktivitas_sipd = replace_string(current_aktivitas.uraian, true, true);
 														var cek_exist = false;
 														aktivitas_exist.data.map(function(b, i){
 															var aktivitas_fmis = replace_string(b.uraian, true, true);
-															if(aktivitas_fmis == aktivitas_sipd){
+															if(aktivitas_fmis == current_aktivitas.uraian){
 																cek_exist = true;
 															}
 															if(kdurut <= +b.kdurut){
@@ -8248,7 +8247,7 @@ function singkronisasi_pendapatan(data_sipd){
 							        	return;
 							        }
 									var nama_aktivitas = b.nama_akun+' | '+b.nama_skpd;
-									if(nama_aktivitas == replace_string(aktivitas_fmis.uraian, true, true)){
+									if(nama_aktivitas == aktivitas_fmis.uraian){
 										b.sumber_dana = [{
 											nama_dana: '[] - '+b.nama_akun
 										}];
