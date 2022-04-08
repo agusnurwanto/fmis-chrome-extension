@@ -70,5 +70,8 @@ window.addEventListener('message', function(event) {
     	case 'custom_dt_skpd_hide':
     		jQuery("#mod-konfirmasi").modal("hide");
 			break;
+    	case 'reload_spd':
+    		tableDokumen.ajax.reload(null, false);
+			break;
 	}
 });

@@ -8681,3 +8681,314 @@ function save_program(url, data_post){
 		});
 	});
 }
+
+function get_list_spd(){
+	return new Promise(function(resolve2, reject2){
+		var url = config.fmis_url+'/penatausahaan/skpkd/bud/spd?draw=1&columns%5B0%5D%5Bdata%5D=action&columns%5B0%5D%5Bname%5D=action&columns%5B0%5D%5Bsearchable%5D=false&columns%5B0%5D%5Borderable%5D=false&columns%5B0%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B0%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B1%5D%5Bdata%5D=DT_RowIndex&columns%5B1%5D%5Bname%5D=DT_RowIndex&columns%5B1%5D%5Bsearchable%5D=false&columns%5B1%5D%5Borderable%5D=true&columns%5B1%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B1%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B2%5D%5Bdata%5D=idunit&columns%5B2%5D%5Bname%5D=idunit&columns%5B2%5D%5Bsearchable%5D=true&columns%5B2%5D%5Borderable%5D=true&columns%5B2%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B2%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B3%5D%5Bdata%5D=spd_no&columns%5B3%5D%5Bname%5D=spd_no&columns%5B3%5D%5Bsearchable%5D=true&columns%5B3%5D%5Borderable%5D=true&columns%5B3%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B3%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B4%5D%5Bdata%5D=spd_tgl&columns%5B4%5D%5Bname%5D=spd_tgl&columns%5B4%5D%5Bsearchable%5D=true&columns%5B4%5D%5Borderable%5D=true&columns%5B4%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B4%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B5%5D%5Bdata%5D=uraian&columns%5B5%5D%5Bname%5D=uraian&columns%5B5%5D%5Bsearchable%5D=true&columns%5B5%5D%5Borderable%5D=true&columns%5B5%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B5%5D%5Bsearch%5D%5Bregex%5D=false&columns%5B6%5D%5Bdata%5D=status&columns%5B6%5D%5Bname%5D=status&columns%5B6%5D%5Bsearchable%5D=true&columns%5B6%5D%5Borderable%5D=true&columns%5B6%5D%5Bsearch%5D%5Bvalue%5D=&columns%5B6%5D%5Bsearch%5D%5Bregex%5D=false&order%5B0%5D%5Bcolumn%5D=6&order%5B0%5D%5Bdir%5D=asc&start=0&length=10000&search%5Bvalue%5D=&search%5Bregex%5D=false';
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	var spd = {};
+	        	res.data.map(function(b, i){
+	        		spd[b.spd_no] = b;
+	        	})
+	        	resolve2(spd);
+	        },
+	        error: function(e){
+	        	console.log('Error save program!', e, this.data);
+	        }
+		});
+	});
+}
+
+function get_list_penandatangan(){
+	return new Promise(function(resolve2, reject2){
+		var url = config.fmis_url+'/penatausahaan/skpkd/bud/spd/pilih-data?load=penandatangan';
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	var pegawai = [];
+	        	jQuery(res).find('#table-pilih-penandatangan a.btn-choose-data-penandatangan').map(function(i, b){
+	        		var nip = jQuery(b).attr('data-nip');
+	        		var nama = jQuery(b).attr('data-nama');
+	        		var jabatan = jQuery(b).attr('data-jabatan');
+	        		pegawai.push({
+	        			nip: nip,
+	        			nama: nama,
+	        			jabatan: jabatan
+	        		});
+	        	});
+	        	resolve2(pegawai);
+	        },
+	        error: function(e){
+	        	console.log('Error save program!', e, this.data);
+	        }
+		});
+	});
+}
+
+function singkronisasi_spd(res){
+	window.spd_simda = res.data;
+	get_list_spd()
+	.then(function(spd_fmis){
+		var body = '';
+		spd_simda.map(function(b, i){
+			if(
+				!spd_fmis[b.no_spd.trim()]
+				&& !spd_fmis['DRAFT-'+b.no_spd.trim()]
+			){
+				body += ''
+					+'<tr>'
+						+'<td><input type="checkbox" value="'+b.no_spd.trim()+'"></td>'
+						+'<td>'+b.no_spd.trim()+'</td>'
+						+'<td>'+b.skpd.nama_skpd+' ('+b.kd_sub_unit+')</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}else{
+				body += ''
+					+'<tr>'
+						+'<td><input type="checkbox" value="'+b.no_spd.trim()+'"> <b>EXISTING</b></td>'
+						+'<td>'+b.no_spd.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}
+		});
+		get_list_penandatangan()
+		.then(function(pegawai){
+			var list_pegawai = '<option value="">Pilih Penandatangan SPD</option>';
+			pegawai.map(function(b, i){
+				list_pegawai += '<option data-nip="'+b.nip+'" data-nama="'+b.nama+'" data-jabatan="'+b.jabatan+'">'+b.nama+' || '+b.nip+' || '+b.jabatan+'</option>';
+			});
+			jQuery('#mod-penandatangan').html(list_pegawai);
+			jQuery('#konfirmasi-program tbody').html(body);
+			run_script('custom_dt_program');
+			hide_loading();
+		});
+	});
+}
+
+function singkronisasi_spd_modal(){
+	var spd_simda_selected = [];
+	var penandatangan = jQuery('#mod-penandatangan option:selected').val();
+	if(penandatangan != ''){
+		var selected = jQuery('#mod-penandatangan option:selected');
+		penandatangan = {
+			nip: selected.attr('data-nip'),
+			nama: selected.attr('data-nama'),
+			jabatan: selected.attr('data-jabatan')
+		}
+		jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
+			var cek = jQuery(b).is(':checked');
+			if(cek){
+				var no_spd = jQuery(b).val();
+				spd_simda.map(function(bb, ii){
+					if(bb.no_spd == no_spd){
+						spd_simda_selected.push(bb);
+					}
+				});
+			}
+		});
+		if(spd_simda_selected.length >= 1){
+			if(confirm('Apakah anda yakin untuk mengsingkronkan data SPD?')){
+				show_loading();
+				console.log('spd_simda_selected', spd_simda_selected, penandatangan);
+				// insert no SPD
+				new Promise(function(resolve, reject){
+					get_list_spd()
+					.then(function(spd_fmis){
+						var last = spd_simda_selected.length - 1;
+						spd_simda_selected.reduce(function(sequence, nextData){
+				            return sequence.then(function(spd){
+				        		return new Promise(function(resolve_reduce, reject_reduce){
+				        			if(
+										!spd_fmis[spd.no_spd.trim()]
+										&& !spd_fmis['DRAFT-'+spd.no_spd.trim()]
+									){
+				        				var idunit = spd.skpd.id_mapping_fmis.split('.')[0];
+				        				var data_post = {
+				        					_token: _token,
+											idunit: idunit,
+											spd_no: spd.no_spd.trim(),
+											spd_tgl: spd.tgl_spd.split(' ')[0],
+											uraian: spd.uraian.trim(),
+											penandatangan_nm: penandatangan.nama,
+											penandatangan_nip: penandatangan.nip,
+											penandatangan_jbt: penandatangan.jabatan
+				        				}
+				        				pesan_loading('Insert SPD no='+spd.no_spd+' uraian='+spd.uraian, true);
+				        				relayAjax({
+											url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/create',
+											type: 'post',
+											data: data_post,
+									        success: function(res){
+									        	resolve_reduce(nextData);
+									        }
+									    });
+				        			}else{
+				        				pesan_loading('Sudah ada! SPD no='+spd.no_spd+' uraian='+spd.uraian, true);
+				        				resolve_reduce(nextData);
+				        			}
+				        		})
+				                .catch(function(e){
+				                    console.log(e);
+				                    return Promise.resolve(nextData);
+				                });
+				            })
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData);
+				            });
+				        }, Promise.resolve(spd_simda_selected[last]))
+				        .then(function(data_last){
+			    			resolve();
+			    		});
+				    });
+			    })
+			    // insert rincian SPD
+			    .then(function(){
+			    	return new Promise(function(resolve, reject){
+			    		get_list_spd()
+						.then(function(spd_fmis){
+							var last = spd_simda_selected.length - 1;
+							spd_simda_selected.reduce(function(sequence, nextData){
+					            return sequence.then(function(spd){
+					            	return new Promise(function(resolve_reduce, reject_reduce){
+					        			if(
+											spd_fmis[spd.no_spd.trim()]
+											|| spd_fmis['DRAFT-'+spd.no_spd.trim()]
+										){
+											if(spd_fmis[spd.no_spd.trim()]){
+												var spd_fmis_selected = spd_fmis[spd.no_spd.trim()];
+											}else{
+												var spd_fmis_selected = spd_fmis['DRAFT-'+spd.no_spd.trim()];
+											}
+											spd.spd_fmis = spd_fmis_selected;
+					            			get_spd_rinci_fmis(spd.spd_fmis)
+					            			.then(function(spd_fmis_rinci){
+					            				spd.spd_fmis_rinci = spd_fmis_rinci;
+						            			get_spd_rinci_simda(spd)
+						            			.then(function(spd_simda_rinci){
+						            				spd.spd_simda_rinci = spd_simda_rinci;
+						            				cek_insert_spd_rinci(spd)
+						            				.then(function(){
+						            					resolve_reduce(nextData);
+						            				})
+						            			});
+					            			});
+						            	}else{
+						            		show_loading('SPD SIMDA dengan no='+spd.no_spd+'uraian='+spd.uraian+' tidak ditemukan di FMIS!', true);
+						            		resolve_reduce(nextData);
+						            	}
+					        		})
+					                .catch(function(e){
+					                    console.log(e);
+					                    return Promise.resolve(nextData);
+					                });
+					            })
+					            .catch(function(e){
+					                console.log(e);
+					                return Promise.resolve(nextData);
+					            });
+					        }, Promise.resolve(spd_simda_selected[last]))
+					        .then(function(data_last){
+				    			resolve();
+				    		});
+				    	});
+			    	});
+			    })
+			    .then(function(){
+			    	run_script('reload_spd');
+			    	alert('Sukses singkronisasi SPD!');
+			    	run_script('program_hide');
+			    	hide_loading();
+			    });
+			}
+		}else{
+			alert('SPD SIMDA belum ada yang dipilih!');
+		}
+	}else{
+		alert('Penandatangan SPD belum dipilih!');
+	}
+
+	function cek_insert_spd_rinci(spd){
+		return new Promise(function(resolve, reject){
+			var last = spd.spd_simda_rinci.length - 1;
+			spd.spd_simda_rinci.reduce(function(sequence, nextData){
+	            return sequence.then(function(spd_rinci){
+	            	return new Promise(function(resolve_reduce, reject_reduce){
+	            		var cek_exist = false;
+	            		spd.spd_fmis_rinci.map(function(b, i){
+	            			var kode_akun = b.rekening.split(' ').shift();
+		            		if(spd_rinci.detail.kode_akun == kode_akun){
+		            			cek_exist = b;
+		            		}
+		            	});
+		            	if(!cek_exist){
+		            		pesan_loading('Insert SPD rinci rek='+spd_rinci.detail.kode_akun+', total='+spd_rinci.nilai+', no SPD='+spd.no_spd, true);
+		            		console.log('masih dalam pengembangan!!!!');
+		            		resolve_reduce(nextData);
+		            	}else{
+		            		pesan_loading('Sudah ada! SPD rinci rek='+cek_exist.rekening+', total='+cek_exist.nilai+', no SPD='+spd.no_spd, true);
+		            		resolve_reduce(nextData);
+		            	}
+	            	})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(spd.spd_simda_rinci[last]))
+	        .then(function(data_last){
+    			resolve();
+    		});	
+		});
+	}
+
+	function get_spd_rinci_fmis(spd_fmis){
+		pesan_loading('get SPD rinci FMIS dengan no='+spd_fmis.spd_no, true);
+		return new Promise(function(resolve, reject){
+			var url = spd_fmis.action.split('href="').pop().split('"')[0].replace('/bud/spd/rencana/', '/bud/spd/rencana/data/');
+			relayAjax({
+				url: url,
+		        success: function(res){
+		        	resolve(res.data);
+		        }
+		    });
+		});
+	}
+
+	function get_spd_rinci_simda(spd_simda){
+		pesan_loading('get SPD rinci SIMDA dengan no='+spd_simda.no_spd, true);
+		return new Promise(function(resolve, reject){
+			window.continue_spd_rinci = resolve;
+			var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_spd_rinci',
+							no_spd: spd_simda.no_spd,
+							kd_urusan: spd_simda.kd_urusan,
+							kd_bidang: spd_simda.kd_bidang,
+							kd_unit: spd_simda.kd_unit,
+							kd_sub: spd_simda.kd_sub,
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+		});
+	}
+}
