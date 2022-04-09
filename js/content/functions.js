@@ -8731,6 +8731,7 @@ function singkronisasi_spd(res){
 	window.spd_simda = res.data;
 	get_list_spd()
 	.then(function(spd_fmis){
+		run_script('program_destroy');
 		var body = '';
 		spd_simda.map(function(b, i){
 			if(
@@ -8953,7 +8954,7 @@ function singkronisasi_spd_modal(){
 		            			var kode_akun = b.rekening.split(' ').shift();
 			            		if(
 			            			spd_rinci.detail.kode_akun == kode_akun
-			            			&& spd_rinci.detail.nama_sub_giat == b.subkegiatan
+			            			&& replace_string(spd_rinci.detail.nama_sub_giat) == replace_string(b.subkegiatan)
 			            			&& spd.id_sub_unit == b.idsubunit
 			            		){
 			            			cek_exist = b;
