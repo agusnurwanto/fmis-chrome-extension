@@ -22,6 +22,7 @@ Semoga bermanfaat
 - Singkronisasi data User SKPD dari SIPD ke FMIS
 - Singkronisasi SKPD Pelaksana RPJMD
 - Singkronisasi Program, Kegiatan, Sub Kegiatan dan RKA 
+- Singkronisasi SPD (Surat Penyediaan Dana) dari SIMDA
 
 ### Pengembangan berikutnya:
 - Melengkapi dokumentasi penggunaan di halaman wiki
