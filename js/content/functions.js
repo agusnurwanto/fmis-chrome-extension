@@ -8927,192 +8927,292 @@ function singkronisasi_spd_modal(){
 	}else{
 		alert('Penandatangan SPD belum dipilih!');
 	}
+}
 
-	function load_spd_sub_keg(id_spd_fmis){
-		return new Promise(function(resolve, reject){
-			relayAjax({
-				url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/pilih-data/'+id_spd_fmis+'?load=subkegiatan',
-		        success: function(res){
-		        	resolve(res);
-		        }
-		    });
-		});
-	}
+function load_spd_sub_keg(id_spd_fmis){
+	pesan_loading('Load all sub kegiatan dari id_spd_fmis='+id_spd_fmis, true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/pilih-data/'+id_spd_fmis+'?load=subkegiatan',
+	        success: function(res){
+	        	resolve(res);
+	        }
+	    });
+	});
+}
 
-	function cek_insert_spd_rinci(spd){
-		return new Promise(function(resolve, reject){
-			var id_spd_fmis = spd.spd_fmis.action.split('href="').pop().split('"')[0].split('/bud/spd/rencana/')[1];
-			load_spd_sub_keg(id_spd_fmis)
-			.then(function(res_sub){
-				var last = spd.spd_simda_rinci.length - 1;
-				spd.spd_simda_rinci.reduce(function(sequence, nextData){
-		            return sequence.then(function(spd_rinci){
-		            	return new Promise(function(resolve_reduce, reject_reduce){
-		            		var cek_exist = false;
-		            		var kdurut = 0;
-		            		spd.spd_fmis_rinci.map(function(b, i){
-		            			var kode_akun = b.rekening.split(' ').shift();
-			            		if(
-			            			spd_rinci.detail.kode_akun == kode_akun
-			            			&& replace_string(spd_rinci.detail.nama_sub_giat) == replace_string(b.subkegiatan)
-			            			&& spd.id_sub_unit == b.idsubunit
-			            		){
-			            			cek_exist = b;
-			            		}
-			            		if(kdurut <= +b.kdurut){
-									kdurut = +b.kdurut;
-								}
-			            	});
-			            	if(!cek_exist){
-			            		new Promise(function(resolve2, reject2){
-									var keyword_simda = spd_rinci.detail.nama_program+'|'+spd_rinci.detail.nama_giat+'|'+spd_rinci.detail.nama_sub_giat;
-			            			pesan_loading('Get ID sub kegiatan FMIS dari nomenklatur '+keyword_simda, true);
-						        	var id_sub_kegiatan = false;
-						        	jQuery(res_sub).find('#table-subkegiatan a.next-tab-rekening').map(function(i, b){
-						        		var tr = jQuery(b).closest('tr');
-						        		var keyword_fmis = tr.find('td').eq(1).html().replace(' <br> ', '|').replace(' </br> ', '|')+'|'+tr.find('td').eq(2).text();
-						        		if(replace_string(keyword_fmis) == replace_string(keyword_simda)){
-						        			id_sub_kegiatan = jQuery(b).attr('data-idsubkegiatan');
-						        		}
-						        	});
-						        	if(id_sub_kegiatan){
-						        		resolve2(id_sub_kegiatan);
-						        	}else{
-						        		reject2('ID sub kegiatan FMIS dari nomenklatur '+keyword_simda+' tidak ditemukan!');
-						        	}
-			            		})
-			            		// get aktivitas
-			            		.then(function(id_sub_kegiatan){
-			            			pesan_loading('Get All aktivitas FMIS dari id '+id_sub_kegiatan, true);
-			            			return new Promise(function(resolve2, reject2){
-				            			relayAjax({
-											url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/pilih-data/'+id_spd_fmis+'?load=aktivitas&idsubkegiatan='+id_sub_kegiatan,
-									        success: function(res){
-									        	var id_aktivitas = [];
-									        	jQuery(res).find('#table-aktivitas a.next-tab-rekening').map(function(i, b){
-									        		var tr = jQuery(b).closest('tr');
-									        		var nama_aktivitas = tr.find('td').eq(1).text();
-									        		var nama_unit = nama_aktivitas.split(' | ').pop();
-									        		if(nama_unit == spd.nama_sub_unit){
-										        		id_aktivitas.push({
-										        			id_sub_kegiatan: id_sub_kegiatan,
-										        			id: jQuery(b).attr('data-idrefaktivitas'),
-										        			nama: nama_aktivitas,
-										        			total: tr.find('td').eq(2).text()
-										        		});
-										        	}
-									        	});
-									        	resolve2(id_aktivitas);
-									        }
-									    })
-				            		});
-			            		})
-			            		// cek rekening
-			            		.then(function(id_aktivitas){
-			            			return new Promise(function(resolve2, reject2){
-			            				if(id_aktivitas.length == 1){
-			            					resolve2(id_aktivitas[0]);
-				            			}else{
-			            					var url_rek = config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/pilih-data/'+id_spd_fmis+'?load=rekening&idrefaktivitas='+id_aktivitas[0].id+'&idsubkegiatan='+id_aktivitas[0].id_sub_kegiatan;
-				            				reject2('Ada lebih dari 1 aktivitas pada sub kegiatan ini. Perlu input manual SPD sesuai aktivitas yang dipilih! '+JSON.stringify(id_aktivitas));
-				            			}
-			            			})
-			            		})
-			            		// insert rincian SPD
-			            		.then(function(id_aktivitas){
-			            			pesan_loading('Insert SPD rinci rek='+spd_rinci.detail.kode_akun+', total='+spd_rinci.nilai+', no SPD='+spd.no_spd, true);
-			            			return new Promise(function(resolve2, reject2){
-			            				kdurut++;
-										var data_post = {
-											_token: _token,
-											kdurut: kdurut,
-											idrefaktivitas: id_aktivitas.id,
-											idsubunit: spd.id_sub_unit,
-											kdrek1: spd_rinci.kd_rek90_1,
-											kdrek2: spd_rinci.kd_rek90_2,
-											kdrek3: spd_rinci.kd_rek90_3,
-											kdrek4: spd_rinci.kd_rek90_4,
-											kdrek5: spd_rinci.kd_rek90_5,
-											kdrek6: spd_rinci.kd_rek90_6,
-											aktivitas_uraian: id_aktivitas.nama,
-											nilai: formatMoney(spd_rinci.nilai, 2, ',', '.')
-										}
-			            				relayAjax({
-											url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/create/'+id_spd_fmis,
-											type: 'post',
-											data: data_post,
-									        success: function(res){
-									        	resolve_reduce(nextData);
-									        }
-									    });
-				            		});
-			            		})
-			            		.catch(function(message){
-			            			pesan_loading(message, true);
-			            			resolve_reduce(nextData);
+function cek_insert_spd_rinci(spd){
+	return new Promise(function(resolve, reject){
+		var id_spd_fmis = spd.spd_fmis.action.split('href="').pop().split('"')[0].split('/bud/spd/rencana/')[1];
+		load_spd_sub_keg(id_spd_fmis)
+		.then(function(res_sub){
+			var last = spd.spd_simda_rinci.length - 1;
+			spd.spd_simda_rinci.reduce(function(sequence, nextData){
+	            return sequence.then(function(spd_rinci){
+	            	return new Promise(function(resolve_reduce, reject_reduce){
+	            		var cek_exist = false;
+	            		var kdurut = 0;
+	            		spd.spd_fmis_rinci.map(function(b, i){
+	            			var kode_akun = b.rekening.split(' ').shift();
+		            		if(
+		            			spd_rinci.detail.kode_akun == kode_akun
+		            			&& replace_string(spd_rinci.detail.nama_sub_giat) == replace_string(b.subkegiatan)
+		            			&& spd.id_sub_unit == b.idsubunit
+		            		){
+		            			cek_exist = b;
+		            		}
+		            		if(kdurut <= +b.kdurut){
+								kdurut = +b.kdurut;
+							}
+		            	});
+		            	if(!cek_exist){
+		            		new Promise(function(resolve2, reject2){
+								var keyword_simda = spd_rinci.detail.nama_program+'|'+spd_rinci.detail.nama_giat+'|'+spd_rinci.detail.nama_sub_giat;
+		            			pesan_loading('Get ID sub kegiatan FMIS dari nomenklatur '+keyword_simda, true);
+					        	var id_sub_kegiatan = false;
+					        	jQuery(res_sub).find('#table-subkegiatan a.next-tab-rekening').map(function(i, b){
+					        		var tr = jQuery(b).closest('tr');
+					        		var keyword_fmis = tr.find('td').eq(1).html().replace(' <br> ', '|').replace(' </br> ', '|')+'|'+tr.find('td').eq(2).text();
+					        		if(replace_string(keyword_fmis) == replace_string(keyword_simda)){
+					        			id_sub_kegiatan = jQuery(b).attr('data-idsubkegiatan');
+					        		}
+					        	});
+					        	if(id_sub_kegiatan){
+					        		resolve2(id_sub_kegiatan);
+					        	}else{
+					        		reject2('ID sub kegiatan FMIS dari nomenklatur '+keyword_simda+' tidak ditemukan!');
+					        	}
+		            		})
+		            		// get aktivitas
+		            		.then(function(id_sub_kegiatan){
+		            			pesan_loading('Get All aktivitas FMIS dari id '+id_sub_kegiatan, true);
+		            			return new Promise(function(resolve2, reject2){
+			            			relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/pilih-data/'+id_spd_fmis+'?load=aktivitas&idsubkegiatan='+id_sub_kegiatan,
+								        success: function(res){
+								        	var id_aktivitas = [];
+								        	jQuery(res).find('#table-aktivitas a.next-tab-rekening').map(function(i, b){
+								        		var tr = jQuery(b).closest('tr');
+								        		var nama_aktivitas = tr.find('td').eq(1).text();
+								        		var nama_unit = nama_aktivitas.split(' | ').pop();
+								        		if(nama_unit == spd.nama_sub_unit){
+									        		id_aktivitas.push({
+									        			id_sub_kegiatan: id_sub_kegiatan,
+									        			id: jQuery(b).attr('data-idrefaktivitas'),
+									        			nama: nama_aktivitas,
+									        			total: tr.find('td').eq(2).text()
+									        		});
+									        	}
+								        	});
+								        	resolve2(id_aktivitas);
+								        }
+								    })
 			            		});
-			            	}else{
-			            		pesan_loading('Sudah ada! SPD rinci rek='+cek_exist.rekening+', total='+cek_exist.nilai+', no SPD='+spd.no_spd, true);
-			            		resolve_reduce(nextData);
-			            	}
-		            	})
-		                .catch(function(e){
-		                    console.log(e);
-		                    return Promise.resolve(nextData);
-		                });
-		            })
+		            		})
+		            		// cek rekening
+		            		.then(function(id_aktivitas){
+		            			return new Promise(function(resolve2, reject2){
+		            				if(id_aktivitas.length == 1){
+		            					resolve2(id_aktivitas[0]);
+			            			}else{
+		            					var url_rek = config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/pilih-data/'+id_spd_fmis+'?load=rekening&idrefaktivitas='+id_aktivitas[0].id+'&idsubkegiatan='+id_aktivitas[0].id_sub_kegiatan;
+			            				reject2('Ada lebih dari 1 aktivitas pada sub kegiatan ini. Perlu input manual SPD sesuai aktivitas yang dipilih! '+JSON.stringify(id_aktivitas));
+			            			}
+		            			})
+		            		})
+		            		// insert rincian SPD
+		            		.then(function(id_aktivitas){
+		            			pesan_loading('Insert SPD rinci rek='+spd_rinci.detail.kode_akun+', total='+spd_rinci.nilai+', no SPD='+spd.no_spd, true);
+		            			return new Promise(function(resolve2, reject2){
+		            				kdurut++;
+									var data_post = {
+										_token: _token,
+										kdurut: kdurut,
+										idrefaktivitas: id_aktivitas.id,
+										idsubunit: spd.id_sub_unit,
+										kdrek1: spd_rinci.kd_rek90_1,
+										kdrek2: spd_rinci.kd_rek90_2,
+										kdrek3: spd_rinci.kd_rek90_3,
+										kdrek4: spd_rinci.kd_rek90_4,
+										kdrek5: spd_rinci.kd_rek90_5,
+										kdrek6: spd_rinci.kd_rek90_6,
+										aktivitas_uraian: id_aktivitas.nama,
+										nilai: formatMoney(spd_rinci.nilai, 2, ',', '.')
+									}
+		            				relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/create/'+id_spd_fmis,
+										type: 'post',
+										data: data_post,
+								        success: function(res){
+								        	resolve_reduce(nextData);
+								        }
+								    });
+			            		});
+		            		})
+		            		.catch(function(message){
+		            			pesan_loading(message, true);
+		            			resolve_reduce(nextData);
+		            		});
+		            	}else{
+		            		pesan_loading('Sudah ada! SPD rinci rek='+cek_exist.rekening+', total='+cek_exist.nilai+', no SPD='+spd.no_spd, true);
+		            		resolve_reduce(nextData);
+		            	}
+	            	})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(spd.spd_simda_rinci[last]))
+	        .then(function(data_last){
+    			resolve();
+    		});
+	    });
+	});
+}
+
+function get_spd_rinci_fmis(spd_fmis){
+	pesan_loading('get SPD rinci FMIS dengan no='+spd_fmis.spd_no, true);
+	return new Promise(function(resolve, reject){
+		var url = spd_fmis.action.split('href="').pop().split('"')[0].replace('/bud/spd/rencana/', '/bud/spd/rencana/data/');
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	resolve(res.data);
+	        }
+	    });
+	});
+}
+
+function get_data_pegawai(spd_fmis){
+	pesan_loading('get all data pegawai', true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/parameter/data-pegawai/datatable',
+	        success: function(res){
+	        	var new_data = {};
+	        	res.data.map(function(b, i){
+	        		var nip = b.nip.replace(/ /g, '');
+	        		var keyword = nip+b.nama+b.get_unit.idunit;
+	        		new_data[keyword] = b;
+	        	});
+	        	resolve({
+	        		'array': res.data,
+	        		'object': new_data
+	        	});
+	        }
+	    });
+	});
+}
+
+function get_spd_rinci_simda(spd_simda){
+	pesan_loading('get SPD rinci SIMDA dengan no='+spd_simda.no_spd, true);
+	return new Promise(function(resolve, reject){
+		window.continue_spd_rinci = resolve;
+		var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'get_spd_rinci',
+						no_spd: spd_simda.no_spd,
+						kd_urusan: spd_simda.kd_urusan,
+						kd_bidang: spd_simda.kd_bidang,
+						kd_unit: spd_simda.kd_unit,
+						kd_sub: spd_simda.kd_sub,
+						tahun_anggaran: config.tahun_anggaran,
+						api_key: config.api_key
+					},
+	    			return: true
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
+	});
+}
+
+function singkronisasi_data_pegawai(data){
+	getUnitFmis().then(function(unit_fmis){
+		get_data_pegawai().then(function(pegawai_fmis){
+			var last = data.length - 1;
+			data.reduce(function(sequence, nextData){
+		        return sequence.then(function(pegawai){
+		        	return new Promise(function(resolve_reduce, reject_reduce){
+		        		var id_unit = pegawai.skpd.id_mapping_fmis.split('.').shift();
+		        		var nama_sub_unit = false;
+						for(var unit_f in unit_fmis){
+							for(var sub_unit_f in unit_fmis[unit_f].sub_unit){
+								if(id_unit == unit_fmis[unit_f].sub_unit[sub_unit_f].id){
+									nama_sub_unit = sub_unit_f;
+								}
+							}
+						}
+						if(id_unit && nama_sub_unit){
+							var keyword = pegawai.nip+pegawai.nama+id_unit;
+							if(!pegawai_fmis.object[keyword]){
+								var nip = pegawai.nip.replace(/ /g, '');
+								var tahun = nip.substr(0, 4);
+								var bulan = nip.substr(4, 2);
+								var tanggal = nip.substr(6, 2);
+								if(
+									tahun != ''
+									&& bulan != ''
+									&& tanggal != ''
+								){
+									var tgllahir = tahun+'-'+bulan+'-'+tanggal;
+								}else{
+									var date = new Date();
+									var tgllahir = date.getUTCFullYear()+'-'+(date.getUTCMonth()+1)+'-'+date.getUTCDate();
+								}
+				        		var data_post = {
+				        			_token: _token,
+				        			nmunit: nama_sub_unit,
+				        			idunit: id_unit,
+				        			nip: nip,
+				        			nama: pegawai.nama,
+				        			tmplahir: 'generate wp-sipd',
+				        			tgllahir: tgllahir
+				        		};
+				        		pesan_loading('Insert Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+				        		relayAjax({
+									url: config.fmis_url+'/parameter/data-pegawai/store',
+									type: 'post',
+									data: data_post,
+							        success: function(res){
+							        	resolve_reduce(nextData);
+							        }
+							    });
+				        	}else{
+				        		pesan_loading('Sudah ada! Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+							    resolve_reduce(nextData);
+				        	}
+			        	}else{
+			        		pesan_loading('Unit SKPD dengan kode SIMDA='+pegawai.kd_sub_unit+' tidak ditemukan di FMIS. Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+						    resolve_reduce(nextData);
+			        	}
+		        	})
 		            .catch(function(e){
 		                console.log(e);
 		                return Promise.resolve(nextData);
 		            });
-		        }, Promise.resolve(spd.spd_simda_rinci[last]))
-		        .then(function(data_last){
-	    			resolve();
-	    		});
-		    });
-		});
-	}
-
-	function get_spd_rinci_fmis(spd_fmis){
-		pesan_loading('get SPD rinci FMIS dengan no='+spd_fmis.spd_no, true);
-		return new Promise(function(resolve, reject){
-			var url = spd_fmis.action.split('href="').pop().split('"')[0].replace('/bud/spd/rencana/', '/bud/spd/rencana/data/');
-			relayAjax({
-				url: url,
-		        success: function(res){
-		        	resolve(res.data);
-		        }
-		    });
-		});
-	}
-
-	function get_spd_rinci_simda(spd_simda){
-		pesan_loading('get SPD rinci SIMDA dengan no='+spd_simda.no_spd, true);
-		return new Promise(function(resolve, reject){
-			window.continue_spd_rinci = resolve;
-			var data = {
-			    message:{
-			        type: "get-url",
-			        content: {
-					    url: config.url_server_lokal,
-					    type: 'post',
-					    data: { 
-							action: 'get_spd_rinci',
-							no_spd: spd_simda.no_spd,
-							kd_urusan: spd_simda.kd_urusan,
-							kd_bidang: spd_simda.kd_bidang,
-							kd_unit: spd_simda.kd_unit,
-							kd_sub: spd_simda.kd_sub,
-							tahun_anggaran: config.tahun_anggaran,
-							api_key: config.api_key
-						},
-		    			return: true
-					}
-			    }
-			};
-			chrome.runtime.sendMessage(data, function(response) {
-			    console.log('responeMessage', response);
+		        })
+		        .catch(function(e){
+		            console.log(e);
+		            return Promise.resolve(nextData);
+		        });
+		    }, Promise.resolve(data[last]))
+		    .then(function(data_last){
+				hide_loading();
+				alert('Berhasil singkronisasi data pegawai dari SIMDA!');
 			});
 		});
-	}
+	});
 }

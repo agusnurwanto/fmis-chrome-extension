@@ -569,6 +569,35 @@ if(current_url.indexOf('parameter/rekening') != -1){
     jQuery('#tampil-pagu-sub-keg').on('click', function(){
     	tampil_pagu_sub_keg();
     });
+}else if(current_url.indexOf('/parameter/data-pegawai') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 10px; float: right;" id="singkronisasi_data_pegawai">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Data Pegawai dari SIMDA'
+    +'</button>';
+    jQuery('.card-header.bg-light').prepend(btn);
+    jQuery('#singkronisasi_data_pegawai').on('click', function(){
+    	if(confirm('Apakah anda yakin untuk mengsingkronkan data Pegawai dari SIMDA?')){
+    		show_loading();
+	    	var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_pegawai_simda',
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+    	}
+    });
 }else if(current_url.indexOf('/penatausahaan/skpkd/bud/spd') != -1){
 	var modal_spd = ''
 		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
