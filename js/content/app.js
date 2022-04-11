@@ -578,6 +578,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
     jQuery('#singkronisasi_data_pegawai').on('click', function(){
     	if(confirm('Apakah anda yakin untuk mengsingkronkan data Pegawai dari SIMDA?')){
     		show_loading();
+    		window.cek_singkron_penandatangan = confirm('Apakah akan melakukan singkronisasi Penandatangan juga?');
 	    	var data = {
 			    message:{
 			        type: "get-url",

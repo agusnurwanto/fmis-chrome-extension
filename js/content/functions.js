@@ -8727,6 +8727,29 @@ function get_list_penandatangan(){
 	});
 }
 
+function get_list_penandatangan_master(){
+	return new Promise(function(resolve2, reject2){
+		var url = config.fmis_url+'/penatausahaan/parameter/penandatangan';
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	var new_data = {};
+	        	res.data.map(function(b, i){
+	        		var keyword = replace_string(b.nip.replace(/ /g, '')+b.nama.trim()+b.nmsubunit.trim());
+	        		new_data[keyword] = b;
+	        	});
+	        	resolve2({
+	        		'array': res.data,
+	        		'object': new_data
+	        	});
+	        },
+	        error: function(e){
+	        	console.log('Error save program!', e, this.data);
+	        }
+		});
+	});
+}
+
 function singkronisasi_spd(res){
 	window.spd_simda = res.data;
 	get_list_spd()
@@ -9088,7 +9111,7 @@ function get_spd_rinci_fmis(spd_fmis){
 	});
 }
 
-function get_data_pegawai(spd_fmis){
+function get_data_pegawai(){
 	pesan_loading('get all data pegawai', true);
 	return new Promise(function(resolve, reject){
 		relayAjax({
@@ -9097,13 +9120,37 @@ function get_data_pegawai(spd_fmis){
 	        	var new_data = {};
 	        	res.data.map(function(b, i){
 	        		var nip = b.nip.replace(/ /g, '');
-	        		var keyword = nip+b.nama+b.get_unit.idunit;
+	        		var keyword = nip;
 	        		new_data[keyword] = b;
 	        	});
 	        	resolve({
 	        		'array': res.data,
 	        		'object': new_data
 	        	});
+	        }
+	    });
+	});
+}
+
+function get_data_pegawai_penandatangan(){
+	pesan_loading('get all data pegawai penandatangan', true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/parameter/penandatangan/data-pegawai',
+	        success: function(res){
+	        	var new_data = {};
+	        	jQuery(res.html).find('#table-pegawai a.select-pegawai').map(function(i, b){
+	        		var nip = jQuery(b).attr('data-nip');
+	        		var nama = jQuery(b).attr('data-name');
+	        		var id = jQuery(b).attr('data-id');
+	        		var keyword = nip.replace(/ /g, '').trim();
+	        		new_data[keyword] = {
+	        			id: id,
+	        			nip: nip,
+	        			nama: nama
+	        		}
+	        	});
+	        	resolve(new_data);
 	        }
 	    });
 	});
@@ -9141,78 +9188,213 @@ function get_spd_rinci_simda(spd_simda){
 
 function singkronisasi_data_pegawai(data){
 	getUnitFmis().then(function(unit_fmis){
-		get_data_pegawai().then(function(pegawai_fmis){
-			var last = data.length - 1;
-			data.reduce(function(sequence, nextData){
-		        return sequence.then(function(pegawai){
-		        	return new Promise(function(resolve_reduce, reject_reduce){
-		        		var id_unit = pegawai.skpd.id_mapping_fmis.split('.').shift();
-		        		var nama_sub_unit = false;
-						for(var unit_f in unit_fmis){
-							for(var sub_unit_f in unit_fmis[unit_f].sub_unit){
-								if(id_unit == unit_fmis[unit_f].sub_unit[sub_unit_f].id){
-									nama_sub_unit = sub_unit_f;
+		new Promise(function(resolve, reject){
+			get_data_pegawai()
+			.then(function(pegawai_fmis){
+				var last = data.length - 1;
+				data.reduce(function(sequence, nextData){
+			        return sequence.then(function(pegawai){
+			        	return new Promise(function(resolve_reduce, reject_reduce){
+			        		var id_unit = pegawai.skpd.id_mapping_fmis.split('.').shift();
+			        		var nama_sub_unit = false;
+							for(var unit_f in unit_fmis){
+								for(var sub_unit_f in unit_fmis[unit_f].sub_unit){
+									if(id_unit == unit_fmis[unit_f].sub_unit[sub_unit_f].id){
+										nama_sub_unit = sub_unit_f;
+									}
 								}
 							}
-						}
-						if(id_unit && nama_sub_unit){
-							var keyword = pegawai.nip+pegawai.nama+id_unit;
-							if(!pegawai_fmis.object[keyword]){
+							if(id_unit && nama_sub_unit){
 								var nip = pegawai.nip.replace(/ /g, '');
-								var tahun = nip.substr(0, 4);
-								var bulan = nip.substr(4, 2);
-								var tanggal = nip.substr(6, 2);
-								if(
-									tahun != ''
-									&& bulan != ''
-									&& tanggal != ''
-								){
-									var tgllahir = tahun+'-'+bulan+'-'+tanggal;
-								}else{
-									var date = new Date();
-									var tgllahir = date.getUTCFullYear()+'-'+(date.getUTCMonth()+1)+'-'+date.getUTCDate();
-								}
-				        		var data_post = {
-				        			_token: _token,
-				        			nmunit: nama_sub_unit,
-				        			idunit: id_unit,
-				        			nip: nip,
-				        			nama: pegawai.nama,
-				        			tmplahir: 'generate wp-sipd',
-				        			tgllahir: tgllahir
-				        		};
-				        		pesan_loading('Insert Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
-				        		relayAjax({
-									url: config.fmis_url+'/parameter/data-pegawai/store',
-									type: 'post',
-									data: data_post,
-							        success: function(res){
-							        	resolve_reduce(nextData);
-							        }
-							    });
+								var keyword = nip;
+								if(!pegawai_fmis.object[keyword]){
+									var tahun = nip.substr(0, 4);
+									var bulan = nip.substr(4, 2);
+									var tanggal = nip.substr(6, 2);
+									if(
+										tahun != ''
+										&& bulan != ''
+										&& tanggal != ''
+									){
+										var tgllahir = tahun+'-'+bulan+'-'+tanggal;
+									}else{
+										var date = new Date();
+										var tgllahir = date.getUTCFullYear()+'-'+(date.getUTCMonth()+1)+'-'+date.getUTCDate();
+									}
+					        		var data_post = {
+					        			_token: _token,
+					        			nmunit: nama_sub_unit,
+					        			idunit: id_unit,
+					        			nip: nip,
+					        			nama: pegawai.nama.trim(),
+					        			tmplahir: 'generate wp-sipd',
+					        			tgllahir: tgllahir
+					        		};
+					        		pesan_loading('Insert Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+					        		relayAjax({
+										url: config.fmis_url+'/parameter/data-pegawai/store',
+										type: 'post',
+										data: data_post,
+								        success: function(res){
+								        	resolve_reduce(nextData);
+								        }
+								    });
+					        	}else{
+					        		pesan_loading('Sudah ada! Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+					        		resolve_reduce(nextData);
+					        	}
 				        	}else{
-				        		pesan_loading('Sudah ada! Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+				        		pesan_loading('Unit SKPD dengan kode SIMDA='+pegawai.kd_sub_unit+' tidak ditemukan di FMIS. Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
 							    resolve_reduce(nextData);
 				        	}
-			        	}else{
-			        		pesan_loading('Unit SKPD dengan kode SIMDA='+pegawai.kd_sub_unit+' tidak ditemukan di FMIS. Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
-						    resolve_reduce(nextData);
-			        	}
-		        	})
-		            .catch(function(e){
-		                console.log(e);
-		                return Promise.resolve(nextData);
-		            });
-		        })
-		        .catch(function(e){
-		            console.log(e);
-		            return Promise.resolve(nextData);
-		        });
-		    }, Promise.resolve(data[last]))
-		    .then(function(data_last){
-				hide_loading();
-				alert('Berhasil singkronisasi data pegawai dari SIMDA!');
+			        	})
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        })
+			        .catch(function(e){
+			            console.log(e);
+			            return Promise.resolve(nextData);
+			        });
+			    }, Promise.resolve(data[last]))
+			    .then(function(data_last){
+			    	resolve();
+				});
 			});
-		});
-	});
+		})
+	    .then(function(){
+	    	return new Promise(function(resolve, reject){
+		    	if(cek_singkron_penandatangan){
+		    		get_data_pegawai_penandatangan()
+		    		.then(function(pegawai_fmis){
+		    			console.log('pegawai_penandatangan_fmis', pegawai_fmis);
+			    		get_list_penandatangan_master()
+			    		.then(function(penandatangan){
+			    			console.log('penandatangan existing', penandatangan);
+							var last = data.length - 1;
+							data.reduce(function(sequence, nextData){
+						        return sequence.then(function(pegawai){
+						        	return new Promise(function(resolve_reduce, reject_reduce){
+						        		var id_unit = pegawai.skpd.id_mapping_fmis.split('.').pop();
+						        		var nama_sub_unit = false;
+										for(var unit_f in unit_fmis){
+											for(var sub_unit_f in unit_fmis[unit_f].sub_unit){
+												if(id_unit == unit_fmis[unit_f].sub_unit[sub_unit_f].id){
+													nama_sub_unit = sub_unit_f;
+												}
+											}
+										}
+						        		var nip = pegawai.nip.replace(/ /g, '');
+										if(pegawai_fmis[nip]){
+											var keyword = replace_string(nip+pegawai.nama.trim()+nama_sub_unit.trim());
+								    		if(!penandatangan.object[keyword]){
+									    		var jabatan = {
+									    			1 : 'KUASA PENGGUNA',
+													2 : 'PPK SKPD',
+													3 : 'BENDAHARA PENERIMAAN',
+													4 : 'BENDAHARA PENGELUARAN',
+													5 : 'BENDAHARA BARANG',
+													6 : 'BENDAHARA PENERIMAAN PEMBANTU',
+													7 : 'BENDAHARA PENGELUARAN PEMBANTU',
+													8 : 'PENGGUNA ANGGARAN'
+									    		};
+									    		var data_post = {
+									    			_token: _token,
+													nmsubunit: nama_sub_unit,
+													idsubunit: id_unit,
+													ref_nama: pegawai.nama,
+													iddatapegawai: pegawai_fmis[nip].id,
+													nip: nip,
+													nama: pegawai.nama,
+													idjabatan: pegawai.kd_jab,
+													nmjabatan: pegawai.jabatan.trim().substring(0, 50),
+													jns_dokumen: [],
+													jns_cakupan: 0
+									    		};
+									    		/*
+													1=SPD
+													2=SPP
+													3=SPM
+													4=SP2D
+													5=Bukti Penerimaan
+													6=STS
+													7=Penguji SP2D
+													8=SPB
+									    		*/
+									    		// KUASA PENGGUNA
+									    		if(pegawai.kd_jab == 1){
+									    			data_post.jns_dokumen.push(2);
+									    			data_post.jns_dokumen.push(3);
+									    		// PPK SKPD
+									    		}else if(pegawai.kd_jab == 2){
+									    			data_post.jns_dokumen.push(2);
+									    			data_post.jns_dokumen.push(3);
+									    		// BENDAHARA PENERIMAAN
+									    		}else if(pegawai.kd_jab == 3){
+									    			data_post.jns_dokumen.push(5);
+									    		// BENDAHARA PENGELUARAN
+									    		}else if(pegawai.kd_jab == 4){
+									    			data_post.jns_dokumen.push(2);
+									    			data_post.jns_dokumen.push(3);
+									    		// BENDAHARA BARANG
+									    		}else if(pegawai.kd_jab == 5){
+									    		// BENDAHARA PENERIMAAN PEMBANTU
+									    		}else if(pegawai.kd_jab == 6){
+									    		// BENDAHARA PENGELUARAN PEMBANTU
+									    		}else if(pegawai.kd_jab == 7){
+									    			data_post.jns_dokumen.push(2);
+									    		// PENGGUNA ANGGARAN
+									    		}else if(pegawai.kd_jab == 8){
+									    			data_post.jns_dokumen.push(2);
+									    			data_post.jns_dokumen.push(3);
+									    		}
+									    		if(data_post.jns_dokumen.length > 0){
+										    		pesan_loading('Insert Penandatangan dokumen untuk Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+										    		relayAjax({
+														url: config.fmis_url+'/penatausahaan/parameter/penandatangan/create',
+														type: 'post',
+														data: data_post,
+												        success: function(res){
+												        	resolve_reduce(nextData);
+												        }
+												    });
+									    		}else{
+									    			pesan_loading('Jenis Dokumen belum diset untuk jabatan '+jabatan[pegawai.kd_jab]+'! Penandatangan dokumen untuk Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+												    resolve_reduce(nextData);
+									    		}
+									    	}else{
+									    		pesan_loading('Sudah ada! Penandatangan dengan Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+									    		resolve_reduce(nextData);
+									    	}
+									    }else{
+									    	pesan_loading('Pegawai tidak ditemukan! Dengan Nama pegawai='+pegawai.nama+', NIP='+pegawai.nip, true);
+								    		resolve_reduce(nextData);
+									    }
+									})
+						            .catch(function(e){
+						                console.log(e);
+						                return Promise.resolve(nextData);
+						            });
+						        })
+						        .catch(function(e){
+						            console.log(e);
+						            return Promise.resolve(nextData);
+						        });
+						    }, Promise.resolve(data[last]))
+						    .then(function(data_last){
+						    	resolve();
+							});
+						});
+					});
+		    	}else{
+				    resolve();
+		    	}
+		    });
+	    })
+	    .then(function(){
+			hide_loading();
+			alert('Berhasil singkronisasi data pegawai dari SIMDA!');
+	    })
+    })
 }
