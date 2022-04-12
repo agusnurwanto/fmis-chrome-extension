@@ -5829,7 +5829,12 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 			        		return new Promise(function(resolve_reduce, reject_reduce){
 			        			var cek_exist = false;
 			        			var aktivitas_exist_update = false;
+			        			var cek_aktivitas_sub_unit = [];
 		        				sub_keg.aktivitas.map(function(b, i){
+		        					var sub_unit_fmis = b.uraian.split(' | ').pop();
+		        					if(replace_string(sub_unit_fmis) == replace_string(sub_keg.nama_sub_skpd)){
+		        						cek_aktivitas_sub_unit.push(b);
+		        					}
 		        					var aktivitas_fmis = replace_string(b.uraian, true, true);
 		        					var aktivitas_sipd2 = current_data.aktivitas.split(' | ')[0];
 		        					// cek jika nama aktivitas sama
@@ -5846,10 +5851,7 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 		        				});
 		        				if(!cek_exist){
 		        					// cek jika aktivitas di fmis hanya satu dan di sipd juga hanya satu, maka aktivitas fmis diupdate sesuai aktivitas di sipd
-		        					if(
-		        						sub_keg.aktivitas.length == 1
-		        						&& all_aktivitas.length == 1
-		        					){
+		        					if(cek_aktivitas_sub_unit.length == 1){
 		        						cek_exist = true;
 		        						aktivitas_exist_update = sub_keg.aktivitas[0];
 		        					}
