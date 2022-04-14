@@ -54,7 +54,7 @@ function capitalizeFirstLetter(string) {
   	return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-function relayAjax(options, retries=20, delay=5000, timeout=90000){
+function relayAjax(options, retries=20, delay=5000, timeout=1800000){
 	options.timeout = timeout;
 	options.cache = false;
 	if(options.length){
@@ -5639,7 +5639,8 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 								        				}
 								        			})
 								        			.then(function(url_simpan){
-							        					relayAjax({
+								        				// ajax dibuat sekali karena terjadi double input rincian, ketika jaringan ke server fmis lambat
+							        					jQuery.ajax({
 															url: url_simpan,
 															type: "post",
 												            data: data_post,
@@ -5648,6 +5649,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 												            },
 												            error: function(e){
 												            	console.log('Error save rincian!', e, this.data);
+												            	resolve_reduce2(nextData2);
 												            }
 														});
 								        			});
@@ -8851,7 +8853,7 @@ function singkronisasi_spd(res){
 					+'<tr>'
 						+'<td><input type="checkbox" value="'+b.no_spd.trim()+'"></td>'
 						+'<td>'+b.no_spd.trim()+'</td>'
-						+'<td>'+b.skpd.nama_skpd+' ('+b.kd_sub_unit+')</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
 						+'<td>'+b.uraian+'</td>'
 					+'</tr>';
 			}else{
@@ -8993,6 +8995,8 @@ function singkronisasi_spd_modal(){
 								            				spd.spd_simda_rinci = spd_simda_rinci;
 								            				cek_insert_spd_rinci(spd)
 								            				.then(function(){
+								            					// send spd rinci ke wp-sipd
+								            					send_spd_ke_wpsipd(spd);
 								            					resolve_reduce(nextData);
 								            				})
 								            			});
@@ -9036,6 +9040,48 @@ function singkronisasi_spd_modal(){
 	}else{
 		alert('Penandatangan SPD belum dipilih!');
 	}
+}
+
+function send_spd_ke_wpsipd(spd){
+	get_spd_rinci_fmis(spd.spd_fmis)
+	.then(function(spd_fmis_rinci){
+		var spd_simda_rinci = {};
+		spd.spd_simda_rinci.map(function(spd_rinci, i){
+    		var keyword = spd_rinci.detail.kode_akun+replace_string(spd_rinci.detail.nama_sub_giat)+spd.id_sub_unit;
+    		spd_simda_rinci[keyword] = spd_rinci;
+    	});
+		spd_fmis_rinci.map(function(b, i){
+			spd_fmis_rinci[i].action = '';
+			var keyword = b.rekening.split(' ').shift()+replace_string(b.subkegiatan)+b.idsubunit;
+			if(spd_simda_rinci[keyword]){
+				spd_fmis_rinci[i].spd_simda_rinci = spd_simda_rinci[keyword];
+			}
+		});
+		var spd_fmis = spd.spd_fmis;
+		spd_fmis.action = '';
+		spd.spd_fmis = spd_fmis;
+		spd.spd_fmis_rinci = spd_fmis_rinci;
+		spd.spd_simda_rinci = '';
+		var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'singkroniasi_spd_fmis',
+						tahun_anggaran: config.tahun_anggaran,
+						data: spd,
+						api_key: config.api_key
+					},
+	    			return: false
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
+	});
 }
 
 function load_spd_sub_keg(id_spd_fmis){
