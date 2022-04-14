@@ -8918,17 +8918,21 @@ function singkronisasi_spd_modal(){
 										&& !spd_fmis['DRAFT-'+spd.no_spd.trim()]
 									){
 				        				var idunit = spd.skpd.id_mapping_fmis.split('.')[0];
+				        				var uraian = 'uraian kosong';
+				        				if(spd.uraian){
+				        					uraian = spd.uraian.trim();
+				        				}
 				        				var data_post = {
 				        					_token: _token,
 											idunit: idunit,
 											spd_no: spd.no_spd.trim(),
 											spd_tgl: spd.tgl_spd.split(' ')[0],
-											uraian: spd.uraian.trim(),
+											uraian: uraian,
 											penandatangan_nm: penandatangan.nama,
 											penandatangan_nip: penandatangan.nip,
 											penandatangan_jbt: penandatangan.jabatan
 				        				}
-				        				pesan_loading('Insert SPD no='+spd.no_spd+' uraian='+spd.uraian, true);
+				        				pesan_loading('Insert SPD no='+spd.no_spd+' uraian='+data_post.uraian, true);
 				        				relayAjax({
 											url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/create',
 											type: 'post',
@@ -8946,17 +8950,21 @@ function singkronisasi_spd_modal(){
 										var id_spd_fmis = spd_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
 				        				var idunit = spd.skpd.id_mapping_fmis.split('.')[0];
 				        				var tgl_spd = new Date().toISOString().split('T')[0];
+				        				var uraian = 'uraian kosong';
+				        				if(spd.uraian){
+				        					uraian = spd.uraian.trim();
+				        				}
 				        				var data_post = {
 				        					_token: _token,
 											idunit: idunit,
 											spd_no: spd.no_spd.trim(),
 											spd_tgl: tgl_spd,
-											uraian: spd.uraian.trim(),
+											uraian: uraian,
 											penandatangan_nm: penandatangan.nama,
 											penandatangan_nip: penandatangan.nip,
 											penandatangan_jbt: penandatangan.jabatan
 				        				}
-				        				pesan_loading('Update SPD tgl_spd='+tgl_spd+' no='+spd.no_spd+' uraian='+spd.uraian, true);
+				        				pesan_loading('Update SPD tgl_spd='+tgl_spd+' no='+spd.no_spd+' uraian='+data_post.uraian, true);
 				        				relayAjax({
 											url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/update/'+id_spd_fmis,
 											type: 'post',
@@ -9071,17 +9079,21 @@ function singkronisasi_spd_modal(){
 											}
 											var id_spd_fmis = spd_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
 					        				var idunit = spd.skpd.id_mapping_fmis.split('.')[0];
+					        				var uraian = 'uraian kosong';
+					        				if(spd.uraian){
+					        					uraian = spd.uraian.trim();
+					        				}
 					        				var data_post = {
 					        					_token: _token,
 												idunit: idunit,
 												spd_no: spd.no_spd.trim(),
 												spd_tgl: spd.tgl_spd.split(' ')[0],
-												uraian: spd.uraian.trim(),
+												uraian: uraian,
 												penandatangan_nm: penandatangan.nama,
 												penandatangan_nip: penandatangan.nip,
 												penandatangan_jbt: penandatangan.jabatan
 					        				}
-					        				pesan_loading('Update SPD tgl_spd='+data_post.tgl_spd+' no='+spd.no_spd+' uraian='+spd.uraian, true);
+					        				pesan_loading('Update SPD tgl_spd='+data_post.spd_tgl+' no='+spd.no_spd+' uraian='+data_post.uraian, true);
 					        				relayAjax({
 												url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/update/'+id_spd_fmis,
 												type: 'post',
