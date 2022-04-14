@@ -8938,8 +8938,33 @@ function singkronisasi_spd_modal(){
 									        }
 									    });
 				        			}else{
-				        				pesan_loading('Sudah ada! SPD no='+spd.no_spd+' uraian='+spd.uraian, true);
-				        				resolve_reduce(nextData);
+				        				if(spd_fmis[spd.no_spd.trim()]){
+											var spd_fmis_selected = spd_fmis[spd.no_spd.trim()];
+										}else{
+											var spd_fmis_selected = spd_fmis['DRAFT-'+spd.no_spd.trim()];
+										}
+										var id_spd_fmis = spd_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
+				        				var idunit = spd.skpd.id_mapping_fmis.split('.')[0];
+				        				var tgl_spd = new Date().toISOString().split('T')[0];
+				        				var data_post = {
+				        					_token: _token,
+											idunit: idunit,
+											spd_no: spd.no_spd.trim(),
+											spd_tgl: tgl_spd,
+											uraian: spd.uraian.trim(),
+											penandatangan_nm: penandatangan.nama,
+											penandatangan_nip: penandatangan.nip,
+											penandatangan_jbt: penandatangan.jabatan
+				        				}
+				        				pesan_loading('Update SPD tgl_spd='+tgl_spd+' no='+spd.no_spd+' uraian='+spd.uraian, true);
+				        				relayAjax({
+											url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/update/'+id_spd_fmis,
+											type: 'post',
+											data: data_post,
+									        success: function(res){
+									        	resolve_reduce(nextData);
+									        }
+									    });
 				        			}
 				        		})
 				                .catch(function(e){
@@ -9024,6 +9049,65 @@ function singkronisasi_spd_modal(){
 					    			resolve();
 					    		});
 					    	});
+					    });
+			    	});
+			    })
+			    .then(function(){
+			    	return new Promise(function(resolve, reject){
+			    		get_list_spd()
+						.then(function(spd_fmis){
+							var last = spd_simda_selected.length - 1;
+							spd_simda_selected.reduce(function(sequence, nextData){
+					            return sequence.then(function(spd){
+					        		return new Promise(function(resolve_reduce, reject_reduce){
+					        			if(
+											spd_fmis[spd.no_spd.trim()]
+											|| spd_fmis['DRAFT-'+spd.no_spd.trim()]
+										){
+											if(spd_fmis[spd.no_spd.trim()]){
+												var spd_fmis_selected = spd_fmis[spd.no_spd.trim()];
+											}else{
+												var spd_fmis_selected = spd_fmis['DRAFT-'+spd.no_spd.trim()];
+											}
+											var id_spd_fmis = spd_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
+					        				var idunit = spd.skpd.id_mapping_fmis.split('.')[0];
+					        				var data_post = {
+					        					_token: _token,
+												idunit: idunit,
+												spd_no: spd.no_spd.trim(),
+												spd_tgl: spd.tgl_spd.split(' ')[0],
+												uraian: spd.uraian.trim(),
+												penandatangan_nm: penandatangan.nama,
+												penandatangan_nip: penandatangan.nip,
+												penandatangan_jbt: penandatangan.jabatan
+					        				}
+					        				pesan_loading('Update SPD tgl_spd='+data_post.tgl_spd+' no='+spd.no_spd+' uraian='+spd.uraian, true);
+					        				relayAjax({
+												url: config.fmis_url+'/penatausahaan/skpkd/bud/spd/update/'+id_spd_fmis,
+												type: 'post',
+												data: data_post,
+										        success: function(res){
+										        	resolve_reduce(nextData);
+										        }
+										    });
+					        			}else{
+					        				pesan_loading('Tidak ditemukan! SPD no='+spd.no_spd+' uraian='+spd.uraian, true);
+					        				resolve_reduce(nextData);
+					        			}
+					        		})
+					                .catch(function(e){
+					                    console.log(e);
+					                    return Promise.resolve(nextData);
+					                });
+					            })
+					            .catch(function(e){
+					                console.log(e);
+					                return Promise.resolve(nextData);
+					            });
+					        }, Promise.resolve(spd_simda_selected[last]))
+					        .then(function(data_last){
+				    			resolve();
+				    		});
 					    });
 			    	});
 			    })
