@@ -8857,9 +8857,20 @@ function singkronisasi_spd(res){
 						+'<td>'+b.uraian+'</td>'
 					+'</tr>';
 			}else{
+				if(spd_fmis[b.no_spd.trim()]){
+					var spd_fmis_selected = spd_fmis[b.no_spd.trim()];
+				}else{
+					var spd_fmis_selected = spd_fmis['DRAFT-'+b.no_spd.trim()];
+				}
+				var disabled = '';
+				var status = '';
+				if(spd_fmis_selected.status == 'Final'){
+					var disabled = 'disabled';
+					var status = ' (Stauts Final)';
+				}
 				body += ''
 					+'<tr>'
-						+'<td><input type="checkbox" value="'+b.no_spd.trim()+'"> <b>EXISTING</b></td>'
+						+'<td><input '+disabled+' type="checkbox" value="'+b.no_spd.trim()+'"> <b>EXISTING'+status+'</b></td>'
 						+'<td>'+b.no_spd.trim()+'</td>'
 						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
 						+'<td>'+b.uraian+'</td>'
@@ -9028,8 +9039,6 @@ function singkronisasi_spd_modal(){
 								            				spd.spd_simda_rinci = spd_simda_rinci;
 								            				cek_insert_spd_rinci(spd)
 								            				.then(function(){
-								            					// send spd rinci ke wp-sipd
-								            					send_spd_ke_wpsipd(spd);
 								            					resolve_reduce(nextData);
 								            				})
 								            			});
@@ -9138,44 +9147,60 @@ function singkronisasi_spd_modal(){
 	}
 }
 
-function send_spd_ke_wpsipd(spd){
-	get_spd_rinci_fmis(spd.spd_fmis)
-	.then(function(spd_fmis_rinci){
-		var spd_simda_rinci = {};
-		spd.spd_simda_rinci.map(function(spd_rinci, i){
-    		var keyword = spd_rinci.detail.kode_akun+replace_string(spd_rinci.detail.nama_sub_giat)+spd.id_sub_unit;
-    		spd_simda_rinci[keyword] = spd_rinci;
-    	});
-		spd_fmis_rinci.map(function(b, i){
-			spd_fmis_rinci[i].action = '';
-			var keyword = b.rekening.split(' ').shift()+replace_string(b.subkegiatan)+b.idsubunit;
-			if(spd_simda_rinci[keyword]){
-				spd_fmis_rinci[i].spd_simda_rinci = spd_simda_rinci[keyword];
-			}
-		});
-		var spd_fmis = spd.spd_fmis;
-		spd_fmis.action = '';
-		spd.spd_fmis = spd_fmis;
-		spd.spd_fmis_rinci = spd_fmis_rinci;
-		spd.spd_simda_rinci = '';
-		var data = {
-		    message:{
-		        type: "get-url",
-		        content: {
-				    url: config.url_server_lokal,
-				    type: 'post',
-				    data: { 
-						action: 'singkroniasi_spd_fmis',
-						tahun_anggaran: config.tahun_anggaran,
-						data: spd,
-						api_key: config.api_key
-					},
-	    			return: false
-				}
-		    }
-		};
-		chrome.runtime.sendMessage(data, function(response) {
-		    console.log('responeMessage', response);
+function singkronisasi_spd_lokal(spd){
+	show_loading();
+	get_list_spd()
+	.then(function(spd_fmis){
+		var spd_fmis_array = [];
+		for(var i in spd_fmis){
+			spd_fmis_array.push(spd_fmis[i]);
+		}
+		var last = spd_fmis_array.length - 1;
+		spd_fmis_array.reduce(function(sequence, nextData){
+            return sequence.then(function(spd_fmis){
+        		return new Promise(function(resolve_reduce, reject_reduce){
+					get_spd_rinci_fmis(spd_fmis)
+					.then(function(spd_fmis_rinci){
+						spd_fmis_rinci.map(function(b, i){
+							spd_fmis_rinci[i].action = '';
+						});
+						spd_fmis.action = '';
+						spd_fmis.spd_fmis_rinci = spd_fmis_rinci;
+						var data = {
+						    message:{
+						        type: "get-url",
+						        content: {
+								    url: config.url_server_lokal,
+								    type: 'post',
+								    data: { 
+										action: 'singkroniasi_spd_fmis',
+										tahun_anggaran: config.tahun_anggaran,
+										data: spd_fmis,
+										api_key: config.api_key
+									},
+					    			return: false
+								}
+						    }
+						};
+						chrome.runtime.sendMessage(data, function(response) {
+						    console.log('responeMessage', response);
+						    resolve_reduce(nextData);
+						});
+					});
+				})
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(spd_fmis_array[last]))
+        .then(function(data_last){
+			alert('Berhasil backup SPD ke DB WP-SIPD!');
+			hide_loading();
 		});
 	});
 }

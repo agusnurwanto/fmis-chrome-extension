@@ -636,8 +636,14 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 10px; float: right;" id="singkronisasi-spd">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SPD dari SIMDA'
+    +'</button>'
+	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 10px; float: right;" id="singkronisasi-spd-lokal">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SPD ke DB Lokal'
     +'</button>';
     jQuery('a[title="Tambah SPD"]').after(btn);
+    jQuery('#singkronisasi-spd-lokal').on('click', function(){
+    	singkronisasi_spd_lokal();
+    });
     jQuery('#singkronisasi-spd').on('click', function(){
     	show_loading();
     	var data = {
@@ -666,6 +672,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	jQuery('#modal_cek_all').on('click', function(){
 		var cek = jQuery(this).is(':checked');
 		jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').prop('checked', cek);
+		jQuery('#konfirmasi-program tbody tr input[type="checkbox"][disabled]').prop('checked', false);
 	});
 }else if(
 	current_url.indexOf('/perencanaan-tahunan/renja-murni') != -1
