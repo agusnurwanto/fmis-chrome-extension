@@ -1029,11 +1029,11 @@ function getTahun(){
 	return jQuery('.nav-link button.waves-light.dropdown-toggle strong').text();
 }
 
-function replace_string(text, no_lowercase=false, no_replace=false){
+function replace_string(text_awal, no_lowercase=false, no_replace=false, recursive=false){
 	if(no_lowercase){
-		text = jQuery('<textarea />').html(text.trim()).text();
+		var text = jQuery('<textarea />').html(text_awal.trim()).text();
 	}else{
-		text = jQuery('<textarea />').html(text.toLowerCase().trim()).text();	
+		var text = jQuery('<textarea />').html(text_awal.toLowerCase().trim()).text();	
 	}
 	if(!no_replace){
 		text = text.replace(/⁰/g, '0');
@@ -1054,7 +1054,11 @@ function replace_string(text, no_lowercase=false, no_replace=false){
 		text = text.replace(/™/g, '');
 		text = text.replace(/˜/g, '');
 	}
-	return text.trim();
+	if(recursive && text_awal.length != text.length){
+		return replace_string(text, no_lowercase, no_replace, recursive);
+	}else{
+		return text.trim();
+	}
 }
 
 function getIdSatuan(satuan, force, val_cb){
@@ -5478,7 +5482,7 @@ function get_master_rekening_rka(idrkpdrenjaaktivitas, idssh_4){
 
 function replace_number(number){
 	if(_type_singkronisasi_rka == 'rka-opd'){
-		return number.replace(/\./g, ',');
+		return (number+'').replace(/\./g, ',');
 	}else{
 		return number;
 	}
@@ -5491,27 +5495,44 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 		sub_keg.aktivitas.reduce(function(sequence, nextData){
             return sequence.then(function(aktivitas){
         		return new Promise(function(resolve_reduce, reject_reduce){
+					var cek_aktivitas_sub_unit = false;
+					// inisiasi data rincian unik sipd
+					var rka_unik = {};
+					rka_sipd.map(function(b, i){
+						var kelompok_keterangan = replace_string(b.subs_bl_teks+' | '+b.ket_bl_teks, true, true).substring(0, 500).trim();
+    					var nama_rincian = replace_string(kelompok_keterangan+' | '+b.nama_komponen+' | '+b.spek_komponen, false, false).substring(0, 500).trim()+b.kode_akun;
+    					if(!rka_unik[nama_rincian]){
+    						rka_unik[nama_rincian] = {
+    							jml_sipd: 1,
+    							jml_fmis: 0
+    						};
+    					}else{
+    						rka_unik[nama_rincian].jml_sipd++;
+    					}
+
+    					var sumber_dana_sipd = b.sumber_dana[0].nama_dana.split('] - ');
+	        			if(sumber_dana_sipd.length > 1){
+		    				sumber_dana_sipd = sumber_dana_sipd[1].replace(/ - /g,'-').trim();
+		    			}else{
+		    				sumber_dana_sipd = sumber_dana_sipd[0].replace(/ - /g,'-').trim();
+		    			}
+						var nama_aktivitas = (sumber_dana_sipd+' | '+sub_keg.nama_sub_skpd).substring(0, 500).trim();
+						if(nama_aktivitas == replace_string(aktivitas.uraian, true, true)){
+							cek_aktivitas_sub_unit = true;
+						}
+					});
+
+					// cek jika aktivitas tidak ditemukan maka langsung diresolve
+					if(!cek_aktivitas_sub_unit){
+						return resolve_reduce(nextData);
+					}
+
         			get_rka_aktivitas(aktivitas)
 					.then(function(rka){
 						// inisiasi form tambah rka fmis dalam aktivitas yang dipilih
 						if(rka.form_tambah_rka){
 							aktivitas.form_tambah_rka = rka.form_tambah_rka;
 						}
-
-						// inisiasi data rincian unik sipd
-						var rka_unik = {};
-						rka_sipd.map(function(b, i){
-							var kelompok_keterangan = replace_string(b.subs_bl_teks+' | '+b.ket_bl_teks, true, true).substring(0, 500).trim();
-        					var nama_rincian = replace_string(kelompok_keterangan+' | '+b.nama_komponen+' | '+b.spek_komponen, false, false).substring(0, 500).trim()+b.kode_akun;
-        					if(!rka_unik[nama_rincian]){
-        						rka_unik[nama_rincian] = {
-        							jml_sipd: 1,
-        							jml_fmis: 0
-        						};
-        					}else{
-        						rka_unik[nama_rincian].jml_sipd++;
-        					}
-						});
 
 						// inisiasi data rincian unik fmis
 						var data_rka = rka.data;
@@ -5763,6 +5784,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 
 function update_rincian_fmis(need_update, aktivitas, sub_keg){
 	return new Promise(function(resolve_reduce2, reject_reduce2){
+		need_update.uraian_belanja = replace_string(need_update.uraian_belanja, true, true, true);
 		var data_post = {
 			_token: _token,
 			_method: 'PUT',
