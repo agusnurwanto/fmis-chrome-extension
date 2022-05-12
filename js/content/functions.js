@@ -5731,7 +5731,9 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 				        		if(selisih >= 1){
 				        			rka_unik_fmis[nama_rincian_unik].map(function(b, i){
 										if(i < selisih){
-											kosongkan_rincian.push(b);
+											if(to_number(b.jml_volume) > 0){
+												kosongkan_rincian.push(b);
+											}
 											rka_unik[nama_rincian_unik].jml_sipd++;
 										}
 									});
