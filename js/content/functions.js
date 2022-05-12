@@ -5500,7 +5500,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 					var rka_unik = {};
 					rka_sipd.map(function(b, i){
 						var kelompok_keterangan = replace_string(b.subs_bl_teks+' | '+b.ket_bl_teks, true, true).substring(0, 500).trim();
-    					var nama_rincian = replace_string(kelompok_keterangan+' | '+b.nama_komponen+' | '+b.spek_komponen, false, false).substring(0, 500).trim()+b.kode_akun;
+    					var nama_rincian = replace_string(kelompok_keterangan+' | '+b.nama_komponen+' | '+b.spek_komponen, false, false).substring(0, 500).trim()+b.kode_akun+b.harga_satuan;
     					if(!rka_unik[nama_rincian]){
     						rka_unik[nama_rincian] = {
     							jml_sipd: 1,
@@ -5538,7 +5538,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 						var data_rka = rka.data;
 						data_rka.map(function(b, i){
 							var uraian_belanja = replace_string(b.uraian_belanja, false, false);
-							var uraian_belanja_unik = uraian_belanja+b.kode_rekening;
+							var uraian_belanja_unik = uraian_belanja+b.kode_rekening+to_number(b.harga);
 							if(!rka_unik[uraian_belanja_unik]){
         						rka_unik[uraian_belanja_unik] = {
         							jml_sipd: 0,
@@ -5567,12 +5567,12 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 			        				if(nama_aktivitas == replace_string(aktivitas.uraian, true, true)){
 				        				var kelompok_keterangan = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
 			        					var nama_rincian = replace_string(kelompok_keterangan+' | '+current_data.nama_komponen+' | '+current_data.spek_komponen, false, false).substring(0, 500).trim();
-										var nama_rincian_unik = nama_rincian+current_data.kode_akun;
+										var nama_rincian_unik = nama_rincian+current_data.kode_akun+current_data.harga_satuan;
 			        					var cek_exist = false;
 			        					var need_update = false;
 										data_rka.map(function(b, i){
 											var uraian_belanja = replace_string(b.uraian_belanja, false, false);
-											var uraian_belanja_unik = uraian_belanja+b.kode_rekening;
+											var uraian_belanja_unik = uraian_belanja+b.kode_rekening+to_number(b.harga);;
 
 											// cek jika nama unik sudah terinsert atau belum
 											if(uraian_belanja_unik == nama_rincian_unik){
@@ -5718,7 +5718,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 				        	var rka_unik_fmis = {};
 				        	data_rka.map(function(b, i){
 								var uraian_belanja = replace_string(b.uraian_belanja, false, false);
-								var uraian_belanja_unik = uraian_belanja+b.kode_rekening;
+								var uraian_belanja_unik = uraian_belanja+b.kode_rekening+to_number(b.harga);;
 								if(!rka_unik_fmis[uraian_belanja_unik]){
 									rka_unik_fmis[uraian_belanja_unik] = [];
 								}
@@ -5817,7 +5817,8 @@ function update_rincian_fmis(need_update, aktivitas, sub_keg){
 			idsatuan3: need_update.idsatuan3,
 			status_pelaksanaan: need_update.status_pelaksanaan
 		};
-		pesan_loading('UPDATE RINCIAN "'+need_update.uraian_belanja+'" AKTIVITAS "'+aktivitas.uraian+'" SUBKEGIATAN "'+sub_keg.nama_sub_giat+'"', true);
+		pesan_loading('UPDATE RINCIAN "'+need_update.uraian_ssh+' | '+need_update.uraian_belanja+'" REKENING "'+need_update.rekening_display+'" AKTIVITAS "'+aktivitas.uraian+'" SUBKEGIATAN "'+sub_keg.nama_sub_giat+'"', true);
+		console.log('need_update', need_update);
 		new Promise(function(resolve, reduce){
 			var code_rincian = need_update.action.split('code=')[1].split('"')[0];
 			relayAjax({
@@ -5937,7 +5938,7 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 		        					// cek jika aktivitas di fmis hanya satu dan di sipd juga hanya satu, maka aktivitas fmis diupdate sesuai aktivitas di sipd
 		        					if(cek_aktivitas_sub_unit.length == 1){
 		        						cek_exist = true;
-		        						aktivitas_exist_update = sub_keg.aktivitas[0];
+		        						aktivitas_exist_update = cek_aktivitas_sub_unit[0];
 		        					}
 		        				}
 			        			var idsumberdana1 = '';
