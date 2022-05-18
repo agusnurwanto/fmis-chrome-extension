@@ -564,10 +564,16 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	var btn = ''
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 10px; float: right;" id="tampil-pagu-sub-keg">'
         +'<i class="fa fa-eye fa-fw"></i> Tampil Pagu Rincian Sub Kegiatan'
+    +'</button>'
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 10px; float: right;" id="delete-rka">'
+        +'<i class="fa fa-eye fa-fw"></i> Hapus / Nolkan RKA'
     +'</button>';
     jQuery('.card-header.bg-light').prepend(btn);
     jQuery('#tampil-pagu-sub-keg').on('click', function(){
     	tampil_pagu_sub_keg();
+    });
+    jQuery('#delete-rka').on('click', function(){
+    	kosongkan_rincian();
     });
 }else if(current_url.indexOf('/parameter/data-pegawai') != -1){
 	var btn = ''

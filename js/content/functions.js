@@ -7436,6 +7436,191 @@ function tampil_pagu_sub_keg(){
     });
 }
 
+function kosongkan_rincian_item(rincian){
+	return new Promise(function(resolve, reduce){
+		var cek_link = rincian.action.split('href="');
+		if(cek_link.length >= 4){
+			var url_form_delete = cek_link[3].split('"')[0];
+			relayAjax({
+				url: url_form_delete+'&action=delete',
+	            success: function(form_delete){
+	            	var form = jQuery(form_delete.form);
+	            	var url_delete = form.attr('action');
+	    			relayAjax({
+						url: url_delete,
+						data: {
+							_method: 'DELETE',
+							_token: _token
+						},
+						type: "post",
+			            success: function(res){
+			            	resolve();
+			            },
+			            error: function(e){
+			            	console.log('Error hapus rincian!', e, rka);
+			            }
+					});
+	            }
+			});
+		}else{
+			if(to_number(rincian.jumlah) == 0){
+				return resolve();
+			}
+			var url_form_update = cek_link[1].split('"')[0];
+			rincian.uraian_belanja = replace_string(rincian.uraian_belanja, true, true, true);
+			var data_post = {
+				_token: _token,
+				_method: 'PUT',
+				kdurut: rincian.kdurut,
+				idsumberdana: rincian.idsumberdana,
+				uraian: rincian.uraian_ssh,
+				idssh_4: rincian.idssh_4,
+				uraian_rekening: rincian.rekening_display,
+				kdrek1: rincian.kdrek1,
+				kdrek2: rincian.kdrek2,
+				kdrek3: rincian.kdrek3,
+				kdrek4: rincian.kdrek4,
+				kdrek5: rincian.kdrek5,
+				kdrek6: rincian.kdrek6,
+				uraian_belanja: rincian.uraian_belanja,
+				volume_renja1: rincian.volume_renja1,
+				volume_renja2: rincian.volume_renja2,
+				volume_renja3: rincian.volume_renja3,
+				harga_renja: rincian.harga,
+				jml_volume_renja: rincian.jml_volume_renja,
+				jumlah_renja: rincian.jumlah_renja,
+				volume_1: 0,
+				volume_2: rincian.volume_2,
+				volume_3: rincian.volume_3,
+				jml_volume: rincian.jml_volume,
+				harga: rincian.harga,
+				jumlah: 0,
+				idsatuan1: rincian.idsatuan1,
+				idsatuan2: rincian.idsatuan2,
+				idsatuan3: rincian.idsatuan3,
+				status_pelaksanaan: rincian.status_pelaksanaan
+			};
+			pesan_loading('UPDATE RINCIAN "'+rincian.uraian_ssh+' | '+rincian.uraian_belanja+'" REKENING "'+rincian.rekening_display+'"', true);
+			console.log('rincian', rincian);
+			new Promise(function(resolve2, reduce2){
+				relayAjax({
+					url: url_form_update+'&action=edit',
+		            success: function(form_edit){
+	    				var form = jQuery(form_edit.form);
+	    				data_post.idrapbdrkabelanja = form.find('input[name="idrapbdrkabelanja"]').val();
+	    				data_post.idrapbdrkaaktivitas = form.find('input[name="idrapbdrkaaktivitas"]').val();
+	    				data_post.harga_renja = form.find('input[name="harga_renja"]').val().replace(/\./g, '');
+	    				data_post.harga = form.find('input[name="harga"]').val().replace(/\./g, '');
+	    				var url = form.attr('action');
+	    				resolve2(url);
+	    			}
+	    		});
+			})
+			.then(function(url_simpan){
+				relayAjax({
+					url: url_simpan,
+					type: "post",
+		            data: data_post,
+		            success: function(res){
+		            	resolve();
+		            },
+		            error: function(e){
+		            	console.log('Error save rincian!', e, this.data);
+		            }
+				});
+			});
+		}
+	});
+}
+
+function kosongkan_rincian(){
+	var sub_kegiatan = [];
+	jQuery('#table-subkegiatan tbody .btn-group-sm .btn.btn-success.my-1.tab-next').map(function(i, b){
+		var kode_sub = jQuery(b).attr('data-code');
+		sub_kegiatan.push({
+			code: kode_sub,
+			sub_keg: jQuery(b).attr('data-info'),
+			keg: jQuery(b).attr('data-keg'),
+			prog: jQuery(b).attr('data-prog')
+		});
+	});
+	if(sub_kegiatan.length == 0){
+		return alert('Sub kegiatan tidak ditemukan!');
+	}
+	show_loading();
+	window._type_singkronisasi_rka = 'rka-opd';
+	var total = 0;
+	var last = sub_kegiatan.length - 1;
+	sub_kegiatan.reduce(function(sequence, nextData){
+        return sequence.then(function(sub){
+    		return new Promise(function(resolve_reduce, reject_reduce){
+    			var total_sub = 0;
+    			relayAjax({
+					url: config.fmis_url+'/anggaran/rka-belanja/aktivitas/datatable?code='+sub.code,
+			        success: function(aktivitas_exist){
+			        	var last2 = aktivitas_exist.data.length - 1;
+			        	aktivitas_exist.data.reduce(function(sequence2, nextData2){
+					        return sequence2.then(function(aktivitas){
+					    		return new Promise(function(resolve_reduce2, reject_reduce2){
+						        	get_rka_aktivitas(aktivitas)
+									.then(function(rka){
+										var data_rka = rka.data;
+										var last3 = data_rka.length - 1;
+							        	data_rka.reduce(function(sequence3, nextData3){
+									        return sequence3.then(function(rincian){
+					    						return new Promise(function(resolve_reduce3, reject_reduce3){
+					    							kosongkan_rincian_item(rincian)
+					    							.then(function(){
+					    								return resolve_reduce3(nextData3);
+					    							});
+									        	})
+									            .catch(function(e){
+									                console.log(e);
+									                return Promise.resolve(nextData3);
+									            });
+									        })
+									        .catch(function(e){
+									            console.log(e);
+									            return Promise.resolve(nextData3);
+									        });
+									    }, Promise.resolve(data_rka[last3]))
+									    .then(function(data_last){
+											return resolve_reduce2(nextData2);
+										});
+									});
+								})
+					            .catch(function(e){
+					                console.log(e);
+					                return Promise.resolve(nextData2);
+					            });
+					        })
+					        .catch(function(e){
+					            console.log(e);
+					            return Promise.resolve(nextData2);
+					        });
+					    }, Promise.resolve(aktivitas_exist.data[last2]))
+					    .then(function(data_last){
+							return resolve_reduce(nextData);
+						});
+			        }
+				});
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        })
+        .catch(function(e){
+            console.log(e);
+            return Promise.resolve(nextData);
+        });
+    }, Promise.resolve(sub_kegiatan[last]))
+    .then(function(data_last){
+    	alert('Berhasil hapus atau kosongkan rincian!');
+		hide_loading();
+    });
+}
+
 function singkron_rka_all_skpd(){
 	show_loading();
 	getUnitFmis().then(function(unit_fmis){
@@ -8605,7 +8790,7 @@ function singkronisasi_pendapatan(data_sipd){
 								        					data_post.jumlah_renja = 0;
 								        					data_post.jml_volume = 1;
 								        					data_post.jumlah = to_number(cek_exist_update.jumlah);
-								        					data_post.status_pelaksanaan = 4;
+								        					data_post.status_pelaksanaan = cek_exist_update.status_pelaksanaan;
 									        				pesan_loading('UPDATE '+nama_jenis_program+' RINCIAN "'+cek_exist_update.uraian_belanja+'" AKTIVITAS "'+aktivitas_fmis.uraian+'"', true);
 								        					var url_simpan = form.attr('action');
 								        					relayAjax({
@@ -9808,7 +9993,7 @@ function delete_kas(aktivitas){
         });
     }, Promise.resolve(aktivitas[last]))
     .then(function(data_last){
-    	initRenstraTable('dokumen');
+    	run_script('data_table_renstra_dokumen');
     	hide_loading();
     	alert('Berhasil hapus data anggaran kas!');
 	});
