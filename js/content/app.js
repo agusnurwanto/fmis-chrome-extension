@@ -675,6 +675,28 @@ if(current_url.indexOf('parameter/rekening') != -1){
 		jQuery('#konfirmasi-program tbody tr input[type="checkbox"][disabled]').prop('checked', false);
 	});
 }else if(
+	current_url.indexOf('/anggaran/rka-renkas') != -1
+){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 10px; float: right;" id="delete-kas">'
+        +'<i class="fa fa-trash fa-fw"></i> Delete Anggaran Kas'
+    +'</button>';
+    jQuery('.card-header.bg-light').prepend(btn);
+    jQuery('#delete-kas').on('click', function(){
+    	var aktivitas = [];
+    	jQuery('#table-aktivitas button[data-type="aktivitas"]').map(function(i, b){
+    		var code_aktivitas = jQuery(b).attr('data-code');
+    		aktivitas.push(code_aktivitas);
+    	});
+    	if(aktivitas.length >= 1){
+	    	if(confirm('Apakah anda yakin untuk semua anggaran kas pada '+aktivitas.length+' aktivitas ini?')){
+	    		delete_kas(aktivitas);
+	    	}
+	    }else{
+	    	alert('Aktivitas kegiatan tidak ditemukan!');
+	    }
+    });
+}else if(
 	current_url.indexOf('/perencanaan-tahunan/renja-murni') != -1
 	|| (
 		current_url.indexOf('/anggaran/rka-opd') != -1

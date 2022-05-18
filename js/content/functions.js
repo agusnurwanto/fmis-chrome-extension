@@ -9736,3 +9736,80 @@ function singkronisasi_data_pegawai(data){
 	    })
     })
 }
+
+function get_rincian_kas(code_aktivitas){
+	pesan_loading('GET rincian Kas', true);
+	return new Promise(function(resolve, reject){
+		var url = config.fmis_url+'/anggaran/rka-renkas/rincian/datatable?code='+code_aktivitas;
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	resolve(res.data);
+	        }
+	    });
+	});
+}
+
+function delete_kas(aktivitas){
+	show_loading();
+	var last = aktivitas.length - 1;
+	aktivitas.reduce(function(sequence, nextData){
+        return sequence.then(function(code_aktivitas){
+        	return new Promise(function(resolve_reduce, reject_reduce){
+				get_rincian_kas(code_aktivitas)
+				.then(function(data){
+					var last2 = data.length - 1;
+					data.reduce(function(sequence2, nextData2){
+				        return sequence2.then(function(rincian){
+				        	return new Promise(function(resolve_reduce2, reject_reduce2){
+				        		var url_form_delete = jQuery(rincian.action).find('a[data-action="delete"]').attr('href')+'&action=delete';
+				        		relayAjax({
+									url: url_form_delete,
+							        success: function(res){
+							        	var url_delete = jQuery(res.form).attr('action');
+							        	pesan_loading('Hapus rincian kas '+rincian.rekening_display, true);
+							    		relayAjax({
+											url: url_delete,
+											type: 'post',
+											data: {
+												_token: _token,
+												_method: 'DELETE'
+											},
+									        success: function(res){
+									        	resolve_reduce2(nextData2);
+									        }
+									    });
+							        }
+							    });
+				        	})
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData2);
+				            });
+				        })
+				        .catch(function(e){
+				            console.log(e);
+				            return Promise.resolve(nextData2);
+				        });
+				    }, Promise.resolve(data[last2]))
+				    .then(function(data_last){
+				    	resolve_reduce(nextData);
+					});
+				});
+        	})
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        })
+        .catch(function(e){
+            console.log(e);
+            return Promise.resolve(nextData);
+        });
+    }, Promise.resolve(aktivitas[last]))
+    .then(function(data_last){
+    	initRenstraTable('dokumen');
+    	hide_loading();
+    	alert('Berhasil hapus data anggaran kas!');
+	});
+}
