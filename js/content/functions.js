@@ -5802,18 +5802,16 @@ function update_rincian_fmis(need_update, aktivitas, sub_keg){
 			kdrek5: need_update.kdrek5,
 			kdrek6: need_update.kdrek6,
 			uraian_belanja: need_update.uraian_belanja,
-			volume_renja1: need_update.volume_renja1,
-			volume_renja2: need_update.volume_renja2,
-			volume_renja3: need_update.volume_renja3,
-			harga_renja: need_update.harga,
-			jml_volume_renja: need_update.jml_volume_renja,
-			jumlah_renja: need_update.jumlah_renja,
-			volume_1: need_update.volume_1,
-			volume_2: need_update.volume_2,
-			volume_3: need_update.volume_3,
-			jml_volume: need_update.jml_volume,
-			harga: need_update.harga,
-			jumlah: need_update.jumlah,
+			volume_renja1: to_number(need_update.volume_renja1, true),
+			volume_renja2: to_number(need_update.volume_renja2, true),
+			volume_renja3: to_number(need_update.volume_renja3, true),
+			jml_volume_renja: to_number(need_update.jml_volume_renja, true),
+			jumlah_renja: to_number(need_update.jumlah_renja, true),
+			volume_1: to_number(need_update.volume_1, true),
+			volume_2: to_number(need_update.volume_2, true),
+			volume_3: to_number(need_update.volume_3, true),
+			jml_volume: to_number(need_update.jml_volume, true),
+			jumlah: to_number(need_update.jumlah, true),
 			idsatuan1: need_update.idsatuan1,
 			idsatuan2: need_update.idsatuan2,
 			idsatuan3: need_update.idsatuan3,
@@ -7335,8 +7333,17 @@ function cek_insert_sasaran_rka(options){
 	});
 }
 
-function to_number(text){
-	return +(text.split(',')[0].replace(/\./g, ''));
+function to_number(text, koma=false){
+	text = text.split(',');
+	var ret = +(text[0].replace(/\./g, ''));
+	if(text.length >= 2){
+		if(koma){
+			ret += ','+text[1];
+		}else{
+			ret = +(ret+'.'+text[1]);
+		}
+	}
+	return ret;
 }
 
 function tampil_pagu_sub_keg(){
@@ -7483,17 +7490,15 @@ function kosongkan_rincian_item(rincian){
 				kdrek5: rincian.kdrek5,
 				kdrek6: rincian.kdrek6,
 				uraian_belanja: rincian.uraian_belanja,
-				volume_renja1: rincian.volume_renja1,
-				volume_renja2: rincian.volume_renja2,
-				volume_renja3: rincian.volume_renja3,
-				harga_renja: rincian.harga,
-				jml_volume_renja: rincian.jml_volume_renja,
-				jumlah_renja: rincian.jumlah_renja,
+				volume_renja1: to_number(rincian.volume_renja1, true),
+				volume_renja2: to_number(rincian.volume_renja2, true),
+				volume_renja3: to_number(rincian.volume_renja3, true),
+				jml_volume_renja: to_number(rincian.jml_volume_renja, true),
+				jumlah_renja: to_number(rincian.jumlah_renja, true),
 				volume_1: 0,
-				volume_2: rincian.volume_2,
-				volume_3: rincian.volume_3,
-				jml_volume: rincian.jml_volume,
-				harga: rincian.harga,
+				volume_2: to_number(rincian.volume_2, true),
+				volume_3: to_number(rincian.volume_3, true),
+				jml_volume: 0,
 				jumlah: 0,
 				idsatuan1: rincian.idsatuan1,
 				idsatuan2: rincian.idsatuan2,
@@ -7547,9 +7552,13 @@ function kosongkan_rincian(){
 	if(sub_kegiatan.length == 0){
 		return alert('Sub kegiatan tidak ditemukan!');
 	}
+	if(!confirm('Apakah anda yakin untuk menghapus atau mengosongkan nilai rincian dari '+sub_kegiatan.length+' sub kegiatan ini?')){
+		return;
+	}
 	show_loading();
 	window._type_singkronisasi_rka = 'rka-opd';
 	var total = 0;
+	console.log('sub_kegiatan', sub_kegiatan);
 	var last = sub_kegiatan.length - 1;
 	sub_kegiatan.reduce(function(sequence, nextData){
         return sequence.then(function(sub){
@@ -8766,12 +8775,12 @@ function singkronisasi_pendapatan(data_sipd){
 							        					kdrek6 : cek_exist_update.kdrek6,
 							        					uraian_belanja : nama_rincian_asli,
 							        					idsatuan1 : cek_exist_update.idsatuan1,
-							        					volume_1 : cek_exist_update.volume_1,
+							        					volume_1 : to_number(cek_exist_update.volume_1, true),
 							        					idsatuan2 : cek_exist_update.idsatuan2,
-							        					volume_2 : cek_exist_update.volume_2,
+							        					volume_2 : to_number(cek_exist_update.volume_2, true),
 							        					idsatuan3 : cek_exist_update.idsatuan3,
-							        					volume_3 : cek_exist_update.volume_3,
-							        					harga : to_number(cek_exist_update.harga)
+							        					volume_3 : to_number(cek_exist_update.volume_3, true),
+							        					harga : to_number(cek_exist_update.harga, true)
 							        				}
 						        					var code_rincian = cek_exist_update.action.split('code=')[1].split('"')[0];
 						        					relayAjax({
@@ -8789,7 +8798,7 @@ function singkronisasi_pendapatan(data_sipd){
 								        					data_post.jml_volume_renja = 0;
 								        					data_post.jumlah_renja = 0;
 								        					data_post.jml_volume = 1;
-								        					data_post.jumlah = to_number(cek_exist_update.jumlah);
+								        					data_post.jumlah = to_number(cek_exist_update.jumlah, true);
 								        					data_post.status_pelaksanaan = cek_exist_update.status_pelaksanaan;
 									        				pesan_loading('UPDATE '+nama_jenis_program+' RINCIAN "'+cek_exist_update.uraian_belanja+'" AKTIVITAS "'+aktivitas_fmis.uraian+'"', true);
 								        					var url_simpan = form.attr('action');
