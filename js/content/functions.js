@@ -7334,7 +7334,7 @@ function cek_insert_sasaran_rka(options){
 }
 
 function to_number(text, koma=false){
-	text = text.split(',');
+	text = (text+'').split(',');
 	var ret = +(text[0].replace(/\./g, ''));
 	if(text.length >= 2){
 		if(koma){
