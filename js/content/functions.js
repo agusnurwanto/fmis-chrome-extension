@@ -5553,6 +5553,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 						var last = rka_sipd.length - 1;
 						var kdurut = 0;
 						console.log('Insert RKA untuk aktivitas = '+aktivitas.uraian, sub_keg.nama_sub_giat, data_rka);
+						var cek_double = {sipd: {}, fmis: {}};
 						rka_sipd.reduce(function(sequence2, nextData2){
 				            return sequence2.then(function(current_data){
 				        		return new Promise(function(resolve_reduce2, reject_reduce2){
@@ -5570,16 +5571,29 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 										var nama_rincian_unik = nama_rincian+current_data.kode_akun+current_data.harga_satuan;
 			        					var cek_exist = false;
 			        					var need_update = false;
+			        					if(!cek_double.sipd[nama_rincian_unik]){
+											cek_double.sipd[nama_rincian_unik] = [];
+										}
+										cek_double.sipd[nama_rincian_unik].push(current_data);
+										cek_double.fmis = {};
 										data_rka.map(function(b, i){
 											var uraian_belanja = replace_string(b.uraian_belanja, false, false);
-											var uraian_belanja_unik = uraian_belanja+b.kode_rekening+to_number(b.harga);;
+											var uraian_belanja_unik = uraian_belanja+b.kode_rekening+to_number(b.harga);
+											if(!cek_double.fmis[uraian_belanja_unik]){
+												cek_double.fmis[uraian_belanja_unik] = [];
+											}
+											cek_double.fmis[uraian_belanja_unik].push(b);
 
 											// cek jika nama unik sudah terinsert atau belum
 											if(uraian_belanja_unik == nama_rincian_unik){
 												// cek jika jumlah rincian unik fmis sudah sama dengan jumlah rincian sipd
 												if(rka_unik[uraian_belanja_unik].jml_fmis >= rka_unik[uraian_belanja_unik].jml_sipd){
 													cek_exist = true;
-													if(to_number(b.jumlah) != current_data.total_harga){
+													if(
+														to_number(b.jumlah) != current_data.total_harga
+														&& cek_double.sipd[uraian_belanja_unik].length == cek_double.fmis[uraian_belanja_unik].length
+													){
+														console.log('URAIAN BELANJA UNIK:', uraian_belanja_unik, current_data);
 														need_update = b;
 													}
 												}else{
@@ -8834,7 +8848,109 @@ function singkronisasi_pendapatan(data_sipd){
 							            });
 							        }, Promise.resolve(rka_sipd[last]))
 							        .then(function(data_last){
-							        	resolve_reduce(nextData);
+										var rka_unik_fmis = {};
+							        	data_rka.map(function(b, i){
+							        		var uraian_belanja = replace_string(b.uraian_belanja, false, false);
+							        		var uraian_belanja_unik = uraian_belanja+b.kode_rekening;
+											if(!rka_unik_fmis[uraian_belanja_unik]){
+												rka_unik_fmis[uraian_belanja_unik] = [];
+											}
+											rka_unik_fmis[uraian_belanja_unik].push(b);
+										});
+							        	var kosongkan_rincian = [];
+							        	for(var nama_rincian_unik in rka_unik){
+							        		var selisih = rka_unik[nama_rincian_unik].jml_fmis - rka_unik[nama_rincian_unik].jml_sipd;
+							        		// cek jika ada rincian yang ada di fmis dan tidak ada di sipd. bisa karena diinput manual atau karena rincian di sipd dihapus. rincian ini perlu di nolkan agar pagu sub kegiatannya sama dengan sipd
+							        		if(selisih >= 1){
+							        			rka_unik_fmis[nama_rincian_unik].map(function(b, i){
+													if(i < selisih){
+														if(to_number(b.jml_volume) > 0){
+															kosongkan_rincian.push(b);
+														}
+														rka_unik[nama_rincian_unik].jml_sipd++;
+													}
+												});
+							        		}
+							        	}
+							        	console.log('kosongkan_rincian', kosongkan_rincian);
+							        	var last = kosongkan_rincian.length - 1;
+							        	kosongkan_rincian.reduce(function(sequence2, nextData2){
+								            return sequence2.then(function(cek_exist_update){
+								        		return new Promise(function(resolve_reduce2, reject_reduce2){
+								        			cek_exist_update.volume_1 = replace_number('0');
+							    					cek_exist_update.jml_volume = replace_number('0');
+							    					cek_exist_update.jumlah = replace_number('0');
+							    					var data_post = {
+							        					_method: 'PUT',
+							        					_token: _token,
+							        					idsumberdana : cek_exist_update.idsumberdana,
+							        					kdurut : cek_exist_update.kdurut,
+							        					idssh_4 : cek_exist_update.idssh_4,
+							        					kdrek1 : cek_exist_update.kdrek1,
+							        					kdrek2 : cek_exist_update.kdrek2,
+							        					kdrek3 : cek_exist_update.kdrek3,
+							        					kdrek4 : cek_exist_update.kdrek4,
+							        					kdrek5 : cek_exist_update.kdrek5,
+							        					kdrek6 : cek_exist_update.kdrek6,
+							        					uraian_belanja : replace_string(cek_exist_update.uraian_belanja, true, true, true),
+							        					idsatuan1 : cek_exist_update.idsatuan1,
+							        					volume_1 : to_number(cek_exist_update.volume_1, true),
+							        					idsatuan2 : cek_exist_update.idsatuan2,
+							        					volume_2 : to_number(cek_exist_update.volume_2, true),
+							        					idsatuan3 : cek_exist_update.idsatuan3,
+							        					volume_3 : to_number(cek_exist_update.volume_3, true),
+							        					harga : to_number(cek_exist_update.harga, true),
+							        					jumlah : to_number(cek_exist_update.jumlah, true),
+							        					jml_volume : to_number(cek_exist_update.jml_volume, true)
+							        				}
+							    					var code_rincian = cek_exist_update.action.split('code=')[1].split('"')[0];
+							    					relayAjax({
+														url: config.fmis_url+'/anggaran/rka-belanja/belanja/form?code='+code_rincian+'&action=edit',
+											            success: function(form_edit){
+								        					var form = jQuery(form_edit.form);
+							    							data_post.idrapbdrkaaktivitas = form.find('input[name="idrapbdrkaaktivitas"]').val();
+								        					data_post.uraian = form.find('input[name="uraian"]').val();
+								        					data_post.idrapbdrkabelanja = form.find('input[name="idrapbdrkabelanja"]').val();
+								        					data_post.uraian_rekening = cek_exist_update.rekening_display;
+								        					data_post.volume_renja1 = 0;
+								        					data_post.volume_renja2 = 0;
+								        					data_post.volume_renja3 = 0;
+								        					data_post.harga_renja = 1;
+								        					data_post.jml_volume_renja = 0;
+								        					data_post.jumlah_renja = 0;
+								        					data_post.status_pelaksanaan = cek_exist_update.status_pelaksanaan;
+									        				pesan_loading('UPDATE '+nama_jenis_program+' RINCIAN "'+cek_exist_update.uraian_belanja+'" AKTIVITAS "'+aktivitas_fmis.uraian+'"', true);
+								        					var url_simpan = form.attr('action');
+								        					relayAjax({
+																url: url_simpan,
+																type: "post",
+													            data: data_post,
+													            success: function(res){
+													            	resolve_reduce2(nextData2);
+													            },
+													            error: function(e){
+													            	console.log('Error save rincian!', e, this.data);
+													            }
+															});
+											            },
+											            error: function(e){
+											            	console.log('Error save rincian!', e, this.data);
+											            }
+													});
+								        		})
+								                .catch(function(e){
+								                    console.log(e);
+								                    return Promise.resolve(nextData2);
+								                });
+								            })
+								            .catch(function(e){
+								                console.log(e);
+								                return Promise.resolve(nextData2);
+								            });
+								        }, Promise.resolve(kosongkan_rincian[last]))
+								        .then(function(data_last2){
+							        		resolve_reduce(nextData);
+							        	});
 							        });
 							    }else{
 							    	pesan_loading('RKA untuk '+nama_jenis_program+' aktivitas = '+aktivitas_fmis.uraian+' tidak ditemukan!');

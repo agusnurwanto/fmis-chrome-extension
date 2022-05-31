@@ -30,6 +30,9 @@ Semoga bermanfaat
 
 ### Video tutorial
 - https://www.youtube.com/watch?v=8wDyFBXkWaM Video 1 (Integrasi WP-SIPD ke FMIS)
+- https://youtu.be/xXVd-cAMB_w Hapus RKA, Aktivitas, Sub Kegiatan, Kegiatan dan Program FMIS
+- https://youtu.be/7J_k8NEAZLM Mapping Program Kegiatan dan Monitoring Hasil Singkronisasi WP-SIPD ke FMIS
+- https://youtu.be/BECuRXKvwAg Singkronisasi Pendapatan, Pembiayaan dan Anggaran Kas FMIS
 
 ### Catatan
 - Informasi terkait progres pengembangan aplikasi dan cara pakainya bisa cek di https://smkasiyahhomeschooling.blogspot.com/2021/12/fmis-chrome-extension-untuk-integrasi.html
