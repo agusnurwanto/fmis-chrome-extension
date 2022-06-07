@@ -605,6 +605,35 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			});
     	}
     });
+}else if(current_url.indexOf('/penatausahaan/parameter/penandatangan') != -1){
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-warning" style="margin-right: 3px;" id="singkronisasi_data_sub_unit">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Data Sub Unit dari SIMDA'
+    +'</button>';
+    jQuery('.btn.btn-secondary.ml-1').parent().prepend(btn);
+    jQuery('#singkronisasi_data_sub_unit').on('click', function(){
+    	if(confirm('Apakah anda yakin untuk mengsingkronkan data Sub Unit dari SIMDA?')){
+    		show_loading();
+	    	var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_meta_subunit_simda',
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+    	}
+    });
 }else if(current_url.indexOf('/penatausahaan/skpkd/bud/spd') != -1){
 	var modal_spd = ''
 		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'

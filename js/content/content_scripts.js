@@ -57,6 +57,10 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			singkronisasi_data_pegawai(res.data);
+		}else if(res.action == 'get_meta_subunit_simda'){
+			_alert = false;
+			cek_hide_loading = false;
+			singkronisasi_data_meta_sub_unit(res.data);
 		}else if(
 			res.action == 'get_data_pendapatan'
 			|| res.action == 'get_data_pembiayaan'

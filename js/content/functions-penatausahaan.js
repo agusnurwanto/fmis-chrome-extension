@@ -1048,3 +1048,111 @@ function singkronisasi_data_pegawai(data){
 	    })
     })
 }
+
+function singkronisasi_data_meta_sub_unit(data){
+	var last = data.length - 1;
+	data.reduce(function(sequence, nextData){
+        return sequence.then(function(sub_unit){
+        	return new Promise(function(resolve_reduce, reject_reduce){
+        		var id_skpd_fmis = sub_unit.skpd.id_mapping_fmis.split('.');
+        		if(
+        			id_skpd_fmis.length < 2 
+        			|| id_skpd_fmis[1] == ''
+        		){
+        			console.log('id_skpd_fmis kosong!', sub_unit);
+        			return resolve_reduce(nextData);
+        		}
+
+        		var id_skpd = id_skpd_fmis[0];
+        		id_skpd_fmis = id_skpd_fmis[1];
+        		get_id_current_user()
+    			.then(function(user){
+    				console.log('user', user, sub_unit);
+    				get_all_user_fmis(user.username)
+					.then(function(users){
+    					var current_user = false;
+    					users.data.map(function(u, n){
+							if(u.kduser == user.username){
+								current_user = u;
+							}
+						});
+						if(current_user){
+							new Promise(function(resolve, reject){
+	    						var url_form_edit = current_user.action.split('href="')[2].split('"')[0];
+	    						relayAjax({
+									url: url_form_edit+'?action=edit',
+							        success: function(form_edit){
+										var form = jQuery(form_edit.form);
+										var data_post = {
+											_token: _token,
+											_method: 'PUT',
+											kduser: current_user.kduser,
+											nmuser: current_user.nmuser,
+											nmket: current_user.nmket,
+											level: 'admin',
+											status: 1,
+											idunit: id_skpd,
+											idsubunit: id_skpd_fmis,
+											'idgroup[]': form.find('select[name="idgroup[]"]').val(),
+											'tahun[]': form.find('select[name="tahun[]"]').val()
+										};
+	    								pesan_loading('UPDATE User '+user.nama+' SET UNIT SKPD = '+sub_unit.skpd.nama_skpd, true);
+										var url_edit = form.attr('action');
+										relayAjax({
+											url: url_edit,
+											data: data_post,
+											type: 'post',
+									        success: function(res){
+									        	resolve(res);
+									        }
+									    });
+							        }
+								});
+	    					})
+	    					.then(function(res){
+								var data_post = {
+									_token: _token,
+									alamat: sub_unit.alamat,
+									pimpinan_nm: sub_unit.nm_pimpinan,
+									pimpinan_nip: sub_unit.nip_pimpinan.replace(/ /g, ''),
+									pimpinan_jbt: sub_unit.jbt_pimpinan,
+									uraian_visi: sub_unit.ur_visi,
+									bank_nm: sub_unit.nm_bank,
+									bank_rek_bendahara: sub_unit.rek_bendahara,
+									npwp: sub_unit.npwp,
+									bendahara_nm: sub_unit.nama,
+									bendahara_nip: sub_unit.nip.replace(/ /g, ''),
+									bendahara_jbt: sub_unit.jabatan
+								};
+								pesan_loading('Update data sub unit', true);
+								relayAjax({
+									url: config.fmis_url+'/penatausahaan/parameter/penandatangan/data-subunit/create',
+									type: 'post',
+									data: data_post,
+								    success: function(res){
+								    	resolve_reduce(nextData);
+								    }
+								});
+	    					})
+						}else{
+							pesan_loading('USER '+user.nama+' tidak ditemukan di FMIS!', true);
+							resolve_reduce(nextData);
+						}
+					});
+    			});
+			})
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        })
+        .catch(function(e){
+            console.log(e);
+            return Promise.resolve(nextData);
+        });
+    }, Promise.resolve(data[last]))
+    .then(function(data_last){
+    	hide_loading();
+		alert('Berhasil singkronisasi data meta sub unit dari SIMDA!');
+	});
+}
