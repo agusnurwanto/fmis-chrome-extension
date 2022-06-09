@@ -1049,7 +1049,7 @@ function singkronisasi_data_pegawai(data){
     })
 }
 
-function singkronisasi_data_meta_sub_unit(data){
+function singkronisasi_data_meta_sub_unit_all(data){
 	var last = data.length - 1;
 	data.reduce(function(sequence, nextData){
         return sequence.then(function(sub_unit){
@@ -1077,63 +1077,9 @@ function singkronisasi_data_meta_sub_unit(data){
 							}
 						});
 						if(current_user){
-							new Promise(function(resolve, reject){
-	    						var url_form_edit = current_user.action.split('href="')[2].split('"')[0];
-	    						relayAjax({
-									url: url_form_edit+'?action=edit',
-							        success: function(form_edit){
-										var form = jQuery(form_edit.form);
-										var data_post = {
-											_token: _token,
-											_method: 'PUT',
-											kduser: current_user.kduser,
-											nmuser: current_user.nmuser,
-											nmket: current_user.nmket,
-											level: 'admin',
-											status: 1,
-											idunit: id_skpd,
-											idsubunit: id_skpd_fmis,
-											'idgroup[]': form.find('select[name="idgroup[]"]').val(),
-											'tahun[]': form.find('select[name="tahun[]"]').val()
-										};
-	    								pesan_loading('UPDATE User '+user.nama+' SET UNIT SKPD = '+sub_unit.skpd.nama_skpd, true);
-										var url_edit = form.attr('action');
-										relayAjax({
-											url: url_edit,
-											data: data_post,
-											type: 'post',
-									        success: function(res){
-									        	resolve(res);
-									        }
-									    });
-							        }
-								});
-	    					})
-	    					.then(function(res){
-								var data_post = {
-									_token: _token,
-									alamat: sub_unit.alamat,
-									pimpinan_nm: sub_unit.nm_pimpinan,
-									pimpinan_nip: sub_unit.nip_pimpinan.replace(/ /g, ''),
-									pimpinan_jbt: sub_unit.jbt_pimpinan,
-									uraian_visi: sub_unit.ur_visi,
-									bank_nm: sub_unit.nm_bank,
-									bank_rek_bendahara: sub_unit.rek_bendahara,
-									npwp: sub_unit.npwp,
-									bendahara_nm: sub_unit.nama,
-									bendahara_nip: sub_unit.nip.replace(/ /g, ''),
-									bendahara_jbt: sub_unit.jabatan
-								};
-								pesan_loading('Update data sub unit', true);
-								relayAjax({
-									url: config.fmis_url+'/penatausahaan/parameter/penandatangan/data-subunit/create',
-									type: 'post',
-									data: data_post,
-								    success: function(res){
-								    	resolve_reduce(nextData);
-								    }
-								});
-	    					})
+							singkronisasi_data_meta_sub_unit(data, function(){
+								resolve_reduce(nextData);
+							});
 						}else{
 							pesan_loading('USER '+user.nama+' tidak ditemukan di FMIS!', true);
 							resolve_reduce(nextData);
@@ -1155,4 +1101,230 @@ function singkronisasi_data_meta_sub_unit(data){
     	hide_loading();
 		alert('Berhasil singkronisasi data meta sub unit dari SIMDA!');
 	});
+}
+
+function singkronisasi_data_meta_sub_unit(data, cb = false){
+	get_id_sub_unit_penatausahaan()
+	.then(function(sub_unit_fmis){
+		var last = data.length - 1;
+		data.reduce(function(sequence, nextData){
+	        return sequence.then(function(sub_unit){
+	        	return new Promise(function(resolve_reduce, reject_reduce){
+	        		var id_skpd_fmis = sub_unit.skpd.id_mapping_fmis.split('.');
+	        		if(
+	        			id_skpd_fmis.length < 2 
+	        			|| id_skpd_fmis[1] == ''
+	        		){
+	        			console.log('id_skpd_fmis kosong!', sub_unit);
+	        			return resolve_reduce(nextData);
+	        		}
+
+	        		var id_skpd = id_skpd_fmis[0];
+	        		id_skpd_fmis = id_skpd_fmis[1];
+	        		if(id_skpd_fmis == sub_unit_fmis.idsubunit){
+	    				console.log('sub_unit', sub_unit);
+	    				show_loading('Get data umum existing '+sub_unit_fmis.nmsubunit);
+	    				var url = config.fmis_url+'/penatausahaan/parameter/penandatangan';
+	    				// https://stackoverflow.com/questions/3372962/can-i-remove-the-x-requested-with-header-from-ajax-requests
+						jQuery.ajax({
+							url: url,
+        					xhr: function() {
+						        var xhr = jQuery.ajaxSettings.xhr();
+						        var setRequestHeader = xhr.setRequestHeader;
+						        xhr.setRequestHeader = function(name, value) {
+						            if (name == 'X-Requested-With') return;
+						            setRequestHeader.call(this, name, value);
+						        }
+						        return xhr;
+						    },
+					        success: function(html){
+					        	var form = jQuery(html.split('<div class="container">')[1].split('</form>')[0]+'</form>');
+					        	var alamat_fmis = form.find('textarea[name="alamat"]').val();
+					        	if(alamat_fmis == ''){
+					        		alamat_fmis = sub_unit.alamat;
+					        	}
+					        	var pimpinan_nm_fmis = form.find('input[name="pimpinan_nm"]').val();
+					        	if(pimpinan_nm_fmis == ''){
+					        		pimpinan_nm_fmis = sub_unit.nm_pimpinan;
+					        	}
+					        	var pimpinan_nip_fmis = form.find('input[name="pimpinan_nip"]').val();
+					        	if(pimpinan_nip_fmis == ''){
+					        		pimpinan_nip_fmis = sub_unit.nip_pimpinan.replace(/ /g, '');
+					        	}
+					        	var pimpinan_jbt_fmis = form.find('input[name="pimpinan_jbt"]').val();
+					        	if(pimpinan_jbt_fmis == ''){
+					        		pimpinan_jbt_fmis = sub_unit.jbt_pimpinan;
+					        	}
+					        	var uraian_visi_fmis = form.find('input[name="uraian_visi"]').val();
+					        	if(uraian_visi_fmis == ''){
+					        		uraian_visi_fmis = sub_unit.ur_visi;
+					        	}
+					        	var bank_nm_fmis = form.find('select[name="bank_nm"]').val();
+					        	if(bank_nm_fmis == ''){
+					        		bank_nm_fmis = sub_unit.nm_bank;
+					        	}
+					        	var bank_rek_bendahara_fmis = form.find('input[name="bank_rek_bendahara"]').val();
+					        	if(bank_rek_bendahara_fmis == ''){
+					        		bank_rek_bendahara_fmis = sub_unit.rek_bendahara;
+					        	}
+					        	var npwp_fmis = form.find('input[name="npwp"]').val();
+					        	if(npwp_fmis == ''){
+					        		npwp_fmis = sub_unit.npwp;
+					        	}
+					        	var bendahara_nm_fmis = form.find('input[name="bendahara_nm"]').val();
+					        	if(bendahara_nm_fmis == ''){
+					        		bendahara_nm_fmis = sub_unit.nama;
+					        	}
+					        	var bendahara_nip_fmis = form.find('input[name="bendahara_nip"]').val();
+					        	if(bendahara_nip_fmis == ''){
+					        		bendahara_nip_fmis = sub_unit.nip.replace(/ /g, '');
+					        	}
+					        	var bendahara_jbt_fmis = form.find('input[name="bendahara_jbt"]').val();
+					        	if(bendahara_jbt_fmis == ''){
+					        		bendahara_jbt_fmis = sub_unit.jabatan;
+					        	}
+								var data_post = {
+									_token: _token,
+									alamat: alamat_fmis,
+									pimpinan_nm: pimpinan_nm_fmis,
+									pimpinan_nip: pimpinan_nip_fmis,
+									pimpinan_jbt: pimpinan_jbt_fmis,
+									uraian_visi: uraian_visi_fmis,
+									bank_nm: bank_nm_fmis,
+									bank_rek_bendahara: bank_rek_bendahara_fmis,
+									npwp: npwp_fmis,
+									bendahara_nm: bendahara_nm_fmis,
+									bendahara_nip: bendahara_nip_fmis,
+									bendahara_jbt: bendahara_jbt_fmis
+								};
+								pesan_loading('Update data sub unit '+sub_unit_fmis.nmsubunit, true);
+								relayAjax({
+									url: config.fmis_url+'/penatausahaan/parameter/penandatangan/data-subunit/create',
+									type: 'post',
+									data: data_post,
+								    success: function(res){
+								    	resolve_reduce(nextData);
+								    }
+								});
+		    				}
+		    			});
+	    			}else{
+	    				resolve_reduce(nextData);
+	    			};
+				})
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        })
+	        .catch(function(e){
+	            console.log(e);
+	            return Promise.resolve(nextData);
+	        });
+	    }, Promise.resolve(data[last]))
+	    .then(function(data_last){
+	    	if(typeof cb == 'function'){
+	    		cb();
+	    	}else{
+		    	hide_loading();
+				alert('Berhasil singkronisasi data meta sub unit dari SIMDA!');
+			}
+		});
+	});
+}
+
+function get_id_sub_unit_penatausahaan(){
+	pesan_loading('Get ID Sub Unit penatausahaan!');
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/parameter/penandatangan/create',
+	        success: function(html){
+	        	var form = jQuery(html);
+	        	resolve({
+	        		nmsubunit: form.find('input[name="nmsubunit"]').val(),
+	        		idsubunit: form.find('input[name="idsubunit"]').val()
+	        	});
+	        }
+	    });
+	});
+}
+
+function get_spp_up(){
+	return new Promise(function(resolve, reduce){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/up',
+	        success: function(res){
+	        	var spp = {};
+	        	res.data.map(function(b, i){
+	        		spp[b.spp_no] = b;
+	        	})
+	        	resolve(spp);
+	        }
+	    });
+	});
+}
+
+function singkronisasi_spp(data){
+	window.spp_simda = data;
+	get_spp_up()
+	.then(function(spp_fmis){
+		run_script('program_destroy');
+    	var body = '';
+		data.map(function(b, i){
+			if(
+				!spp_fmis[b.no_spp.trim()]
+				&& !spp_fmis['DRAFT-'+b.no_spp.trim()]
+			){
+				body += ''
+					+'<tr>'
+						+'<td><input type="checkbox" value="'+b.no_spp.trim()+'"></td>'
+						+'<td>'+b.no_spp.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}else{
+				if(spp_fmis[b.no_spp.trim()]){
+					var spp_fmis_selected = spp_fmis[b.no_spp.trim()];
+				}else{
+					var spp_fmis_selected = spp_fmis['DRAFT-'+b.no_spp.trim()];
+				}
+				var disabled = '';
+				var status = '';
+				if(spp_fmis_selected.status == 'Final'){
+					var disabled = 'disabled';
+					var status = ' (Stauts Final)';
+				}
+				body += ''
+					+'<tr>'
+						+'<td><input '+disabled+' type="checkbox" value="'+b.no_spp.trim()+'"> <b>EXISTING'+status+'</b></td>'
+						+'<td>'+b.no_spp.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}
+		});
+		jQuery('#konfirmasi-program tbody').html(body);
+		run_script('custom_dt_program');
+		hide_loading();
+    });
+}
+
+function singkronisasi_spp_modal(){
+	var data_selected = [];
+	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
+		var cek = jQuery(b).is(':checked');
+		if(cek){
+			var no_spp = jQuery(b).val();
+			spp_simda.map(function(bb, ii){
+				if(bb.no_spp == no_spp){
+					data_selected.push(bb);
+				}
+			});
+		}
+	});
+	if(data_selected.length >= 1){
+		if(confirm('Apakah anda yakin untuk mengsingkronkan data SPP?')){
+			console.log('data_selected', data_selected);
+		}
+	}
 }

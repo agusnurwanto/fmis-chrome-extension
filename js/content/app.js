@@ -634,6 +634,70 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			});
     	}
     });
+}else if(current_url.indexOf('/penatausahaan/skpd/bend-pengeluaran/spp/up') != -1){
+	var modal_spp = ''
+		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
+	        +'<div class="modal-dialog modal-xl" role="document">'
+	            +'<div class="modal-content">'
+	                +'<div class="modal-header bgpanel-theme" style="background: #8997bd;">'
+	                    +'<h4 class="modal-title text-white" id="">Daftar Surat Permintaan Pembayaran (SPP)</h4>'
+	                    +'<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"><i class="mdi mdi-close-circle"></i></span></button>'
+	                +'</div>'
+	                +'<div class="modal-body">'
+	                  	+'<table class="table table-hover table-striped" id="konfirmasi-program">'
+	                      	+'<thead>'
+	                        	+'<tr style="background: #8997bd;">'
+	                          		+'<th class="text-white"><input type="checkbox" id="modal_cek_all"></th>'
+	                          		+'<th class="text-white" width="300">No SPP</th>'
+	                          		+'<th class="text-white" width="300">SKPD</th>'
+	                          		+'<th class="text-white" width="500">Uraian</th>'
+	                        	+'</tr>'
+	                      	+'</thead>'
+	                      	+'<tbody></tbody>'
+	                  	+'</table>'
+	                +'</div>'
+	                +'<div class="modal-footer">'
+	                    +'<button type="button" class="btn btn-success" id="singkronisasi-spp-modal">Proses</button>'
+	                    +'<button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>'
+	                +'</div>'
+	            +'</div>'
+	        +'</div>'
+	    +'</div>';
+	jQuery('body').append(modal_spp);
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkronisasi_data_spp_up">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Data SPP dari SIMDA'
+    +'</button>';
+    jQuery('.btn[title="Tambah SPP"]').parent().append(btn);
+    jQuery('#singkronisasi_data_spp_up').on('click', function(){
+    	get_id_sub_unit_penatausahaan()
+    	.then(function(sub_unit_fmis){
+    		show_loading();
+	    	var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_spp',
+							tipe: 'up',
+							idsubunit: sub_unit_fmis.idsubunit,
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+	    });
+    });
+    jQuery('#singkronisasi-spp-modal').on('click', function(){
+    	singkronisasi_spp_modal();
+    });
 }else if(current_url.indexOf('/penatausahaan/skpkd/bud/spd') != -1){
 	var modal_spd = ''
 		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
