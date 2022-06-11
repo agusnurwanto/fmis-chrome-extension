@@ -53,6 +53,14 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			continue_spd_rinci(res.data);
+		}else if(res.action == 'get_spp_rinci'){
+			_alert = false;
+			cek_hide_loading = false;
+			continue_spp_rinci(res.data);
+		}else if(res.action == 'get_tagihan'){
+			_alert = false;
+			cek_hide_loading = false;
+			singkronisasi_tagihan(res.data);
 		}else if(res.action == 'get_spp'){
 			_alert = false;
 			cek_hide_loading = false;

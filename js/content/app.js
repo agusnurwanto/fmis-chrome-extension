@@ -670,9 +670,10 @@ if(current_url.indexOf('parameter/rekening') != -1){
     +'</button>';
     jQuery('.btn[title="Tambah SPP"]').parent().append(btn);
     jQuery('#singkronisasi_data_spp_up').on('click', function(){
+    	show_loading();
+    	window.tipe_spp_global = 'up';
     	get_id_sub_unit_penatausahaan()
     	.then(function(sub_unit_fmis){
-    		show_loading();
 	    	var data = {
 			    message:{
 			        type: "get-url",
@@ -681,7 +682,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 					    type: 'post',
 					    data: { 
 							action: 'get_spp',
-							tipe: 'up',
+							tipe: tipe_spp_global,
 							idsubunit: sub_unit_fmis.idsubunit,
 							tahun_anggaran: config.tahun_anggaran,
 							api_key: config.api_key
@@ -697,6 +698,69 @@ if(current_url.indexOf('parameter/rekening') != -1){
     });
     jQuery('#singkronisasi-spp-modal').on('click', function(){
     	singkronisasi_spp_modal();
+    });
+}else if(current_url.indexOf('/penatausahaan/skpd/tu/tagihan') != -1){
+	var modal_spp = ''
+		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
+	        +'<div class="modal-dialog modal-xl" role="document">'
+	            +'<div class="modal-content">'
+	                +'<div class="modal-header bgpanel-theme" style="background: #8997bd;">'
+	                    +'<h4 class="modal-title text-white" id="">Daftar Tagihan</h4>'
+	                    +'<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"><i class="mdi mdi-close-circle"></i></span></button>'
+	                +'</div>'
+	                +'<div class="modal-body">'
+	                  	+'<table class="table table-hover table-striped" id="konfirmasi-program">'
+	                      	+'<thead>'
+	                        	+'<tr style="background: #8997bd;">'
+	                          		+'<th class="text-white"><input type="checkbox" id="modal_cek_all"></th>'
+	                          		+'<th class="text-white" width="300">No Tagihan</th>'
+	                          		+'<th class="text-white" width="300">SKPD</th>'
+	                          		+'<th class="text-white" width="500">Uraian</th>'
+	                        	+'</tr>'
+	                      	+'</thead>'
+	                      	+'<tbody></tbody>'
+	                  	+'</table>'
+	                +'</div>'
+	                +'<div class="modal-footer">'
+	                    +'<button type="button" class="btn btn-success" id="singkronisasi-tagihan-modal">Proses</button>'
+	                    +'<button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>'
+	                +'</div>'
+	            +'</div>'
+	        +'</div>'
+	    +'</div>';
+	jQuery('body').append(modal_spp);
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkronisasi_data_tagihan">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Data Tagihan dari SIMDA'
+    +'</button>';
+    jQuery('.btn[data-title="Tambah Tagihan Non Kontrak"]').parent().append(btn);
+    jQuery('#singkronisasi_data_tagihan').on('click', function(){
+    	show_loading();
+    	get_id_sub_unit_penatausahaan()
+    	.then(function(sub_unit_fmis){
+	    	var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_tagihan',
+							idsubunit: sub_unit_fmis.idsubunit,
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+	    });
+    });
+    jQuery('#singkronisasi-tagihan-modal').on('click', function(){
+    	singkronisasi_tagihan_modal();
     });
 }else if(current_url.indexOf('/penatausahaan/skpkd/bud/spd') != -1){
 	var modal_spd = ''
@@ -733,13 +797,19 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	    +'</div>';
 	jQuery('body').append(modal_spd);
 	var btn = ''
+	+'<button type="button" class="btn btn-outline-primary btn-sm" style="margin-left: 10px; float: right;" id="verifikasi-spd">'
+        +'<i class="fas fa-check fa-fw"></i> Verifikasi SPD FMIS'
+    +'</button>'
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 10px; float: right;" id="singkronisasi-spd">'
-        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SPD dari SIMDA'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SPD dari SIMDA dan Verifikasi SPD FMIS'
     +'</button>'
 	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 10px; float: right;" id="singkronisasi-spd-lokal">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SPD ke DB Lokal'
     +'</button>';
     jQuery('a[title="Tambah SPD"]').after(btn);
+    jQuery('#verifikasi-spd').on('click', function(){
+    	verifikasi_spd();
+    });
     jQuery('#singkronisasi-spd-lokal').on('click', function(){
     	singkronisasi_spd_lokal();
     });
@@ -766,7 +836,11 @@ if(current_url.indexOf('parameter/rekening') != -1){
 		});
     });
     jQuery('#singkronisasi-spd-modal').on('click', function(){
-    	singkronisasi_spd_modal();
+    	if(jQuery(this).attr('verifikasi') == 1){
+    		verifikasi_spd_modal();
+    	}else{
+    		singkronisasi_spd_modal();
+    	}
     });
 	jQuery('#modal_cek_all').on('click', function(){
 		var cek = jQuery(this).is(':checked');
