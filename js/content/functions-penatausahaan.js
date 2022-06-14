@@ -17,6 +17,25 @@ function get_list_spd(){
 	});
 }
 
+function get_list_tagihan(){
+	return new Promise(function(resolve2, reject2){
+		var url = config.fmis_url+'/penatausahaan/skpd/tu/tagihan';
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	var data = {};
+	        	res.data.map(function(b, i){
+	        		data[b.tagihan_no] = b;
+	        	})
+	        	resolve2(data);
+	        },
+	        error: function(e){
+	        	console.log('Error save program!', e, this.data);
+	        }
+		});
+	});
+}
+
 function get_list_penandatangan(){
 	return new Promise(function(resolve2, reject2){
 		var url = config.fmis_url+'/penatausahaan/skpkd/bud/spd/pilih-data?load=penandatangan';
@@ -121,40 +140,40 @@ function singkronisasi_spd(res){
 	});
 }
 
-function singkronisasi_tagihan(res){
-	window.spd_simda = res.data;
+function singkronisasi_tagihan(data){
+	window.tagihan_simda = data;
 	get_list_tagihan()
-	.then(function(spd_fmis){
+	.then(function(tagihan_fmis){
 		run_script('program_destroy');
 		var body = '';
-		spd_simda.map(function(b, i){
+		tagihan_simda.map(function(b, i){
 			if(
-				!spd_fmis[b.no_spd.trim()]
-				&& !spd_fmis['DRAFT-'+b.no_spd.trim()]
+				!tagihan_fmis[b.no_tagihan.trim()]
+				&& !tagihan_fmis['DRAFT-'+b.no_tagihan.trim()]
 			){
 				body += ''
 					+'<tr>'
-						+'<td><input type="checkbox" value="'+b.no_spd.trim()+'"></td>'
-						+'<td>'+b.no_spd.trim()+'</td>'
+						+'<td><input type="checkbox" value="'+b.no_tagihan.trim()+'"></td>'
+						+'<td>'+b.no_tagihan.trim()+'</td>'
 						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
 						+'<td>'+b.uraian+'</td>'
 					+'</tr>';
 			}else{
-				if(spd_fmis[b.no_spd.trim()]){
-					var spd_fmis_selected = spd_fmis[b.no_spd.trim()];
+				if(tagihan_fmis[b.no_tagihan.trim()]){
+					var tagihan_fmis_selected = tagihan_fmis[b.no_tagihan.trim()];
 				}else{
-					var spd_fmis_selected = spd_fmis['DRAFT-'+b.no_spd.trim()];
+					var tagihan_fmis_selected = tagihan_fmis['DRAFT-'+b.no_tagihan.trim()];
 				}
 				var disabled = '';
 				var status = '';
-				if(spd_fmis_selected.status == 'Final'){
+				if(tagihan_fmis_selected.status == 'Final'){
 					var disabled = 'disabled';
 					var status = ' (Status Final)';
 				}
 				body += ''
 					+'<tr>'
-						+'<td><input '+disabled+' type="checkbox" value="'+b.no_spd.trim()+'"> <b>EXISTING'+status+'</b></td>'
-						+'<td>'+b.no_spd.trim()+'</td>'
+						+'<td><input '+disabled+' type="checkbox" value="'+b.no_tagihan.trim()+'"> <b>EXISTING'+status+'</b></td>'
+						+'<td>'+b.no_tagihan.trim()+'</td>'
 						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
 						+'<td>'+b.uraian+'</td>'
 					+'</tr>';
@@ -606,6 +625,18 @@ function load_spp_sub_keg(id_spp_fmis){
 			url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/up/pilih-data/'+id_spp_fmis+'?load=subkegiatan',
 	        success: function(res){
 	        	resolve(res);
+	        }
+	    });
+	});
+}
+
+function load_tagihan_sub_keg(id_tagihan_fmis){
+	pesan_loading('Load all sub kegiatan dari id_tagihan_fmis='+id_tagihan_fmis, true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=subkegiatan',
+	        success: function(res){
+	        	resolve(res.data);
 	        }
 	    });
 	});
@@ -1232,6 +1263,341 @@ function cek_insert_spp_rinci(spp){
 	});
 }
 
+function cek_insert_tagihan_rinci(tagihan){
+	return new Promise(function(resolve, reject){
+		var id_tagihan_fmis = tagihan.tagihan_fmis.action.split('href="').pop().split('"')[0].split('/').pop();
+		load_tagihan_sub_keg(id_tagihan_fmis)
+		.then(function(res_sub){
+			var last = tagihan.tagihan_simda_rinci.length - 1;
+	        var kdurut = 0;
+	        var tagihan_unik = {};
+	        tagihan.tagihan_fmis_rinci.map(function(b, i){
+    			var kode_akun = b.kdrek1+'.'+b.kdrek2+'.'+b.kdrek3+'.'+b.kdrek4+'.'+b.kdrek5+'.'+b.kdrek6;
+    			var nama_unik = kode_akun;
+    			if(!tagihan_unik[nama_unik]){
+    				tagihan_unik[nama_unik] = {
+						jml_sipd: 0,
+						jml_fmis: 1
+					};
+    			}else{
+    				tagihan_unik[nama_unik].jml_fmis++;
+    			}
+        	});
+	        tagihan.tagihan_simda_rinci.map(function(b, i){
+    			var kode_akun = b.detail.kode_akun;
+    			var nama_unik = kode_akun;
+    			if(!tagihan_unik[nama_unik]){
+    				tagihan_unik[nama_unik] = {
+						jml_sipd: 1,
+						jml_fmis: 0
+					};
+    			}else{
+    				tagihan_unik[nama_unik].jml_sipd++;
+    			}
+        	});
+
+	        console.log('tagihan_unik', tagihan_unik);
+			var cek_double = {sipd: {}, fmis: {}};
+	        tagihan.tagihan_simda_rinci.reduce(function(sequence, nextData){
+	            return sequence.then(function(tagihan_rinci){
+	            	return new Promise(function(resolve_reduce, reject_reduce){
+	            		var nama_simda_unik = tagihan_rinci.detail.kode_akun+replace_string(tagihan_rinci.detail.nama_sub_giat);
+	            		if(!cek_double.sipd[nama_simda_unik]){
+							cek_double.sipd[nama_simda_unik] = [];
+						}
+						cek_double.sipd[nama_simda_unik].push(tagihan_rinci.detail);
+						cek_double.fmis = {};
+
+	            		var cek_exist = false;
+    					var need_update = false;
+	            		tagihan.tagihan_fmis_rinci.map(function(b, i){
+	            			var kode_akun = b.kdrek1+'.'+b.kdrek2+'.'+b.kdrek3+'.'+b.kdrek4+'.'+b.kdrek5+'.'+b.kdrek6;
+	            			var nama_fmis_unik = kode_akun;
+	            			if(!cek_double.fmis[nama_fmis_unik]){
+								cek_double.fmis[nama_fmis_unik] = [];
+							}
+							cek_double.fmis[nama_fmis_unik].push(b);
+							// cek jika nama unik sudah terinsert atau belum
+		            		if(nama_simda_unik == nama_fmis_unik){
+		            			// cek jika jumlah rincian unik fmis sudah sama dengan jumlah rincian sipd
+		            			if(tagihan_unik[nama_fmis_unik].jml_fmis >= tagihan_unik[nama_fmis_unik].jml_sipd){
+		            				cek_exist = b;
+		            				if(
+										(
+											+b.nilai != +tagihan_rinci.nilai
+											|| b.kdurut != tagihan_rinci.no_id 
+										)
+										&& cek_double.sipd[nama_fmis_unik].length == cek_double.fmis[nama_fmis_unik].length
+									){
+		            					console.log('URAIAN BELANJA UNIK: ('+(+b.nilai)+' != '+(+tagihan_rinci.nilai)+' || '+b.kdurut+' != '+tagihan_rinci.no_id+') && '+cek_double.sipd[nama_fmis_unik].length+' == '+cek_double.fmis[nama_fmis_unik].length, nama_fmis_unik, tagihan_rinci, b);
+										need_update = b;
+		            				}
+		            			}else{
+		            				rka_unik[nama_fmis_unik].jml_fmis++;
+		            			}
+		            		}
+
+		            		if(kdurut <= +b.kdurut){
+								kdurut = +b.kdurut;
+							}
+		            	});
+		            	if(!cek_exist){
+		            		new Promise(function(resolve2, reject2){
+								var keyword_simda = tagihan_rinci.detail.nama_sub_giat;
+		            			pesan_loading('Get ID sub kegiatan FMIS dari nomenklatur '+keyword_simda, true);
+					        	var id_sub_kegiatan = false;
+					        	res_sub.map(function(b, i){
+					        		var keyword_fmis = b.name;
+					        		if(replace_string(keyword_fmis) == replace_string(keyword_simda)){
+					        			id_sub_kegiatan = b.columnId;
+					        		}
+					        	});
+					        	if(id_sub_kegiatan){
+					        		resolve2(id_sub_kegiatan);
+					        	}else{
+					        		reject2('ID sub kegiatan FMIS dari nomenklatur '+keyword_simda+' tidak ditemukan!');
+					        	}
+		            		})
+		            		// get aktivitas
+		            		.then(function(id_sub_kegiatan){
+		            			return new Promise(function(resolve2, reject2){
+		            				pesan_loading('Get All aktivitas FMIS dari id '+id_sub_kegiatan, true);
+			            			relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=aktivitas&id='+id_sub_kegiatan,
+								        success: function(res){
+								        	var aktivitas_all = [];
+								        	res.data.map(function(b, i){
+								        		var id_unit_fmis = b.idsubunit;
+								        		if(id_unit_fmis == tagihan.skpd.id_mapping_fmis.split('.').pop()){
+								        			var nama_aktivitas = b.name;
+									        		aktivitas_all.push({
+									        			id_sub_kegiatan: id_sub_kegiatan,
+									        			id: b.columnId,
+									        			nama: nama_aktivitas,
+									        			total: b.nilai
+									        		});
+									        	}
+								        	});
+								        	resolve2(aktivitas_all);
+								        }
+								    })
+			            		});
+		            		})
+		            		// cek rekening
+		            		.then(function(aktivitas_all){
+		            			return new Promise(function(resolve2, reject2){
+		            				if(aktivitas_all.length == 1){
+		            					relayAjax({
+											url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=rekening&id='+aktivitas_all[0].id,
+									        success: function(res){
+									        	var id_rekening = [];
+									        	res.data.map(function(b, i){
+									        		var nama_rekening = b.name;
+									        		var kode_rekening = b.code;
+									        		var spd = b.columnSpd;
+									        		if(kode_rekening == tagihan_rinci.detail.kode_akun){
+										        		id_rekening.push({
+										        			id_sub_kegiatan: aktivitas_all[0].id_sub_kegiatan,
+										        			id: b.columnId,
+										        			nama: nama_rekening,
+										        			kode_rekening: kode_rekening,
+										        			spd: spd,
+										        			total: b.nilai
+										        		});
+										        	}
+									        	});
+									        	resolve2(id_rekening);
+									        }
+									    });
+			            			}else{
+			            				reject2('Ada lebih dari 1 aktivitas pada sub kegiatan ini. Perlu input manual tagihan sesuai aktivitas yang dipilih! '+JSON.stringify(aktivitas_all));
+			            			}
+		            			})
+		            		})
+		            		// insert rincian tagihan
+		            		.then(function(id_rekening){
+			            		return new Promise(function(resolve2, reject2){
+		            				if(id_rekening.length == 1){
+		            					relayAjax({
+											url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-spd/'+id_tagihan_fmis+'?spd='+id_rekening[0].spd,
+									        success: function(res_spd){
+									        	var id_spd_selected = false;
+									        	for(var id_spd in res_spd.spd){
+									        		if(res_spd.spd[id_spd] == tagihan.no_spd){
+									        			id_spd_selected = id_spd;
+									        		}
+									        	}
+									        	if(id_spd_selected){
+						            				pesan_loading('Insert tagihan rinci rek='+tagihan_rinci.detail.kode_akun+', total='+tagihan_rinci.nilai+', no tagihan='+tagihan.no_tagihan, true);
+													var data_post = {
+														_token: _token,
+														nmrek: id_rekening[0].nama,
+														idrefaktivitas: id_rekening[0].id,
+														kdrek: id_rekening[0].kode_rekening,
+														nilai: to_number(tagihan_rinci.nilai, true),
+														idspd: id_spd_selected
+													};
+						            				relayAjax({
+														url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/create/'+id_tagihan_fmis,
+														type: 'post',
+														data: data_post,
+												        success: function(res){
+												        	resolve_reduce(nextData);
+												        }
+												    });
+						            			}else{
+				            						reject2('ID SPD tidak ditemukan! '+JSON.stringify(res_spd.spd)+' != '+tagihan.no_spd);
+						            			}
+									        }
+									    });
+				            		}else{
+				            			reject2('Ada lebih dari 1 rekening pada aktivitas ini. Perlu input manual tagihan sesuai rekening yang dipilih! '+JSON.stringify(id_rekening));
+				            		}
+				            	});
+		            		})
+		            		.catch(function(message){
+		            			pesan_loading(message, true);
+		            			resolve_reduce(nextData);
+		            		});
+		            	}else if(need_update){
+	            			return new Promise(function(resolve2, reject2){
+	            				var url_form = need_update.action.split('href="');
+	            				if(url_form.length >= 3){
+	            					pesan_loading('Update tagihan rinci rek='+tagihan_rinci.detail.kode_akun+', total='+tagihan_rinci.nilai+', no tagihan='+tagihan.no_tagihan, true);
+		            				relayAjax({
+										url: url_form[1].split('"')[0],
+								        success: function(res){
+								        	var url_update = jQuery(res).find('form').attr('action');
+											var data_post = {
+												_token: _token,
+												kdurut: tagihan_rinci.no_id,
+												idrefaktivitas: need_update.idrefaktivitas,
+												kdrek1: need_update.kdrek1,
+												kdrek2: need_update.kdrek2,
+												kdrek3: need_update.kdrek3,
+												kdrek4: need_update.kdrek4,
+												kdrek5: need_update.kdrek5,
+												kdrek6: need_update.kdrek6,
+												aktivitas_uraian: need_update.aktivitas,
+												nilai: formatMoney(tagihan_rinci.nilai, 2, ',', '.')
+											}
+											if(tipe_tagihan_global != 'up'){
+												data_post.idsubunit = need_update.idsubunit;
+											}
+				            				relayAjax({
+												url: url_update,
+												type: 'post',
+												data: data_post,
+										        success: function(res){
+										        	resolve_reduce(nextData);
+										        }
+										    });
+				            			}
+								    });
+	            				}else{
+	            					pesan_loading('Tombol edit tidak ada! tagihan rinci rek='+cek_exist.rekening+', total='+cek_exist.nilai+', no tagihan='+tagihan.no_tagihan, true);
+		            				resolve_reduce(nextData);
+	            				}
+		            		});
+		            	}else{
+		            		pesan_loading('Sudah ada! tagihan rinci rek='+cek_exist.rekening+', total='+cek_exist.nilai+', no tagihan='+tagihan.no_tagihan, true);
+		            		resolve_reduce(nextData);
+		            	}
+	            	})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(tagihan.tagihan_simda_rinci[last]))
+	        .then(function(data_last){
+	        	var tagihan_unik_fmis = {};
+	        	tagihan.tagihan_fmis_rinci.map(function(b, i){
+        			var kode_akun = b.rekening.split(' ').shift();
+        			var nama_fmis_unik = kode_akun+replace_string(b.subkegiatan);
+					if(!tagihan_unik_fmis[nama_fmis_unik]){
+						tagihan_unik_fmis[nama_fmis_unik] = [];
+					}
+					tagihan_unik_fmis[nama_fmis_unik].push(b);
+				});
+	        	var kosongkan_rincian = [];
+	        	for(var nama_rincian_unik in tagihan_unik){
+	        		var selisih = tagihan_unik[nama_rincian_unik].jml_fmis - tagihan_unik[nama_rincian_unik].jml_sipd;
+	        		// cek jika ada rincian yang ada di fmis dan tidak ada di sipd. bisa karena diinput manual atau karena rincian di sipd dihapus. rincian ini perlu di nolkan agar pagu sub kegiatannya sama dengan sipd
+	        		if(selisih >= 1){
+	        			tagihan_unik_fmis[nama_rincian_unik].map(function(b, i){
+							if(i < selisih){
+								if(to_number(b.nilai) > 0){
+									kosongkan_rincian.push(b);
+								}
+								tagihan_unik[nama_rincian_unik].jml_sipd++;
+							}
+						});
+	        		}
+	        	}
+	        	console.log('kosongkan_rincian', kosongkan_rincian);
+	        	var last = kosongkan_rincian.length - 1;
+	        	kosongkan_rincian.reduce(function(sequence2, nextData2){
+		            return sequence2.then(function(need_update){
+		        		return new Promise(function(resolve_reduce2, reject_reduce2){
+		        			var url_form = need_update.action.split('href="');
+		        			if(url_form.length >= 3){
+			        			pesan_loading('Kosongkan tagihan rinci rek='+need_update.rekening+', total=0, no tagihan='+tagihan.no_tagihan, true);
+	            				relayAjax({
+									url: url_form[1].split('"')[0],
+							        success: function(res){
+							        	var url_update = jQuery(res).find('form').attr('action');
+										var data_post = {
+											_token: _token,
+											kdurut: tagihan_rinci.no_id,
+											idrefaktivitas: need_update.idrefaktivitas,
+											idsubunit: need_update.idsubunit,
+											kdrek1: need_update.kdrek1,
+											kdrek2: need_update.kdrek2,
+											kdrek3: need_update.kdrek3,
+											kdrek4: need_update.kdrek4,
+											kdrek5: need_update.kdrek5,
+											kdrek6: need_update.kdrek6,
+											aktivitas_uraian: need_update.aktivitas,
+											nilai: formatMoney(0, 2, ',', '.')
+										}
+			            				relayAjax({
+											url: url_update,
+											type: 'post',
+											data: data_post,
+									        success: function(res){
+									        	resolve_reduce2(nextData2);
+									        }
+									    });
+			            			}
+							    });
+	            			}else{
+            					pesan_loading('Tombol edit tidak ada! tagihan rinci rek='+need_update.rekening+', total='+need_update.nilai+', no tagihan='+tagihan.no_spd, true);
+								resolve_reduce2(nextData2);
+	            			}
+		        		})
+		                .catch(function(e){
+		                    console.log(e);
+		                    return Promise.resolve(nextData2);
+		                });
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData2);
+		            });
+		        }, Promise.resolve(kosongkan_rincian[last]))
+		        .then(function(data_last){
+    				resolve();
+	        	});
+    		});
+	    });
+	});
+}
+
 function get_spd_rinci_fmis(spd_fmis){
 	pesan_loading('get SPD rinci FMIS dengan no='+spd_fmis.spd_no, true);
 	return new Promise(function(resolve, reject){
@@ -1249,6 +1615,19 @@ function get_spp_rinci_fmis(spp_fmis){
 	pesan_loading('get SPP rinci FMIS dengan no='+spp_fmis.spp_no, true);
 	return new Promise(function(resolve, reject){
 		var url = spp_fmis.action.split('href="').pop().split('"')[0].replace('/spp/up/rincian/', '/spp/up/rincian/data/');
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	resolve(res.data);
+	        }
+	    });
+	});
+}
+
+function get_tagihan_rinci_fmis(data){
+	pesan_loading('get tagihan rinci FMIS dengan no='+data.tagihan_no, true);
+	return new Promise(function(resolve, reject){
+		var url = data.action.split('href="').pop().split('"')[0].replace('/skpd/tu/tagihan/rincian/', '/skpd/tu/tagihan/rincian/datatable/');
 		relayAjax({
 			url: url,
 	        success: function(res){
@@ -1304,7 +1683,7 @@ function get_data_pegawai_penandatangan(){
 }
 
 function get_spp_rinci_simda(spp_simda){
-	pesan_loading('get SPD rinci SIMDA dengan no='+spp_simda.no_spp, true);
+	pesan_loading('get SPP rinci SIMDA dengan no='+spp_simda.no_spp, true);
 	return new Promise(function(resolve, reject){
 		window.continue_spp_rinci = resolve;
 		var data = {
@@ -1995,6 +2374,169 @@ function singkronisasi_spp_modal(){
 	        .then(function(){
 		    	run_script('reload_spd');
 				alert('Berhasil singkronisasi SPP!');
+		    	run_script('program_hide');
+				hide_loading();
+			});
+		}
+	}else{
+		alert('Pilih data dulu!');
+	}
+}
+
+function singkronisasi_tagihan_modal(){
+	var data_selected = [];
+	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
+		var cek = jQuery(b).is(':checked');
+		if(cek){
+			var no_tagihan = jQuery(b).val();
+			tagihan_simda.map(function(bb, ii){
+				if(bb.no_tagihan == no_tagihan){
+					data_selected.push(bb);
+				}
+			});
+		}
+	});
+	if(data_selected.length >= 1){
+		if(confirm('Apakah anda yakin untuk mengsingkronkan data SPP?')){
+			show_loading();
+			console.log('data_selected', data_selected);
+			new Promise(function(resolve, reject){
+    			get_list_tagihan()
+				.then(function(tagihan_fmis){
+					var last = data_selected.length - 1;
+					data_selected.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+								var jns_belanja_ls = 1;
+								var idjnstagihan = 1;
+								if(current_data.jns_tagihan == 5){
+									jns_belanja_ls = 5;
+									idjnstagihan = 9;
+								}
+								var data_post = {
+		        					_token: _token,
+									tagihan_no: current_data.no_tagihan.trim(),
+									tagihan_tgl: current_data.tgl_tagihan.split(' ')[0],
+									uraian: current_data.uraian,
+									tipetagihan: 0,
+									jns_belanja_ls: jns_belanja_ls,
+									idjnstagihan: idjnstagihan,
+									pct_tkdn: 0,
+									idrup: ""
+		        				}
+								if(
+									!tagihan_fmis[current_data.no_tagihan.trim()]
+									&& !tagihan_fmis['DRAFT-'+current_data.no_tagihan.trim()]
+								){
+			        				pesan_loading('Simpan data tagihan '+current_data.no_tagihan, true);
+			        				relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/create/0',
+										type: 'post',
+										data: data_post,
+								        success: function(res){
+								        	resolve_reduce(nextData);
+								        }
+								    });
+								}else{
+									if(tagihan_fmis[current_data.no_tagihan.trim()]){
+										var tagihan_fmis_selected = tagihan_fmis[current_data.no_tagihan.trim()];
+									}else{
+										var tagihan_fmis_selected = tagihan_fmis['DRAFT-'+current_data.no_tagihan.trim()];
+									}
+									if(
+										tagihan_fmis_selected.action.indexOf('update') == -1
+										|| (
+											current_data.uraian == tagihan_fmis_selected.uraian
+											&& current_data.tgl_tagihan.split(' ')[0] == tagihan_fmis_selected.tagihan_tgl
+										)
+									){
+										return resolve_reduce(nextData);
+									}
+									var id_tagihan_fmis = tagihan_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
+									pesan_loading('Perlu update data tagihan '+current_data.no_tagihan, true);
+			        				relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/update/'+id_tagihan_fmis,
+										type: 'post',
+										data: data_post,
+								        success: function(res){
+								        	resolve_reduce(nextData);
+								        }
+								    });
+								}
+			        		})
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(data_selected[last]))
+			        .then(function(data_last){
+				    	resolve();
+					});
+				});
+			})
+	        .then(function(){
+	        	// singkronisasi rincian Tagihan
+	        	return new Promise(function(resolve, reject){
+	    			get_list_tagihan()
+					.then(function(tagihan_fmis){
+						var last = data_selected.length - 1;
+						data_selected.reduce(function(sequence, nextData){
+				            return sequence.then(function(current_data){
+				        		return new Promise(function(resolve_reduce, reject_reduce){
+				        			if(
+										tagihan_fmis[current_data.no_tagihan.trim()]
+										|| tagihan_fmis['DRAFT-'+current_data.no_tagihan.trim()]
+									){
+										if(tagihan_fmis[current_data.no_tagihan.trim()]){
+											var tagihan_fmis_selected = tagihan_fmis[current_data.no_tagihan.trim()];
+										}else{
+											var tagihan_fmis_selected = tagihan_fmis['DRAFT-'+current_data.no_tagihan.trim()];
+										}
+										if(tagihan_fmis_selected.action.indexOf('update') == -1){
+											return resolve_reduce(nextData);
+										}
+										current_data.tagihan_fmis = tagihan_fmis_selected;
+										get_tagihan_rinci_fmis(current_data.tagihan_fmis)
+				            			.then(function(tagihan_fmis_rinci){
+				            				current_data.tagihan_fmis_rinci = tagihan_fmis_rinci;
+					            			get_spp_rinci_simda(current_data)
+					            			.then(function(tagihan_simda_rinci){
+					            				current_data.tagihan_simda_rinci = tagihan_simda_rinci;
+					            				cek_insert_tagihan_rinci(current_data)
+					            				.then(function(){
+					            					resolve_reduce(nextData);
+					            				})
+					            			});
+				            			});
+				        			}else{
+				        				pesan_loading('Tidak ditemukan! Data tagihan '+current_data.no_tagihan, true);
+				        				resolve_reduce(nextData);
+				        			}
+				        		})
+				                .catch(function(e){
+				                    console.log(e);
+				                    return Promise.resolve(nextData);
+				                });
+				            })
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData);
+				            });
+				        }, Promise.resolve(data_selected[last]))
+				        .then(function(data_last){
+					    	resolve();
+						});
+					});
+				});
+	        })
+	        .then(function(){
+		    	run_script('reload_tagihan');
+				alert('Berhasil singkronisasi tagihan!');
 		    	run_script('program_hide');
 				hide_loading();
 			});

@@ -73,5 +73,8 @@ window.addEventListener('message', function(event) {
     	case 'reload_spd':
     		tableDokumen.ajax.reload(null, false);
 			break;
+    	case 'reload_tagihan':
+    		tableTagihan.ajax.reload(null, false);
+			break;
 	}
 });
