@@ -762,6 +762,11 @@ if(current_url.indexOf('parameter/rekening') != -1){
     jQuery('#singkronisasi-tagihan-modal').on('click', function(){
     	singkronisasi_tagihan_modal();
     });
+	jQuery('#modal_cek_all').on('click', function(){
+		var cek = jQuery(this).is(':checked');
+		jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').prop('checked', cek);
+		jQuery('#konfirmasi-program tbody tr input[type="checkbox"][disabled]').prop('checked', false);
+	});
 }else if(current_url.indexOf('/penatausahaan/skpkd/bud/spd') != -1){
 	var modal_spd = ''
 		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'

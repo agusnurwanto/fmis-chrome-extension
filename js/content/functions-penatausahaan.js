@@ -1269,7 +1269,6 @@ function cek_insert_tagihan_rinci(tagihan){
 		load_tagihan_sub_keg(id_tagihan_fmis)
 		.then(function(res_sub){
 			var last = tagihan.tagihan_simda_rinci.length - 1;
-	        var kdurut = 0;
 	        var tagihan_unik = {};
 	        tagihan.tagihan_fmis_rinci.map(function(b, i){
     			var kode_akun = b.kdrek1+'.'+b.kdrek2+'.'+b.kdrek3+'.'+b.kdrek4+'.'+b.kdrek5+'.'+b.kdrek6;
@@ -1301,7 +1300,7 @@ function cek_insert_tagihan_rinci(tagihan){
 	        tagihan.tagihan_simda_rinci.reduce(function(sequence, nextData){
 	            return sequence.then(function(tagihan_rinci){
 	            	return new Promise(function(resolve_reduce, reject_reduce){
-	            		var nama_simda_unik = tagihan_rinci.detail.kode_akun+replace_string(tagihan_rinci.detail.nama_sub_giat);
+	            		var nama_simda_unik = tagihan_rinci.detail.kode_akun;
 	            		if(!cek_double.sipd[nama_simda_unik]){
 							cek_double.sipd[nama_simda_unik] = [];
 						}
@@ -1324,27 +1323,22 @@ function cek_insert_tagihan_rinci(tagihan){
 		            				cek_exist = b;
 		            				if(
 										(
-											+b.nilai != +tagihan_rinci.nilai
-											|| b.kdurut != tagihan_rinci.no_id 
+											to_number(b.nilai) != +tagihan_rinci.nilai
 										)
 										&& cek_double.sipd[nama_fmis_unik].length == cek_double.fmis[nama_fmis_unik].length
 									){
-		            					console.log('URAIAN BELANJA UNIK: ('+(+b.nilai)+' != '+(+tagihan_rinci.nilai)+' || '+b.kdurut+' != '+tagihan_rinci.no_id+') && '+cek_double.sipd[nama_fmis_unik].length+' == '+cek_double.fmis[nama_fmis_unik].length, nama_fmis_unik, tagihan_rinci, b);
+		            					console.log('URAIAN BELANJA UNIK: ('+to_number(b.nilai)+' != '+(+tagihan_rinci.nilai)+' && '+cek_double.sipd[nama_fmis_unik].length+' == '+cek_double.fmis[nama_fmis_unik].length, nama_fmis_unik, tagihan_rinci, b);
 										need_update = b;
 		            				}
 		            			}else{
 		            				rka_unik[nama_fmis_unik].jml_fmis++;
 		            			}
 		            		}
-
-		            		if(kdurut <= +b.kdurut){
-								kdurut = +b.kdurut;
-							}
 		            	});
 		            	if(!cek_exist){
 		            		new Promise(function(resolve2, reject2){
 								var keyword_simda = tagihan_rinci.detail.nama_sub_giat;
-		            			pesan_loading('Get ID sub kegiatan FMIS dari nomenklatur '+keyword_simda, true);
+		            			pesan_loading('Get data insert data baru ID sub kegiatan FMIS dari nomenklatur '+keyword_simda, true);
 					        	var id_sub_kegiatan = false;
 					        	res_sub.map(function(b, i){
 					        		var keyword_fmis = b.name;
@@ -1467,23 +1461,20 @@ function cek_insert_tagihan_rinci(tagihan){
 		            				relayAjax({
 										url: url_form[1].split('"')[0],
 								        success: function(res){
-								        	var url_update = jQuery(res).find('form').attr('action');
+								        	res = res.split('<script type="text/javascript">')[0];
+								        	var form = jQuery(res).find('form');
+								        	var url_update = form.attr('action');
+								        	var idrefaktivitas = form.find('input[name="idrefaktivitas"]').val();
+								        	var kdrek = form.find('input[name="kdrek"]').val();
+								        	var idspd = form.find('select[name="idspd"]').val();
 											var data_post = {
 												_token: _token,
-												kdurut: tagihan_rinci.no_id,
-												idrefaktivitas: need_update.idrefaktivitas,
-												kdrek1: need_update.kdrek1,
-												kdrek2: need_update.kdrek2,
-												kdrek3: need_update.kdrek3,
-												kdrek4: need_update.kdrek4,
-												kdrek5: need_update.kdrek5,
-												kdrek6: need_update.kdrek6,
-												aktivitas_uraian: need_update.aktivitas,
-												nilai: formatMoney(tagihan_rinci.nilai, 2, ',', '.')
-											}
-											if(tipe_tagihan_global != 'up'){
-												data_post.idsubunit = need_update.idsubunit;
-											}
+												nmrek: need_update.entity_name,
+												idrefaktivitas: idrefaktivitas,
+												kdrek: kdrek,
+												nilai: to_number(+tagihan_rinci.nilai, true),
+												idspd: idspd
+											};
 				            				relayAjax({
 												url: url_update,
 												type: 'post',
@@ -1500,7 +1491,7 @@ function cek_insert_tagihan_rinci(tagihan){
 	            				}
 		            		});
 		            	}else{
-		            		pesan_loading('Sudah ada! tagihan rinci rek='+cek_exist.rekening+', total='+cek_exist.nilai+', no tagihan='+tagihan.no_tagihan, true);
+		            		pesan_loading('Sudah ada! tagihan rinci rek='+cek_exist.entity_code+', total='+cek_exist.nilai+', no tagihan='+tagihan.no_tagihan, true);
 		            		resolve_reduce(nextData);
 		            	}
 	            	})
@@ -1517,8 +1508,8 @@ function cek_insert_tagihan_rinci(tagihan){
 	        .then(function(data_last){
 	        	var tagihan_unik_fmis = {};
 	        	tagihan.tagihan_fmis_rinci.map(function(b, i){
-        			var kode_akun = b.rekening.split(' ').shift();
-        			var nama_fmis_unik = kode_akun+replace_string(b.subkegiatan);
+        			var kode_akun = b.kdrek1+'.'+b.kdrek2+'.'+b.kdrek3+'.'+b.kdrek4+'.'+b.kdrek5+'.'+b.kdrek6;
+        			var nama_fmis_unik = kode_akun;
 					if(!tagihan_unik_fmis[nama_fmis_unik]){
 						tagihan_unik_fmis[nama_fmis_unik] = [];
 					}
@@ -1550,27 +1541,26 @@ function cek_insert_tagihan_rinci(tagihan){
 	            				relayAjax({
 									url: url_form[1].split('"')[0],
 							        success: function(res){
-							        	var url_update = jQuery(res).find('form').attr('action');
+							        	res = res.split('<script type="text/javascript">')[0];
+							        	var form = jQuery(res).find('form');
+							        	var url_update = form.attr('action');
+							        	var idrefaktivitas = form.find('input[name="idrefaktivitas"]').val();
+							        	var kdrek = form.find('input[name="kdrek"]').val();
+							        	var idspd = form.find('select[name="idspd"]').val();
 										var data_post = {
 											_token: _token,
-											kdurut: tagihan_rinci.no_id,
-											idrefaktivitas: need_update.idrefaktivitas,
-											idsubunit: need_update.idsubunit,
-											kdrek1: need_update.kdrek1,
-											kdrek2: need_update.kdrek2,
-											kdrek3: need_update.kdrek3,
-											kdrek4: need_update.kdrek4,
-											kdrek5: need_update.kdrek5,
-											kdrek6: need_update.kdrek6,
-											aktivitas_uraian: need_update.aktivitas,
-											nilai: formatMoney(0, 2, ',', '.')
-										}
+											nmrek: need_update.entity_name,
+											idrefaktivitas: idrefaktivitas,
+											kdrek: kdrek,
+											nilai: 0,
+											idspd: idspd
+										};
 			            				relayAjax({
 											url: url_update,
 											type: 'post',
 											data: data_post,
 									        success: function(res){
-									        	resolve_reduce2(nextData2);
+									        	resolve_reduce(nextData);
 									        }
 									    });
 			            			}
@@ -2446,12 +2436,12 @@ function singkronisasi_tagihan_modal(){
 									if(
 										tagihan_fmis_selected.action.indexOf('update') == -1
 										|| (
-											current_data.uraian == tagihan_fmis_selected.uraian
-											&& current_data.tgl_tagihan.split(' ')[0] == tagihan_fmis_selected.tagihan_tgl
+											replace_string(current_data.uraian, true, true, true) == replace_string(tagihan_fmis_selected.uraian, true, true, true)
 										)
 									){
 										return resolve_reduce(nextData);
 									}
+									console.log('current_data, tagihan_fmis_selected', current_data, tagihan_fmis_selected);
 									var id_tagihan_fmis = tagihan_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
 									pesan_loading('Perlu update data tagihan '+current_data.no_tagihan, true);
 			        				relayAjax({
