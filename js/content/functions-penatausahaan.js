@@ -2145,10 +2145,10 @@ function get_id_sub_unit_penatausahaan(){
 	});
 }
 
-function get_spp_up(){
+function get_spp(){
 	return new Promise(function(resolve, reduce){
 		relayAjax({
-			url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/up',
+			url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/'+tipe_spp_global,
 	        success: function(res){
 	        	var spp = {};
 	        	res.data.map(function(b, i){
@@ -2162,7 +2162,7 @@ function get_spp_up(){
 
 function singkronisasi_spp(data){
 	window.spp_simda = data;
-	get_spp_up()
+	get_spp()
 	.then(function(spp_fmis){
 		run_script('program_destroy');
     	var body = '';
@@ -2199,13 +2199,25 @@ function singkronisasi_spp(data){
 					+'</tr>';
 			}
 		});
-		jQuery('#konfirmasi-program tbody').html(body);
-		run_script('custom_dt_program');
-		hide_loading();
+		get_bank()
+		.then(function(bank){
+			var options_bank = '<option value="">Pilih Bank</option>';
+			bank.map(function(b, i){
+				options_bank += '<option value="'+b.kdbankbiller+' '+b.nmbankbiller+'">'+b.kdbankbiller+' '+b.nmbankbiller+'</option>';
+			});
+			jQuery('#pilih_bank').html(options_bank);
+			jQuery('#konfirmasi-program tbody').html(body);
+			run_script('custom_dt_program');
+			hide_loading();
+		});
     });
 }
 
 function singkronisasi_spp_modal(){
+	var bank_tujuan = jQuery('#pilih_bank').val();
+	if(bank_tujuan == ''){
+		return alert('Bank penerima tidak boleh kosong!');
+	}
 	var data_selected = [];
 	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
 		var cek = jQuery(b).is(':checked');
@@ -2220,10 +2232,16 @@ function singkronisasi_spp_modal(){
 	});
 	if(data_selected.length >= 1){
 		if(confirm('Apakah anda yakin untuk mengsingkronkan data SPP?')){
+			if(
+				tipe_spp_global != 'up'
+				&& tipe_spp_global != 'ls'
+			){
+				return alert('Tipe SPP ini belum disupport!');
+			}
 			show_loading();
 			console.log('data_selected', data_selected);
 			new Promise(function(resolve, reject){
-    			get_spp_up()
+    			get_spp()
 				.then(function(spp_fmis){
 					var last = data_selected.length - 1;
 					data_selected.reduce(function(sequence, nextData){
@@ -2233,26 +2251,60 @@ function singkronisasi_spp_modal(){
 									!spp_fmis[current_data.no_spp.trim()]
 									&& !spp_fmis['DRAFT-'+current_data.no_spp.trim()]
 								){
-									var data_post = {
-			        					_token: _token,
-										spp_no: current_data.no_spp.trim(),
-										spp_tgl: current_data.tgl_spp.split(' ')[0],
-										uraian: current_data.uraian,
-										penerima_npwp: current_data.npwp,
-										penerima_rek: current_data.rek_penerima,
-										penerima_bank: current_data.bank_penerima,
-										penerima_alamat: current_data.alamat_penerima,
-										penerima_nm: current_data.nm_penerima
-			        				}
-			        				pesan_loading('Simpan data SPP '+current_data.no_spp, true);
-			        				relayAjax({
-										url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/up/create',
-										type: 'post',
-										data: data_post,
-								        success: function(res){
-								        	resolve_reduce(nextData);
-								        }
-								    });
+									new Promise(function(resolve2, reject2){
+										var data_post = {
+				        					_token: _token,
+											spp_no: current_data.no_spp.trim(),
+											spp_tgl: current_data.tgl_spp.split(' ')[0],
+											uraian: current_data.uraian,
+											penerima_npwp: current_data.npwp,
+											penerima_rek: current_data.rek_penerima,
+											penerima_bank: bank_tujuan,
+											penerima_alamat: current_data.alamat_penerima,
+											penerima_nm: current_data.nm_penerima
+				        				}
+				        				if(tipe_spp_global == 'ls'){
+				        					data_post.idtagihan = '';
+				        					data_post.idspd = '';
+				        					data_post.pptk_nm = current_data.nama_pptk;
+				        					data_post.pptk_nip = current_data.nip_pptk;
+				        					relayAjax({
+												url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/ls/pilih-data?load=tagihan&spp_tgl='+data_post.spp_tgl,
+										        success: function(res){
+										        	var table = jQuery(res.split('<script type="text/javascript">')[0]);
+										        	table.find('.btn-choose-data-tagihan').map(function(i, b){
+										        		var no_tagihan = jQuery(b).attr('data-tagihan_no');
+										        		if(no_tagihan == current_data.no_tagihan){
+										        			data_post.idtagihan = jQuery(b).attr('data-idtagihan');
+										        			data_post.idspd = jQuery(b).attr('data-idspd');
+										        		}
+										        	});
+										        	if(data_post.idtagihan == ''){
+										        		reject2('No tagihan tidak ditemukan! '+current_data.no_tagihan);
+										        	}else{
+				        								resolve2(data_post);
+				        							}
+										        }
+										    });
+				        				}else{
+				        					resolve2(data_post);
+				        				}
+				        			})
+									.then(function(data_post){
+				        				pesan_loading('Simpan data SPP '+current_data.no_spp, true);
+				        				relayAjax({
+											url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/'+tipe_spp_global+'/create',
+											type: 'post',
+											data: data_post,
+									        success: function(res){
+									        	resolve_reduce(nextData);
+									        }
+									    });
+				        			})
+				        			.catch(function(message){
+				        				pesan_loading(message);
+				        				resolve_reduce(nextData);
+				        			});
 								}else{
 									if(spp_fmis[current_data.no_spp.trim()]){
 										var spp_fmis_selected = spp_fmis[current_data.no_spp.trim()];
@@ -2264,8 +2316,10 @@ function singkronisasi_spp_modal(){
 										|| (
 											current_data.uraian == spp_fmis_selected.uraian
 											&& current_data.nm_penerima == spp_fmis_selected.penerima_nm
+											&& bank_tujuan == spp_fmis_selected.penerima_bank
 										)
 									){
+										pesan_loading('Sudah ada! data SPP '+current_data.no_spp, true);
 										return resolve_reduce(nextData);
 									}
 									var id_spp_fmis = spp_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
@@ -2276,13 +2330,19 @@ function singkronisasi_spp_modal(){
 										uraian: current_data.uraian,
 										penerima_npwp: current_data.npwp,
 										penerima_rek: current_data.rek_penerima,
-										penerima_bank: current_data.bank_penerima,
+										penerima_bank: bank_tujuan,
 										penerima_alamat: current_data.alamat_penerima,
 										penerima_nm: current_data.nm_penerima
 			        				}
+			        				if(tipe_spp_global == 'ls'){
+			        					data_post.idtagihan = spp_fmis_selected.idtagihan;
+			        					data_post.idspd = spp_fmis_selected.idspd;
+			        					data_post.pptk_nm = current_data.nama_pptk;
+			        					data_post.pptk_nip = current_data.nip_pptk;
+			        				}
 									pesan_loading('Perlu update data SPP '+current_data.no_spp, true);
 			        				relayAjax({
-										url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/up/update/'+id_spp_fmis,
+										url: config.fmis_url+'/penatausahaan/skpd/bend-pengeluaran/spp/'+tipe_spp_global+'/update/'+id_spp_fmis,
 										type: 'post',
 										data: data_post,
 								        success: function(res){
@@ -2309,7 +2369,10 @@ function singkronisasi_spp_modal(){
 	        .then(function(){
 	        	// singkronisasi rincian SPP
 	        	return new Promise(function(resolve, reject){
-	    			get_spp_up()
+	        		if(tipe_spp_global == 'ls'){
+	        			return resolve();
+	        		}
+	    			get_spp()
 					.then(function(spp_fmis){
 						var last = data_selected.length - 1;
 						data_selected.reduce(function(sequence, nextData){
@@ -2371,6 +2434,17 @@ function singkronisasi_spp_modal(){
 	}else{
 		alert('Pilih data dulu!');
 	}
+}
+
+function get_bank(){
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/parameter/bank-tujuan',
+	        success: function(res){
+				resolve(res.data);
+			}
+		});
+	});
 }
 
 function singkronisasi_tagihan_modal(){

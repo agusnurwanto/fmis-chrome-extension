@@ -634,7 +634,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			});
     	}
     });
-}else if(current_url.indexOf('/penatausahaan/skpd/bend-pengeluaran/spp/up') != -1){
+}else if(current_url.indexOf('/penatausahaan/skpd/bend-pengeluaran/spp') != -1){
 	var modal_spp = ''
 		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
 	        +'<div class="modal-dialog modal-xl" role="document">'
@@ -644,6 +644,10 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	                    +'<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"><i class="mdi mdi-close-circle"></i></span></button>'
 	                +'</div>'
 	                +'<div class="modal-body">'
+	                	+'<div class="form-group row p-2">'
+	                		+'<label for="pilih_bank" class="col-sm-3 col-form-label text-left font-weight-semibold border-bottom">Pilih Bank Penerima</label>'
+	                		+'<select class="form-control col-sm-9" id="pilih_bank"></select>'
+	                	+'</div>'
 	                  	+'<table class="table table-hover table-striped" id="konfirmasi-program">'
 	                      	+'<thead>'
 	                        	+'<tr style="background: #8997bd;">'
@@ -671,7 +675,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
     jQuery('.btn[title="Tambah SPP"]').parent().append(btn);
     jQuery('#singkronisasi_data_spp_up').on('click', function(){
     	show_loading();
-    	window.tipe_spp_global = 'up';
+    	window.tipe_spp_global = current_url.split('/').pop();
     	get_id_sub_unit_penatausahaan()
     	.then(function(sub_unit_fmis){
 	    	var data = {

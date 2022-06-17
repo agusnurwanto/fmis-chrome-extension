@@ -676,8 +676,17 @@ function singkronisasi_ssh_item(data_ssh, cb, options){
 															no_urut_item++;
 															var keterangan_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.spek, true).substring(0, 250).trim();;
 															var satuan_asli = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.satuan;
-															if(!satuan_asli || satuan_asli == ''){
+															if(
+																!satuan_asli 
+																|| satuan_asli == ''
+															){
 																satuan_asli = 'kosong';
+															}else if(
+																__kelompok_id == 'Pendapatan'
+																|| __kelompok_id == 'Pembiayaan penerimaan'
+																|| __kelompok_id == 'Pembiayaan pengeluaran'
+															){
+																satuan_asli = 'tahun';
 															}else{
 																satuan_asli = satuan_asli.toLowerCase().trim();
 															}
