@@ -630,6 +630,18 @@ function load_spp_sub_keg(id_spp_fmis){
 	});
 }
 
+function load_sp2b_sub_keg(id_sp2b_fmis){
+	pesan_loading('Load all sub kegiatan dari id_sp2b_fmis='+id_sp2b_fmis, true);
+	return new Promise(function(resolve, reject){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpd/sp2b/rincian/pilih-data/'+id_sp2b_fmis+'?load=subkegiatan',
+	        success: function(res){
+	        	resolve(res);
+	        }
+	    });
+	});
+}
+
 function load_tagihan_sub_keg(id_tagihan_fmis){
 	pesan_loading('Load all sub kegiatan dari id_tagihan_fmis='+id_tagihan_fmis, true);
 	return new Promise(function(resolve, reject){
@@ -924,6 +936,321 @@ function cek_insert_spd_rinci(spd){
 							    });
 	            			}else{
             					pesan_loading('Tombol edit tidak ada! SPD rinci rek='+need_update.rekening+', total='+need_update.nilai+', no SPD='+spd.no_spd, true);
+								resolve_reduce2(nextData2);
+	            			}
+		        		})
+		                .catch(function(e){
+		                    console.log(e);
+		                    return Promise.resolve(nextData2);
+		                });
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData2);
+		            });
+		        }, Promise.resolve(kosongkan_rincian[last]))
+		        .then(function(data_last){
+    				resolve();
+	        	});
+    		});
+	    });
+	});
+}
+
+function cek_insert_sp2b_rinci(sp2b){
+	return new Promise(function(resolve, reject){
+		var id_sp2b_fmis = sp2b.sp2b_fmis.action.split('href="').pop().split('"')[0].split('/').pop();
+		load_sp2b_sub_keg(id_sp2b_fmis)
+		.then(function(res_sub){
+			var last = sp2b.sp2b_simda_rinci.length - 1;
+	        var kdurut = 0;
+	        var sp2b_unik = {};
+	        sp2b.sp2b_fmis_rinci.map(function(b, i){
+    			var kode_akun = b.rekening.split(' ').shift();
+    			var nama_unik = kode_akun+replace_string(b.subkegiatan);
+    			if(!sp2b_unik[nama_unik]){
+    				sp2b_unik[nama_unik] = {
+						jml_sipd: 0,
+						jml_fmis: 1
+					};
+    			}else{
+    				sp2b_unik[nama_unik].jml_fmis++;
+    			}
+        	});
+	        sp2b.sp2b_simda_rinci.map(function(b, i){
+	        	if(b.id_prog == 0){
+	        		b.detail.nama_program = 'Non Program';
+	        		b.detail.nama_giat = 'Non Kegiatan';
+	        		b.detail.nama_sub_giat = 'Non Sub Kegiatan';
+	        		sp2b.sp2b_simda_rinci[i].detail = b.detail;
+	        	}
+    			var kode_akun = b.detail.kode_akun;
+    			var nama_unik = kode_akun+replace_string(b.detail.nama_sub_giat);
+    			if(!sp2b_unik[nama_unik]){
+    				sp2b_unik[nama_unik] = {
+						jml_sipd: 1,
+						jml_fmis: 0
+					};
+    			}else{
+    				sp2b_unik[nama_unik].jml_sipd++;
+    			}
+        	});
+
+	        console.log('sp2b_unik', sp2b_unik);
+			var cek_double = {sipd: {}, fmis: {}};
+	        sp2b.sp2b_simda_rinci.reduce(function(sequence, nextData){
+	            return sequence.then(function(sp2b_rinci){
+	            	return new Promise(function(resolve_reduce, reject_reduce){
+	            		var nama_simda_unik = sp2b_rinci.detail.kode_akun+replace_string(sp2b_rinci.detail.nama_sub_giat);
+	            		if(!cek_double.sipd[nama_simda_unik]){
+							cek_double.sipd[nama_simda_unik] = [];
+						}
+						cek_double.sipd[nama_simda_unik].push(sp2b_rinci.detail);
+						cek_double.fmis = {};
+
+	            		var cek_exist = false;
+    					var need_update = false;
+	            		sp2b.sp2b_fmis_rinci.map(function(b, i){
+	            			var kode_akun = b.rekening.split(' ').shift();
+	            			var nama_fmis_unik = kode_akun+replace_string(b.subkegiatan);
+	            			if(!cek_double.fmis[nama_fmis_unik]){
+								cek_double.fmis[nama_fmis_unik] = [];
+							}
+							cek_double.fmis[nama_fmis_unik].push(b);
+							// cek jika nama unik sudah terinsert atau belum
+		            		if(nama_simda_unik == nama_fmis_unik){
+		            			// cek jika jumlah rincian unik fmis sudah sama dengan jumlah rincian sipd
+		            			if(sp2b_unik[nama_fmis_unik].jml_fmis >= sp2b_unik[nama_fmis_unik].jml_sipd){
+		            				cek_exist = b;
+		            				if(
+										(
+											+b.nilai != +sp2b_rinci.nilai
+											|| b.kdurut != sp2b_rinci.no_id 
+										)
+										&& cek_double.sipd[nama_fmis_unik].length == cek_double.fmis[nama_fmis_unik].length
+									){
+		            					console.log('URAIAN BELANJA UNIK: ('+(+b.nilai)+' != '+(+sp2b_rinci.nilai)+' || '+b.kdurut+' != '+sp2b_rinci.no_id+') && '+cek_double.sipd[nama_fmis_unik].length+' == '+cek_double.fmis[nama_fmis_unik].length, nama_fmis_unik, sp2b_rinci, b);
+										need_update = b;
+		            				}
+		            			}else{
+		            				rka_unik[nama_fmis_unik].jml_fmis++;
+		            			}
+		            		}
+
+		            		if(kdurut <= +b.kdurut){
+								kdurut = +b.kdurut;
+							}
+		            	});
+		            	if(!cek_exist){
+		            		new Promise(function(resolve2, reject2){
+								var keyword_simda = sp2b_rinci.detail.nama_program+'|'+sp2b_rinci.detail.nama_giat+'|'+sp2b_rinci.detail.nama_sub_giat;
+		            			pesan_loading('Get ID sub kegiatan FMIS dari nomenklatur '+keyword_simda, true);
+					        	var id_sub_kegiatan = false;
+					        	jQuery(res_sub).find('#table-subkegiatan a.next-tab-rekening').map(function(i, b){
+					        		var tr = jQuery(b).closest('tr');
+					        		var keyword_fmis = tr.find('td').eq(1).html().replace(' <br> ', '|').replace(' </br> ', '|')+'|'+tr.find('td').eq(2).text();
+					        		if(replace_string(keyword_fmis) == replace_string(keyword_simda)){
+					        			id_sub_kegiatan = jQuery(b).attr('data-idsubkegiatan');
+					        		}
+					        	});
+					        	if(id_sub_kegiatan){
+					        		resolve2(id_sub_kegiatan);
+					        	}else{
+					        		reject2('ID sub kegiatan FMIS dari nomenklatur '+keyword_simda+' tidak ditemukan!');
+					        	}
+		            		})
+		            		// get aktivitas
+		            		.then(function(id_sub_kegiatan){
+		            			return new Promise(function(resolve2, reject2){
+		            				pesan_loading('Get All aktivitas FMIS dari id '+id_sub_kegiatan, true);
+			            			relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpd/sp2b/rincian/pilih-data/'+id_sp2b_fmis+'?load=aktivitas&idsubkegiatan='+id_sub_kegiatan,
+								        success: function(res){
+								        	var id_aktivitas = [];
+								        	jQuery(res).find('#table-aktivitas a.next-tab-rekening').map(function(i, b){
+								        		var tr = jQuery(b).closest('tr');
+								        		var nama_aktivitas = tr.find('td').eq(1).text();
+								        		var nama_unit = nama_aktivitas.split(' | ').pop();
+								        		if(nama_unit == sp2b.skpd.nama_skpd){
+									        		id_aktivitas.push({
+									        			id_sub_kegiatan: id_sub_kegiatan,
+									        			id: jQuery(b).attr('data-idrefaktivitas'),
+									        			nama: nama_aktivitas,
+									        			total: tr.find('td').eq(2).text()
+									        		});
+									        	}
+								        	});
+								        	if(id_aktivitas.length == 0){
+								        		console.log('sp2b', sp2b, res);
+								        		reject2('aktivitas tidak ditemukan!');
+								        	}else{
+								        		resolve2(id_aktivitas);
+								        	}
+								        }
+								    })
+			            		});
+		            		})
+		            		// cek rekening
+		            		.then(function(id_aktivitas){
+		            			return new Promise(function(resolve2, reject2){
+		            				if(id_aktivitas.length == 1){
+		            					resolve2(id_aktivitas[0]);
+			            			}else{
+			            				reject2('Ada lebih dari 1 aktivitas pada sub kegiatan ini. Perlu input manual sp2b sesuai aktivitas yang dipilih! '+JSON.stringify(id_aktivitas));
+			            			}
+		            			})
+		            		})
+		            		// insert rincian sp2b
+		            		.then(function(id_aktivitas){
+		            			pesan_loading('Insert sp2b rinci rek='+sp2b_rinci.detail.kode_akun+', total='+sp2b_rinci.nilai+', no sp2b='+sp2b.no_sp3b, true);
+		            			return new Promise(function(resolve2, reject2){
+		            				kdurut++;
+									var data_post = {
+										_token: _token,
+										kdurut: sp2b_rinci.no_id,
+										idrefaktivitas: '',
+										idsubunit: '',
+										kdrek1: sp2b_rinci.kd_rek90_1,
+										kdrek2: sp2b_rinci.kd_rek90_2,
+										kdrek3: sp2b_rinci.kd_rek90_3,
+										kdrek4: sp2b_rinci.kd_rek90_4,
+										kdrek5: sp2b_rinci.kd_rek90_5,
+										kdrek6: sp2b_rinci.kd_rek90_6,
+										nilai: formatMoney(sp2b_rinci.nilai, 2, ',', '.')
+									};
+									data_post.aktivitas_uraian = id_aktivitas.nama;
+									data_post.idsubunit = sp2b.id_sub_unit;
+									data_post.idrefaktivitas = id_aktivitas.id;
+		            				relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpd/sp2b/rincian/create/'+id_sp2b_fmis,
+										type: 'post',
+										data: data_post,
+								        success: function(res){
+								        	resolve_reduce(nextData);
+								        }
+								    });
+			            		});
+		            		})
+		            		.catch(function(message){
+		            			pesan_loading(message, true);
+		            			resolve_reduce(nextData);
+		            		});
+		            	}else if(need_update){
+	            			return new Promise(function(resolve2, reject2){
+	            				var url_form = need_update.action.split('href="');
+	            				if(url_form.length >= 3){
+	            					pesan_loading('Update sp2b rinci rek='+sp2b_rinci.detail.kode_akun+', total='+sp2b_rinci.nilai+', no sp2b='+sp2b.no_sp3b, true);
+		            				relayAjax({
+										url: url_form[1].split('"')[0],
+								        success: function(res){
+								        	var url_update = jQuery(res).find('form').attr('action');
+											var data_post = {
+												_token: _token,
+												kdurut: sp2b_rinci.no_id,
+												idrefaktivitas: need_update.idrefaktivitas,
+												kdrek1: need_update.kdrek1,
+												kdrek2: need_update.kdrek2,
+												kdrek3: need_update.kdrek3,
+												kdrek4: need_update.kdrek4,
+												kdrek5: need_update.kdrek5,
+												kdrek6: need_update.kdrek6,
+												aktivitas_uraian: need_update.aktivitas,
+												nilai: formatMoney(sp2b_rinci.nilai, 2, ',', '.')
+											}
+											data_post.idsubunit = need_update.idsubunit;
+				            				relayAjax({
+												url: url_update,
+												type: 'post',
+												data: data_post,
+										        success: function(res){
+										        	resolve_reduce(nextData);
+										        }
+										    });
+				            			}
+								    });
+	            				}else{
+	            					pesan_loading('Tombol edit tidak ada! sp2b rinci rek='+cek_exist.rekening+', total='+cek_exist.nilai+', no sp2b='+sp2b.no_sp3b, true);
+		            				resolve_reduce(nextData);
+	            				}
+		            		});
+		            	}else{
+		            		pesan_loading('Sudah ada! sp2b rinci rek='+cek_exist.rekening+', total='+cek_exist.nilai+', no sp2b='+sp2b.no_sp3b, true);
+		            		resolve_reduce(nextData);
+		            	}
+	            	})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(sp2b.sp2b_simda_rinci[last]))
+	        .then(function(data_last){
+	        	var sp2b_unik_fmis = {};
+	        	sp2b.sp2b_fmis_rinci.map(function(b, i){
+        			var kode_akun = b.rekening.split(' ').shift();
+        			var nama_fmis_unik = kode_akun+replace_string(b.subkegiatan);
+					if(!sp2b_unik_fmis[nama_fmis_unik]){
+						sp2b_unik_fmis[nama_fmis_unik] = [];
+					}
+					sp2b_unik_fmis[nama_fmis_unik].push(b);
+				});
+	        	var kosongkan_rincian = [];
+	        	for(var nama_rincian_unik in sp2b_unik){
+	        		var selisih = sp2b_unik[nama_rincian_unik].jml_fmis - sp2b_unik[nama_rincian_unik].jml_sipd;
+	        		// cek jika ada rincian yang ada di fmis dan tidak ada di sipd. bisa karena diinput manual atau karena rincian di sipd dihapus. rincian ini perlu di nolkan agar pagu sub kegiatannya sama dengan sipd
+	        		if(selisih >= 1){
+	        			sp2b_unik_fmis[nama_rincian_unik].map(function(b, i){
+							if(i < selisih){
+								if(to_number(b.nilai) > 0){
+									kosongkan_rincian.push(b);
+								}
+								sp2b_unik[nama_rincian_unik].jml_sipd++;
+							}
+						});
+	        		}
+	        	}
+	        	console.log('kosongkan_rincian', kosongkan_rincian);
+	        	var last = kosongkan_rincian.length - 1;
+	        	kosongkan_rincian.reduce(function(sequence2, nextData2){
+		            return sequence2.then(function(need_update){
+		        		return new Promise(function(resolve_reduce2, reject_reduce2){
+		        			var url_form = need_update.action.split('href="');
+		        			if(url_form.length >= 3){
+			        			pesan_loading('Kosongkan sp2b rinci rek='+need_update.rekening+', total=0, no sp2b='+sp2b.no_sp3b, true);
+	            				relayAjax({
+									url: url_form[1].split('"')[0],
+							        success: function(res){
+							        	var url_update = jQuery(res).find('form').attr('action');
+										var data_post = {
+											_token: _token,
+											kdurut: need_update.kdurut,
+											idrefaktivitas: need_update.idrefaktivitas,
+											idsubunit: need_update.idsubunit,
+											kdrek1: need_update.kdrek1,
+											kdrek2: need_update.kdrek2,
+											kdrek3: need_update.kdrek3,
+											kdrek4: need_update.kdrek4,
+											kdrek5: need_update.kdrek5,
+											kdrek6: need_update.kdrek6,
+											aktivitas_uraian: need_update.aktivitas,
+											nilai: formatMoney(0, 2, ',', '.')
+										}
+			            				relayAjax({
+											url: url_update,
+											type: 'post',
+											data: data_post,
+									        success: function(res){
+									        	resolve_reduce2(nextData2);
+									        }
+									    });
+			            			}
+							    });
+	            			}else{
+            					pesan_loading('Tombol edit tidak ada! sp2b rinci rek='+need_update.rekening+', total='+need_update.nilai+', no sp2b='+sp2b.no_sp3b, true);
 								resolve_reduce2(nextData2);
 	            			}
 		        		})
@@ -1614,6 +1941,19 @@ function get_spp_rinci_fmis(spp_fmis){
 	});
 }
 
+function get_sp2b_rinci_fmis(sp2b_fmis){
+	pesan_loading('get SP2B rinci FMIS dengan no='+sp2b_fmis.sp2b_no, true);
+	return new Promise(function(resolve, reject){
+		var url = sp2b_fmis.action.split('href="').pop().split('"')[0].replace('/penatausahaan/skpd/sp2b/rincian/', '/penatausahaan/skpd/sp2b/rincian/data/');
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	resolve(res.data);
+	        }
+	    });
+	});
+}
+
 function get_tagihan_rinci_fmis(data){
 	pesan_loading('get tagihan rinci FMIS dengan no='+data.tagihan_no, true);
 	return new Promise(function(resolve, reject){
@@ -1685,6 +2025,36 @@ function get_spp_rinci_simda(spp_simda){
 				    data: { 
 						action: 'get_spp_rinci',
 						no_spp: spp_simda.no_spp,
+						kd_urusan: spp_simda.kd_urusan,
+						kd_bidang: spp_simda.kd_bidang,
+						kd_unit: spp_simda.kd_unit,
+						kd_sub: spp_simda.kd_sub,
+						tahun_anggaran: config.tahun_anggaran,
+						api_key: config.api_key
+					},
+	    			return: true
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
+	});
+}
+
+function get_sp2b_rinci_simda(spp_simda){
+	pesan_loading('get SP2B rinci SIMDA dengan no='+spp_simda.no_sp3b, true);
+	return new Promise(function(resolve, reject){
+		window.continue_sp2b_rinci = resolve;
+		var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'get_sp2b_rinci',
+						no_sp2b: spp_simda.no_sp3b,
 						kd_urusan: spp_simda.kd_urusan,
 						kd_bidang: spp_simda.kd_bidang,
 						kd_unit: spp_simda.kd_unit,
@@ -2211,6 +2581,231 @@ function singkronisasi_spp(data){
 			hide_loading();
 		});
     });
+}
+
+function get_sp2b(){
+	return new Promise(function(resolve, reduce){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpd/sp2b',
+	        success: function(res){
+	        	var sp2b = {};
+	        	res.data.map(function(b, i){
+	        		sp2b[b.sp2b_no] = b;
+	        	})
+	        	resolve(sp2b);
+	        }
+	    });
+	});
+}
+
+function singkronisasi_sp2b(data){
+	window.sp2b_simda = data;
+	get_sp2b()
+	.then(function(sp2b_fmis){
+		run_script('program_destroy');
+    	var body = '';
+		data.map(function(b, i){
+			if(
+				!sp2b_fmis[b.no_sp3b.trim()]
+				&& !sp2b_fmis['DRAFT-'+b.no_sp3b.trim()]
+			){
+				body += ''
+					+'<tr>'
+						+'<td><input type="checkbox" value="'+b.no_sp3b.trim()+'"></td>'
+						+'<td>'+b.no_sp3b.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}else{
+				if(sp2b_fmis[b.no_sp3b.trim()]){
+					var sp2b_fmis_selected = sp2b_fmis[b.no_sp3b.trim()];
+				}else{
+					var sp2b_fmis_selected = sp2b_fmis['DRAFT-'+b.no_sp3b.trim()];
+				}
+				var disabled = '';
+				var status = '';
+				if(sp2b_fmis_selected.status == 'Final'){
+					var disabled = 'disabled';
+					var status = ' (Stauts Final)';
+				}
+				body += ''
+					+'<tr>'
+						+'<td><input '+disabled+' type="checkbox" value="'+b.no_sp3b.trim()+'"> <b>EXISTING'+status+'</b></td>'
+						+'<td>'+b.no_sp3b.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}
+		});
+		jQuery('#konfirmasi-program tbody').html(body);
+		run_script('custom_dt_program');
+		hide_loading();
+    });
+}
+
+function singkronisasi_sp2b_modal(){
+	var data_selected = [];
+	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
+		var cek = jQuery(b).is(':checked');
+		if(cek){
+			var no_sp3b = jQuery(b).val();
+			sp2b_simda.map(function(bb, ii){
+				if(bb.no_sp3b == no_sp3b){
+					data_selected.push(bb);
+				}
+			});
+		}
+	});
+	if(data_selected.length >= 1){
+		if(confirm('Apakah anda yakin untuk mengsingkronkan data SP2B?')){
+			show_loading();
+			console.log('data_selected', data_selected);
+			new Promise(function(resolve, reject){
+				get_sp2b()
+				.then(function(sp2b_fmis){
+					var last = data_selected.length - 1;
+					data_selected.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+								if(
+									!sp2b_fmis[current_data.no_sp3b.trim()]
+									&& !sp2b_fmis['DRAFT-'+current_data.no_sp3b.trim()]
+								){
+									var data_post = {
+			        					_token: _token,
+										sp2b_no: current_data.no_sp3b.trim(),
+										sp2b_tgl: current_data.tgl_sp3b.split(' ')[0],
+										uraian: current_data.uraian,
+										periode: current_data.periode,
+										penandatangan_nm: current_data.nm_penandatangan,
+										penandatangan_nip: current_data.nip_penandatangan,
+										penandatangan_jbt: current_data.jbt_penandatangan
+			        				}
+			        				pesan_loading('Simpan data SP2B '+current_data.no_sp3b, true);
+			        				relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpd/sp2b/create',
+										type: 'post',
+										data: data_post,
+								        success: function(res){
+								        	resolve_reduce(nextData);
+								        }
+								    });
+								}else{
+									if(sp2b_fmis[current_data.no_sp3b.trim()]){
+										var fmis_selected = sp2b_fmis[current_data.no_sp3b.trim()];
+									}else{
+										var fmis_selected = sp2b_fmis['DRAFT-'+current_data.no_sp3b.trim()];
+									}
+									if(
+										fmis_selected.action.indexOf('update') == -1
+										|| (
+											current_data.uraian == fmis_selected.uraian
+											&& current_data.periode == fmis_selected.periode
+										)
+									){
+										pesan_loading('Sudah ada! data SP2B '+current_data.no_sp3b, true);
+										return resolve_reduce(nextData);
+									}
+									var id_fmis = fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
+									var data_post = {
+			        					_token: _token,
+										spp_no: current_data.no_sp3b.trim(),
+										sp2b_tgl: current_data.tgl_sp3b.split(' ')[0],
+										uraian: current_data.uraian,
+										periode: current_data.periode,
+										penandatangan_nm: current_data.nm_penandatangan,
+										penandatangan_nip: current_data.nip_penandatangan,
+										penandatangan_jbt: current_data.jbt_penandatangan
+			        				}
+									pesan_loading('Perlu update data SP2B '+current_data.no_spp, true);
+			        				relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpd/sp2b/update/'+id_fmis,
+										type: 'post',
+										data: data_post,
+								        success: function(res){
+								        	resolve_reduce(nextData);
+								        }
+								    });
+								}
+			        		})
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(data_selected[last]))
+			        .then(function(data_last){
+				    	resolve();
+					});
+				});
+			})
+			.then(function(){
+	        	// singkronisasi rincian SP2B
+	        	return new Promise(function(resolve, reject){
+	    			get_sp2b()
+					.then(function(sp2b_fmis){
+						var last = data_selected.length - 1;
+						data_selected.reduce(function(sequence, nextData){
+				            return sequence.then(function(current_data){
+				        		return new Promise(function(resolve_reduce, reject_reduce){
+				        			if(
+										sp2b_fmis[current_data.no_sp3b.trim()]
+										|| sp2b_fmis['DRAFT-'+current_data.no_sp3b.trim()]
+									){
+										if(sp2b_fmis[current_data.no_sp3b.trim()]){
+											var sp2b_fmis_selected = sp2b_fmis[current_data.no_sp3b.trim()];
+										}else{
+											var sp2b_fmis_selected = sp2b_fmis['DRAFT-'+current_data.no_sp3b.trim()];
+										}
+										if(sp2b_fmis_selected.action.indexOf('update') == -1){
+											return resolve_reduce(nextData);
+										}
+										current_data.sp2b_fmis = sp2b_fmis_selected;
+										get_sp2b_rinci_fmis(current_data.sp2b_fmis)
+				            			.then(function(sp2b_fmis_rinci){
+				            				current_data.sp2b_fmis_rinci = sp2b_fmis_rinci;
+					            			get_sp2b_rinci_simda(current_data)
+					            			.then(function(sp2b_simda_rinci){
+					            				current_data.sp2b_simda_rinci = sp2b_simda_rinci;
+					            				cek_insert_sp2b_rinci(current_data)
+					            				.then(function(){
+					            					resolve_reduce(nextData);
+					            				})
+					            			});
+				            			});
+				        			}else{
+				        				pesan_loading('Tidak ditemukan! Data SPP '+current_data.no_sp3b, true);
+				        				resolve_reduce(nextData);
+				        			}
+				        		})
+				                .catch(function(e){
+				                    console.log(e);
+				                    return Promise.resolve(nextData);
+				                });
+				            })
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData);
+				            });
+				        }, Promise.resolve(data_selected[last]))
+				        .then(function(data_last){
+					    	resolve();
+						});
+					});
+				});
+	        })
+	        .then(function(){
+		    	run_script('reload_spd');
+				alert('Berhasil singkronisasi SP2B!');
+		    	run_script('program_hide');
+				hide_loading();
+			});
+		}
+	}
 }
 
 function singkronisasi_spp_modal(){

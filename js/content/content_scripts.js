@@ -45,6 +45,14 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			singkronisasi_anggaran_kas(res);
+		}else if(res.action == 'get_sp2b'){
+			_alert = false;
+			cek_hide_loading = false;
+			singkronisasi_sp2b(res.data);
+		}else if(res.action == 'get_sp2b_rinci'){
+			_alert = false;
+			cek_hide_loading = false;
+			continue_sp2b_rinci(res.data);
 		}else if(res.action == 'get_spd'){
 			_alert = false;
 			cek_hide_loading = false;
