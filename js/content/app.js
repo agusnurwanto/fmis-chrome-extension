@@ -55,7 +55,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-ssh-sipd">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi SSH SIPD'
     +'</button>';
-	jQuery('#golongan .btn-outline-dark').parent().append(btn);
+	jQuery('#golongan .btn-outline-primary').parent().append(btn);
 	jQuery('#singkron-ssh-sipd').on('click', function(){
     	if(confirm('Apakah anda yakin untuk melakukan singkronisasi data Struktur SSH dari WP-SIPD ke FMIS?')){
 			var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 7=Pendapatan & Pembiayaan, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
