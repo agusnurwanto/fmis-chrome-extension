@@ -73,6 +73,10 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			singkronisasi_spp(res.data);
+		}else if(res.action == 'get_spm'){
+			_alert = false;
+			cek_hide_loading = false;
+			singkronisasi_spm(res.data);
 		}else if(res.action == 'get_pegawai_simda'){
 			_alert = false;
 			cek_hide_loading = false;

@@ -36,9 +36,12 @@ function get_list_tagihan(){
 	});
 }
 
-function get_list_penandatangan(){
+function get_list_penandatangan(tipe = false){
 	return new Promise(function(resolve2, reject2){
 		var url = config.fmis_url+'/penatausahaan/skpkd/bud/spd/pilih-data?load=penandatangan';
+		if(tipe == 'spm'){
+			url = config.fmis_url+'/penatausahaan/skpd/tu/spm/up/pilih-data?load=penandatangan';
+		}
 		relayAjax({
 			url: url,
 	        success: function(res){
@@ -2515,6 +2518,85 @@ function get_id_sub_unit_penatausahaan(){
 	});
 }
 
+function get_spm(){
+	return new Promise(function(resolve, reduce){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpd/tu/spm/'+tipe_spp_global,
+	        success: function(res){
+	        	var spm = {};
+	        	res.data.map(function(b, i){
+	        		spm[b.spp_no] = b;
+	        	})
+	        	resolve(spm);
+	        }
+	    });
+	});
+}
+
+function singkronisasi_spm(data){
+	window.spm_simda = data;
+	get_spm()
+	.then(function(spm_fmis){
+		run_script('program_destroy');
+    	var body = '';
+		data.map(function(b, i){
+			if(
+				!spm_fmis[b.no_spp.trim()]
+				&& !spm_fmis['DRAFT-'+b.no_spp.trim()]
+			){
+				body += ''
+					+'<tr>'
+						+'<td><input type="checkbox" value="'+b.no_spp.trim()+'" disabled> <b>SPP tidak ditemukan'+'</b></td>'
+						+'<td>'+b.no_spp.trim()+' | '+b.no_spm.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}else if(
+				!spm_fmis[b.no_spp.trim()].get_trn_spm
+				|| !spm_fmis['DRAFT-'+b.no_spp.trim()].get_trn_spm
+			){
+				body += ''
+					+'<tr>'
+						+'<td><input type="checkbox" value="'+b.no_spp.trim()+'"></td>'
+						+'<td>'+b.no_spp.trim()+' | '+b.no_spm.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}else{
+				if(spm_fmis[b.no_spp.trim()]){
+					var spm_fmis_selected = spm_fmis[b.no_spp.trim()];
+				}else{
+					var spm_fmis_selected = spm_fmis['DRAFT-'+b.no_spp.trim()];
+				}
+				var disabled = '';
+				var status = '';
+				if(spm_fmis_selected.status.indexOf('Final') != -1){
+					var disabled = 'disabled';
+					var status = ' (Status Final)';
+				}
+				body += ''
+					+'<tr>'
+						+'<td><input '+disabled+' type="checkbox" value="'+b.no_spp.trim()+'"> <b>EXISTING'+status+'</b></td>'
+						+'<td>'+b.no_spp.trim()+' | '+b.no_spm.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>'+b.uraian+'</td>'
+					+'</tr>';
+			}
+		});
+		get_list_penandatangan()
+		.then(function(pegawai){
+			var list_pegawai = '<option value="">Pilih Penandatangan SPM</option>';
+			pegawai.map(function(b, i){
+				list_pegawai += '<option data-nip="'+b.nip+'" data-nama="'+b.nama+'" data-jabatan="'+b.jabatan+'">'+b.nama+' || '+b.nip+' || '+b.jabatan+'</option>';
+			});
+			jQuery('#mod-penandatangan').html(list_pegawai);
+			jQuery('#konfirmasi-program tbody').html(body);
+			run_script('custom_dt_program');
+			hide_loading();
+		});
+    });
+}
+
 function get_spp(){
 	return new Promise(function(resolve, reduce){
 		relayAjax({
@@ -2805,6 +2887,112 @@ function singkronisasi_sp2b_modal(){
 				hide_loading();
 			});
 		}
+	}
+}
+
+function singkronisasi_spm_modal(){
+	var penandatangan = jQuery('#mod-penandatangan option:selected').val();
+	if(penandatangan == ''){
+		return alert('Penandatangan tidak boleh kosong!');
+	}
+	var selected = jQuery('#mod-penandatangan option:selected');
+	penandatangan = {
+		nip: selected.attr('data-nip'),
+		nama: selected.attr('data-nama'),
+		jabatan: selected.attr('data-jabatan')
+	}
+	var data_selected = [];
+	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
+		var cek = jQuery(b).is(':checked');
+		if(cek){
+			var no_spp = jQuery(b).val();
+			spm_simda.map(function(bb, ii){
+				if(bb.no_spp == no_spp){
+					data_selected.push(bb);
+				}
+			});
+		}
+	});
+	if(data_selected.length >= 1){
+		if(confirm('Apakah anda yakin untuk mengsingkronkan data SPM?')){
+			if(
+				tipe_spp_global != 'up'
+				&& tipe_spp_global != 'ls'
+			){
+				return alert('Tipe SPM ini belum disupport!');
+			}
+			show_loading();
+			console.log('data_selected', data_selected);
+			new Promise(function(resolve, reject){
+    			get_spm()
+				.then(function(spm_fmis){
+					var last = data_selected.length - 1;
+					data_selected.reduce(function(sequence, nextData){
+			            return sequence.then(function(current_data){
+			        		return new Promise(function(resolve_reduce, reject_reduce){
+			        			if(!spm_fmis[current_data.no_spp].get_trn_spm){
+				        			var id_spm_fmis = spm_fmis[current_data.no_spp].action.split('/print/')[1].split('"')[0]
+				        			relayAjax({
+										url: config.fmis_url+'/penatausahaan/skpd/tu/spm/up/create/'+id_spm_fmis,
+								        success: function(form_ret){
+								        	var form = jQuery(form_ret).find('form');
+								        	var verifikator_nm = current_data.nm_verifikator;
+								        	if(verifikator_nm == null || verifikator_nm == ''){
+								        		verifikator_nm = current_data.nm_penandatangan;
+								        	}
+								        	var data_post = {
+								        		_token: _token,
+								        		spm_no: current_data.no_spm.trim(),
+												spm_tgl: current_data.tgl_spm.split(' ')[0],
+												uraian: current_data.uraian,
+												penandatangan_nm: penandatangan.nama,
+												penandatangan_nip: penandatangan.nip,
+												penandatangan_jbt: penandatangan.jabatan,
+												verifikator_nm: verifikator_nm,
+												penerima_nm: form.find('input[name="penerima_nm"]').val(),
+												penerima_bank: form.find('input[name="penerima_bank"]').val(),
+												penerima_rek: form.find('input[name="penerima_rek"]').val(),
+								        	}
+								        	pesan_loading('Simpan data SPM '+current_data.no_spm, true);
+					        				relayAjax({
+												url: form.attr('action'),
+												type: 'post',
+												data: data_post,
+										        success: function(res){
+										        	resolve_reduce(nextData);
+										        }
+										    });
+								        }
+								    });
+				        		}else{
+				        			pesan_loading('Data sudah ada SPM '+current_data.no_spm, true);
+				        			resolve_reduce(nextData);
+				        		}
+			        		})
+			                .catch(function(e){
+			                    console.log(e);
+			                    return Promise.resolve(nextData);
+			                });
+			            })
+			            .catch(function(e){
+			                console.log(e);
+			                return Promise.resolve(nextData);
+			            });
+			        }, Promise.resolve(data_selected[last]))
+			        .then(function(data_last){
+				    	resolve();
+					});
+				})
+			})
+			.then(function(){
+				run_script('reload_spd');
+				alert('Berhasil singkronisasi SPM!');
+		    	run_script('program_hide');
+				hide_loading();
+			})
+		}
+	}else{
+		alert('Pilih data dulu!');
 	}
 }
 
