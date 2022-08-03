@@ -2548,14 +2548,14 @@ function singkronisasi_sp2d(data){
 			){
 				body += ''
 					+'<tr>'
-						+'<td><input type="checkbox" value="'+b.no_spm.trim()+'" disabled> <b>SPP tidak ditemukan'+'</b></td>'
+						+'<td><input type="checkbox" value="'+b.no_spm.trim()+'" disabled> <b>SP2D tidak ditemukan'+'</b></td>'
 						+'<td>'+b.no_spm.trim()+' | '+b.no_sp2d.trim()+'</td>'
 						+'<td>'+b.nm_penandatangan+' | '+b.tgl_sp2d.split(' ')[0]+'</td>'
 						+'<td>'+b.keterangan+'</td>'
 					+'</tr>';
 			}else if(
-				!sp2d_fmis[b.no_spm.trim()].get_trn_spm
-				|| !sp2d_fmis['DRAFT-'+b.no_spm.trim()].get_trn_spm
+				sp2d_fmis[b.no_spm.trim()].sp2d_no.indexOf('Tambah SP2D') != -1
+				|| sp2d_fmis['DRAFT-'+b.no_spm.trim()].sp2d_no.indexOf('Tambah SP2D') != -1
 			){
 				body += ''
 					+'<tr>'
@@ -2984,7 +2984,10 @@ function singkronisasi_sp2d_modal(){
 	if(penandatangan == ''){
 		return alert('Penandatangan tidak boleh kosong!');
 	}
-	return alert('masih dalam pengembangan!');
+	var bank_tujuan = jQuery('#pilih_bank').val();
+	if(bank_tujuan == ''){
+		return alert('Bank penerima tidak boleh kosong!');
+	}
 	var selected = jQuery('#mod-penandatangan option:selected');
 	penandatangan = {
 		nip: selected.attr('data-nip'),
@@ -2995,55 +2998,42 @@ function singkronisasi_sp2d_modal(){
 	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
 		var cek = jQuery(b).is(':checked');
 		if(cek){
-			var no_spp = jQuery(b).val();
-			spm_simda.map(function(bb, ii){
-				if(bb.no_spp == no_spp){
+			var no_spm = jQuery(b).val();
+			sp2d_simda.map(function(bb, ii){
+				if(bb.no_spm == no_spm){
 					data_selected.push(bb);
 				}
 			});
 		}
 	});
 	if(data_selected.length >= 1){
-		if(confirm('Apakah anda yakin untuk mengsingkronkan data SPM?')){
-			if(
-				tipe_spp_global != 'up'
-				&& tipe_spp_global != 'ls'
-			){
-				return alert('Tipe SPM ini belum disupport!');
-			}
+		if(confirm('Apakah anda yakin untuk mengsingkronkan data SP2D?')){
 			show_loading();
 			console.log('data_selected', data_selected);
 			new Promise(function(resolve, reject){
-    			get_spm()
-				.then(function(spm_fmis){
+    			get_sp2d()
+				.then(function(sp2d_fmis){
 					var last = data_selected.length - 1;
 					data_selected.reduce(function(sequence, nextData){
 			            return sequence.then(function(current_data){
 			        		return new Promise(function(resolve_reduce, reject_reduce){
-			        			if(!spm_fmis[current_data.no_spp].get_trn_spm){
-				        			var id_spm_fmis = spm_fmis[current_data.no_spp].action.split('/print/')[1].split('"')[0]
+			        			if(sp2d_fmis[current_data.no_spm].sp2d_no.indexOf('Tambah SP2D') != -1){
+				        			var id_sp2d_fmis = sp2d_fmis[current_data.no_spm].action.split('/printspm/')[1].split('"')[0]
 				        			relayAjax({
-										url: config.fmis_url+'/penatausahaan/skpd/tu/spm/up/create/'+id_spm_fmis,
+										url: config.fmis_url+'/penatausahaan/skpkd/bud/sp2d/create/'+id_sp2d_fmis,
 								        success: function(form_ret){
 								        	var form = jQuery(form_ret).find('form');
-								        	var verifikator_nm = current_data.nm_verifikator;
-								        	if(verifikator_nm == null || verifikator_nm == ''){
-								        		verifikator_nm = current_data.nm_penandatangan;
-								        	}
 								        	var data_post = {
 								        		_token: _token,
-								        		spm_no: current_data.no_spm.trim(),
-												spm_tgl: current_data.tgl_spm.split(' ')[0],
-												uraian: current_data.uraian,
+								        		sp2d_no: current_data.no_sp2d.trim(),
+												sp2d_tgl: current_data.tgl_sp2d.split(' ')[0],
+												keterangan: current_data.keterangan,
+												idkdbank: bank_tujuan,
 												penandatangan_nm: penandatangan.nama,
 												penandatangan_nip: penandatangan.nip,
-												penandatangan_jbt: penandatangan.jabatan,
-												verifikator_nm: verifikator_nm,
-												penerima_nm: form.find('input[name="penerima_nm"]').val(),
-												penerima_bank: form.find('input[name="penerima_bank"]').val(),
-												penerima_rek: form.find('input[name="penerima_rek"]').val(),
+												penandatangan_jbt: penandatangan.jabatan
 								        	}
-								        	pesan_loading('Simpan data SPM '+current_data.no_spm, true);
+								        	pesan_loading('Simpan data SP2D '+current_data.no_sp2d, true);
 					        				relayAjax({
 												url: form.attr('action'),
 												type: 'post',
@@ -3055,7 +3045,7 @@ function singkronisasi_sp2d_modal(){
 								        }
 								    });
 				        		}else{
-				        			pesan_loading('Data sudah ada SPM '+current_data.no_spm, true);
+				        			pesan_loading('Data sudah ada SP2D '+current_data.no_sp2d, true);
 				        			resolve_reduce(nextData);
 				        		}
 			        		})
@@ -3076,7 +3066,7 @@ function singkronisasi_sp2d_modal(){
 			})
 			.then(function(){
 				run_script('reload_spd');
-				alert('Berhasil singkronisasi SPM!');
+				alert('Berhasil singkronisasi SP2D!');
 		    	run_script('program_hide');
 				hide_loading();
 			})
