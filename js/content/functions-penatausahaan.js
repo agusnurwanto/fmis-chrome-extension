@@ -651,7 +651,7 @@ function load_tagihan_sub_keg(id_tagihan_fmis){
 	pesan_loading('Load all sub kegiatan dari id_tagihan_fmis='+id_tagihan_fmis, true);
 	return new Promise(function(resolve, reject){
 		relayAjax({
-			url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=subkegiatan',
+			url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=subkegiatan&id=',
 	        success: function(res){
 	        	resolve(res.data);
 	        }
@@ -680,6 +680,12 @@ function cek_insert_spd_rinci(spd){
     			}
         	});
 	        spd.spd_simda_rinci.map(function(b, i){
+    			if(b.id_prog == 0){
+    				b.detail.nama_program = 'Non Program';
+    				b.detail.nama_giat = 'Non Kegiatan';
+    				b.detail.nama_sub_giat = 'Non Sub Kegiatan';
+    				spd.spd_simda_rinci[i] = b;
+    			}
     			var kode_akun = b.detail.kode_akun;
     			var nama_unik = kode_akun+replace_string(b.detail.nama_sub_giat)+spd.id_sub_unit;
     			if(!spd_unik[nama_unik]){
@@ -787,8 +793,46 @@ function cek_insert_spd_rinci(spd){
 		            				if(id_aktivitas.length == 1){
 		            					resolve2(id_aktivitas[0]);
 			            			}else{
-		            					var url_rek = config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/pilih-data/'+id_spd_fmis+'?load=rekening&idrefaktivitas='+id_aktivitas[0].id+'&idsubkegiatan='+id_aktivitas[0].id_sub_kegiatan;
-			            				reject2('Ada lebih dari 1 aktivitas pada sub kegiatan ini. Perlu input manual SPD sesuai aktivitas yang dipilih! '+JSON.stringify(id_aktivitas));
+			            				var rek_double = [];
+			            				var last2 = id_aktivitas.length - 1;
+			            				id_aktivitas.reduce(function(sequence2, nextData2){
+								            return sequence2.then(function(aktivitas){
+								            	return new Promise(function(resolve_reduce2, reject_reduce2){
+								            		pesan_loading('Get rekening dari aktivitas '+aktivitas.nama, true);
+			            							var url_rek = config.fmis_url+'/penatausahaan/skpkd/bud/spd/rencana/pilih-data/'+id_spd_fmis+'?load=rekening&idrefaktivitas='+aktivitas.id+'&idsubkegiatan='+aktivitas.id_sub_kegiatan;
+			            							relayAjax({
+														url: url_rek,
+												        success: function(res_rek){
+												        	jQuery(res_rek).find('.btn-choose-rekening.btn-primary').closest('tr').map(function(i, b){
+												        		var rek = jQuery(b).find('td').eq(0).text().split(' ')[0];
+												        		if(rek == spd_rinci.detail.kode_akun){
+												        			rek_double.push(aktivitas);
+												        		}
+												        	});
+												        	resolve_reduce2(nextData2);
+												        }
+												    });
+								            	})
+								                .catch(function(e){
+								                    console.log(e);
+								                    return Promise.resolve(nextData2);
+								                });
+								            })
+								            .catch(function(e){
+								                console.log(e);
+								                return Promise.resolve(nextData2);
+								            });
+								        }, Promise.resolve(id_aktivitas[last2]))
+								        .then(function(data_last){
+								        	if(rek_double.length == 1){
+								        		resolve2(rek_double[0]);
+								        	}else if(rek_double.length == 0){
+								        		console.log('spd_rinci', spd_rinci);
+								        		reject2('Rekening "'+spd_rinci.detail.kode_akun+'" tidak ditemukan pada sub kegiatan "'+spd_rinci.detail.nama_sub_giat+'"!');
+								        	}else{
+				            					reject2('Ada lebih dari 1 rekening yang sama pada sub kegiatan ini. Perlu input manual SPD sesuai aktivitas yang dipilih! '+JSON.stringify(rek_double));
+				            				}
+								        });
 			            			}
 		            			})
 		            		})
@@ -917,7 +961,7 @@ function cek_insert_spd_rinci(spd){
 							        	var url_update = jQuery(res).find('form').attr('action');
 										var data_post = {
 											_token: _token,
-											kdurut: spd_rinci.no_id,
+											kdurut: need_update.idspd,
 											idrefaktivitas: need_update.idrefaktivitas,
 											idsubunit: need_update.idsubunit,
 											kdrek1: need_update.kdrek1,
@@ -1668,81 +1712,122 @@ function cek_insert_tagihan_rinci(tagihan){
 		            		}
 		            	});
 		            	if(!cek_exist){
-		            		new Promise(function(resolve2, reject2){
-								var keyword_simda = tagihan_rinci.detail.nama_sub_giat;
-		            			pesan_loading('Get data insert data baru ID sub kegiatan FMIS dari nomenklatur '+keyword_simda, true);
-					        	var id_sub_kegiatan = false;
-					        	res_sub.map(function(b, i){
-					        		var keyword_fmis = b.name;
-					        		if(replace_string(keyword_fmis) == replace_string(keyword_simda)){
-					        			id_sub_kegiatan = b.columnId;
-					        		}
-					        	});
-					        	if(id_sub_kegiatan){
-					        		resolve2(id_sub_kegiatan);
-					        	}else{
-					        		reject2('ID sub kegiatan FMIS dari nomenklatur '+keyword_simda+' tidak ditemukan!');
-					        	}
-		            		})
-		            		// get aktivitas
-		            		.then(function(id_sub_kegiatan){
-		            			return new Promise(function(resolve2, reject2){
-		            				pesan_loading('Get All aktivitas FMIS dari id '+id_sub_kegiatan, true);
-			            			relayAjax({
-										url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=aktivitas&id='+id_sub_kegiatan,
-								        success: function(res){
-								        	var aktivitas_all = [];
-								        	res.data.map(function(b, i){
-								        		var id_unit_fmis = b.idsubunit;
-								        		if(id_unit_fmis == tagihan.skpd.id_mapping_fmis.split('.').pop()){
-								        			var nama_aktivitas = b.name;
-									        		aktivitas_all.push({
-									        			id_sub_kegiatan: id_sub_kegiatan,
-									        			id: b.columnId,
-									        			nama: nama_aktivitas,
-									        			total: b.nilai
-									        		});
-									        	}
-								        	});
-								        	resolve2(aktivitas_all);
-								        }
-								    })
-			            		});
-		            		})
-		            		// cek rekening
-		            		.then(function(aktivitas_all){
-		            			return new Promise(function(resolve2, reject2){
-		            				if(aktivitas_all.length == 1){
-		            					relayAjax({
-											url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=rekening&id='+aktivitas_all[0].id,
-									        success: function(res){
-									        	var id_rekening = [];
-									        	res.data.map(function(b, i){
-									        		var nama_rekening = b.name;
-									        		var kode_rekening = b.code;
-									        		var spd = b.columnSpd;
-									        		if(kode_rekening == tagihan_rinci.detail.kode_akun){
-										        		id_rekening.push({
-										        			id_sub_kegiatan: aktivitas_all[0].id_sub_kegiatan,
-										        			id: b.columnId,
-										        			nama: nama_rekening,
-										        			kode_rekening: kode_rekening,
-										        			spd: spd,
-										        			total: b.nilai
-										        		});
-										        	}
-									        	});
-									        	resolve2(id_rekening);
-									        }
-									    });
-			            			}else{
-			            				reject2('Ada lebih dari 1 aktivitas pada sub kegiatan ini. Perlu input manual tagihan sesuai aktivitas yang dipilih! '+JSON.stringify(aktivitas_all));
-			            			}
-		            			})
-		            		})
+		            		new Promise(function(resolve22, reject22){
+			            		if(tagihan.tagihan_fmis_rinci.length == 0){
+				            		new Promise(function(resolve2, reject2){
+						    			if(tagihan_rinci.id_prog == 0){
+						    				tagihan_rinci.detail.nama_program = 'Non Program';
+						    				tagihan_rinci.detail.nama_giat = 'Non Kegiatan';
+						    				tagihan_rinci.detail.nama_sub_giat = 'Non Sub Kegiatan';
+						    			}
+										var keyword_simda = tagihan_rinci.detail.nama_sub_giat;
+				            			pesan_loading('Get data insert data baru ID sub kegiatan FMIS dari nomenklatur '+keyword_simda, true);
+							        	var id_sub_kegiatan = false;
+							        	res_sub.map(function(b, i){
+							        		var keyword_fmis = b.name;
+							        		if(replace_string(keyword_fmis) == replace_string(keyword_simda)){
+							        			id_sub_kegiatan = b.columnId;
+							        		}
+							        		return b;
+							        	});
+							        	if(id_sub_kegiatan){
+							        		resolve2(id_sub_kegiatan);
+							        	}else{
+							        		reject2('ID sub kegiatan FMIS dari nomenklatur "'+keyword_simda+'" tidak ditemukan!');
+							        	}
+				            		})
+				            		// get aktivitas
+				            		.then(function(id_sub_kegiatan){
+				            			return new Promise(function(resolve2, reject2){
+				            				pesan_loading('Get All aktivitas FMIS dari id '+id_sub_kegiatan, true);
+					            			relayAjax({
+												url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=aktivitas&id='+id_sub_kegiatan,
+										        success: function(res){
+										        	var aktivitas_all = [];
+										        	res.data.map(function(b, i){
+										        		var id_unit_fmis = b.idsubunit;
+										        		if(id_unit_fmis == tagihan.skpd.id_mapping_fmis.split('.').pop()){
+										        			var nama_aktivitas = b.name;
+											        		aktivitas_all.push({
+											        			id_sub_kegiatan: id_sub_kegiatan,
+											        			id: b.columnId,
+											        			nama: nama_aktivitas,
+											        			total: b.nilai
+											        		});
+											        	}
+										        	});
+										        	resolve2(aktivitas_all);
+										        }
+										    })
+					            		});
+				            		})
+				            		// cek rekening
+				            		.then(function(aktivitas_all){
+							        	var id_rekening = [];
+			            				var last2 = aktivitas_all.length - 1;
+			            				aktivitas_all.reduce(function(sequence2, nextData2){
+								            return sequence2.then(function(aktivitas){
+								            	return new Promise(function(resolve_reduce2, reject_reduce2){
+								            		pesan_loading('Get data rekening dari aktivitas '+aktivitas.nama, true);
+					            					relayAjax({
+														url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-rekening/'+id_tagihan_fmis+'?datatable=1&target=rekening&id='+aktivitas.id,
+												        success: function(res){
+												        	res.data.map(function(b, i){
+												        		var nama_rekening = b.name;
+												        		var kode_rekening = b.code;
+												        		var spd = b.columnSpd;
+												        		if(kode_rekening == tagihan_rinci.detail.kode_akun){
+													        		id_rekening.push({
+													        			id_sub_kegiatan: aktivitas.id_sub_kegiatan,
+													        			id: b.columnId,
+													        			nama: nama_rekening,
+													        			kode_rekening: kode_rekening,
+													        			spd: spd,
+													        			total: b.nilai
+													        		});
+													        	}
+												        	});
+												        	resolve_reduce2(nextData2);
+												        }
+												    });
+								            	})
+								                .catch(function(e){
+								                    console.log(e);
+								                    return Promise.resolve(nextData2);
+								                });
+								            })
+								            .catch(function(e){
+								                console.log(e);
+								                return Promise.resolve(nextData2);
+								            });
+								        }, Promise.resolve(aktivitas_all[last2]))
+								        .then(function(data_last){
+			            					resolve22(id_rekening);
+			            				})
+			            			});
+			            		}else{
+			            			var id_rekening = [];
+						        	res_sub.map(function(b, i){
+						        		var nama_rekening = b.name;
+						        		var kode_rekening = b.code;
+						        		var spd = b.columnSpd;
+						        		if(kode_rekening == tagihan_rinci.detail.kode_akun){
+							        		id_rekening.push({
+							        			id: b.columnId,
+							        			nama: nama_rekening,
+							        			kode_rekening: kode_rekening,
+							        			spd: spd,
+							        			total: b.nilai
+							        		});
+							        	}
+						        	});
+						        	resolve22(id_rekening);
+			            		}
+			            	})
 		            		// insert rincian tagihan
 		            		.then(function(id_rekening){
 			            		return new Promise(function(resolve2, reject2){
+		            				console.log('id_rekening', id_rekening);
 		            				if(id_rekening.length == 1){
 		            					relayAjax({
 											url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/rincian/data-spd/'+id_tagihan_fmis+'?spd='+id_rekening[0].spd,
@@ -1760,7 +1845,7 @@ function cek_insert_tagihan_rinci(tagihan){
 														nmrek: id_rekening[0].nama,
 														idrefaktivitas: id_rekening[0].id,
 														kdrek: id_rekening[0].kode_rekening,
-														nilai: to_number(tagihan_rinci.nilai, true),
+														nilai: tagihan_rinci.nilai,
 														idspd: id_spd_selected
 													};
 						            				relayAjax({
@@ -1776,6 +1861,8 @@ function cek_insert_tagihan_rinci(tagihan){
 						            			}
 									        }
 									    });
+				            		}else if(id_rekening.length == 0){
+			            				reject2('Rekening "'+tagihan_rinci.detail.kode_akun+'" tidak ditemukan pada sub kegiatan "'+tagihan_rinci.detail.nama_sub_giat+'". Perlu input manual tagihan sesuai aktivitas yang dipilih!');
 				            		}else{
 				            			reject2('Ada lebih dari 1 rekening pada aktivitas ini. Perlu input manual tagihan sesuai rekening yang dipilih! '+JSON.stringify(id_rekening));
 				            		}
