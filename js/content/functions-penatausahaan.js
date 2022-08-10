@@ -17,6 +17,25 @@ function get_list_spd(){
 	});
 }
 
+function get_list_kontrak(){
+	return new Promise(function(resolve2, reject2){
+		var url = config.fmis_url+'/penatausahaan/skpd/tu/kontrak';
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	var data = {};
+	        	res.data.map(function(b, i){
+	        		data[b.kontrak_no] = b;
+	        	})
+	        	resolve2(data);
+	        },
+	        error: function(e){
+	        	console.log('Error save program!', e, this.data);
+	        }
+		});
+	});
+}
+
 function get_list_tagihan(){
 	return new Promise(function(resolve2, reject2){
 		var url = config.fmis_url+'/penatausahaan/skpd/tu/tagihan';
@@ -138,6 +157,60 @@ function singkronisasi_spd(res){
 			jQuery('#singkronisasi-spd-modal').attr('verifikasi', 0);
 			jQuery('#mod-penandatangan').html(list_pegawai);
 			jQuery('#mod-penandatangan').parent().show();
+			jQuery('#konfirmasi-program tbody').html(body);
+			run_script('custom_dt_program');
+			hide_loading();
+		});
+	});
+}
+
+function singkronisasi_kontrak(data){
+	window.kontrak_simda = data;
+	get_list_kontrak()
+	.then(function(tagihan_fmis){
+		run_script('program_destroy');
+		var body = '';
+		kontrak_simda.map(function(b, i){
+			if(
+				!tagihan_fmis[b.no_kontrak.trim()]
+				&& !tagihan_fmis['DRAFT-'+b.no_kontrak.trim()]
+			){
+				body += ''
+					+'<tr>'
+						+'<td><input type="checkbox" value="'+b.no_kontrak.trim()+'"></td>'
+						+'<td>'+b.no_kontrak.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>('+b.nm_perusahaan+') '+b.keperluan+'</td>'
+					+'</tr>';
+			}else{
+				if(tagihan_fmis[b.no_kontrak.trim()]){
+					var tagihan_fmis_selected = tagihan_fmis[b.no_kontrak.trim()];
+				}else{
+					var tagihan_fmis_selected = tagihan_fmis['DRAFT-'+b.no_kontrak.trim()];
+				}
+				var disabled = '';
+				var status = '';
+				if(tagihan_fmis_selected.status == 'Final'){
+					var disabled = 'disabled';
+					var status = ' (Status Final)';
+				}
+				body += ''
+					+'<tr>'
+						+'<td><input '+disabled+' type="checkbox" value="'+b.no_kontrak.trim()+'"> <b>EXISTING'+status+'</b></td>'
+						+'<td>'+b.no_kontrak.trim()+'</td>'
+						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
+						+'<td>('+b.nm_perusahaan+') '+b.keperluan+'</td>'
+					+'</tr>';
+			}
+		});
+		
+		get_bank()
+		.then(function(bank){
+			var options_bank = '<option value="">Pilih Bank</option>';
+			bank.map(function(b, i){
+				options_bank += '<option value="'+b.kdbankbiller+' '+b.nmbankbiller+'">'+b.kdbankbiller+' '+b.nmbankbiller+'</option>';
+			});
+			jQuery('#pilih_bank').html(options_bank);
 			jQuery('#konfirmasi-program tbody').html(body);
 			run_script('custom_dt_program');
 			hide_loading();
@@ -3668,6 +3741,307 @@ function singkronisasi_tagihan_modal(){
 	        .then(function(){
 		    	run_script('reload_tagihan');
 				alert('Berhasil singkronisasi tagihan!');
+		    	run_script('program_hide');
+				hide_loading();
+			});
+		}
+	}else{
+		alert('Pilih data dulu!');
+	}
+}
+
+function get_sub_keg_kontrak(){
+	return new Promise(function(resolve2, reject2){
+		var tgl_skr = new Date();
+		tgl_skr = tgl_skr.toISOString().split('T')[0];
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpd/tu/kontrak/data-subkegiatan?kontrak_tgl='+tgl_skr,
+	        success: function(res){
+	        	return resolve2(res.data);
+	        }
+	    });
+	});
+}
+
+function get_kontrak_rinci_fmis(kontrak_fmis){
+	return new Promise(function(resolve2, reject2){
+		var id_kontrak_fmis = kontrak_fmis.action.split('href="').pop().split('"')[0].split('/').pop();
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpd/tu/kontrak/addendum/datatable/'+id_kontrak_fmis,
+	        success: function(res){
+	        	return resolve2(res.data);
+	        }
+	    });
+	});
+}
+
+function get_kontrak_rinci_simda(kontrak_simda){
+	return new Promise(function(resolve, reject){
+		pesan_loading('get kontrak rinci SIMDA dengan no='+kontrak_simda.no_kontrak, true);
+		window.continue_kontrak_rinci = resolve;
+		var data = {
+		    message:{
+		        type: "get-url",
+		        content: {
+				    url: config.url_server_lokal,
+				    type: 'post',
+				    data: { 
+						action: 'get_kontrak_addendum',
+						no_kontrak: kontrak_simda.no_kontrak,
+						tahun_anggaran: config.tahun_anggaran,
+						api_key: config.api_key
+					},
+	    			return: true
+				}
+		    }
+		};
+		chrome.runtime.sendMessage(data, function(response) {
+		    console.log('responeMessage', response);
+		});
+	});
+}
+
+function cek_insert_kontrak_rinci(kontrak){
+	return new Promise(function(resolve, reject){
+		var id_kontrak_fmis = kontrak.kontrak_fmis.action.split('href="').pop().split('"')[0].split('/').pop();
+		load_kontrak_sub_keg(id_kontrak_fmis)
+		.then(function(res_sub){
+			var last = kontrak.kontrak_simda_rinci.length - 1;
+	        var kdurut = 0;
+	        var kontrak_unik = {};
+	        kontrak.kontrak_fmis_rinci.map(function(b, i){
+    			var nama_unik = b.no_kontrak;
+    			if(!kontrak_unik[nama_unik]){
+    				kontrak_unik[nama_unik] = {
+						jml_sipd: 0,
+						jml_fmis: 1
+					};
+    			}else{
+    				kontrak_unik[nama_unik].jml_fmis++;
+    			}
+        	});
+	        kontrak.kontrak_simda_rinci.map(function(b, i){
+    			var nama_unik = b.no_kontrak;
+    			if(!kontrak_unik[nama_unik]){
+    				kontrak_unik[nama_unik] = {
+						jml_sipd: 1,
+						jml_fmis: 0
+					};
+    			}else{
+    				kontrak_unik[nama_unik].jml_sipd++;
+    			}
+        	});
+
+	        console.log('kontrak_unik', kontrak_unik);
+			var cek_double = {sipd: {}, fmis: {}};
+	        kontrak.kontrak_simda_rinci.reduce(function(sequence, nextData){
+	            return sequence.then(function(current_data){
+	            	return new Promise(function(resolve_reduce, reject_reduce){
+
+	            	})
+	                .catch(function(e){
+	                    console.log(e);
+	                    return Promise.resolve(nextData);
+	                });
+	            })
+	            .catch(function(e){
+	                console.log(e);
+	                return Promise.resolve(nextData);
+	            });
+	        }, Promise.resolve(kontrak.kontrak_simda_rinci[last]))
+	        .then(function(data_last){
+
+	        });
+	    });
+	});
+}
+
+function singkronisasi_kontrak_modal(){
+	var val_bank = jQuery('#pilih_bank').val();
+	if(val_bank == ''){
+		return alert('Pilihan bank tidak boleh kosong!');
+	}
+	var data_selected = [];
+	jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').map(function(i, b){
+		var cek = jQuery(b).is(':checked');
+		if(cek){
+			var no_kontrak = jQuery(b).val();
+			kontrak_simda.map(function(bb, ii){
+				if(bb.no_kontrak == no_kontrak){
+					data_selected.push(bb);
+				}
+			});
+		}
+	});
+	if(data_selected.length >= 1){
+		if(confirm('Apakah anda yakin untuk mengsingkronkan data Kontrak?')){
+			show_loading();
+			console.log('data_selected', data_selected);
+			new Promise(function(resolve, reject){
+				get_sub_keg_kontrak()
+				.then(function(data_sub_all){
+	    			get_list_kontrak()
+					.then(function(kontrak_fmis){
+						return new Promise(function(resolve2, reject2){
+							var last = data_selected.length - 1;
+							data_selected.reduce(function(sequence, nextData){
+					            return sequence.then(function(current_data){
+					        		return new Promise(function(resolve_reduce, reject_reduce){
+				        				var data_post = {
+				        					_token : _token,
+											kontrak_no : current_data.no_kontrak,
+											kontrak_tgl : current_data.tgl_kontrak.split(' ')[0],
+											waktu : current_data.waktu,
+											nmsubkegiatan : '',
+											idsubkegiatan : '',
+											nilai : current_data.nilai,
+											keperluan : current_data.keperluan,
+											idkontraklkpp : '',
+											penerima_nm : current_data.nm_pemilik,
+											penerima_bentuk : current_data.bentuk,
+											penerima_alamat : current_data.alamat,
+											penerima_pemilik : current_data.nm_pemilik,
+											penerima_npwp : current_data.npwp,
+											bank_nm : val_bank,
+											bank_nm_rek : current_data.nm_rekening,
+											bank_no_rek : current_data.no_rekening
+				        				}
+										var sub_keg = false;
+							        	data_sub_all.map(function(b, i){
+							        		if(
+							        			replace_string(b.nmsubkegiatan, true, true, true) == replace_string(current_data.detail.nama_program, true, true, true)
+							        			|| replace_string(b.nmkegiatan, true, true, true) == replace_string(current_data.detail.nama_giat, true, true, true)
+							        			|| replace_string(b.nmprogram, true, true, true) == replace_string(current_data.detail.nama_sub_giat, true, true, true)
+							        		){
+							        			sub_keg = b;
+							        		}
+							        	});
+							        	if(sub_keg){
+											if(
+												!kontrak_fmis[current_data.no_kontrak.trim()]
+												&& !kontrak_fmis['DRAFT-'+current_data.no_kontrak.trim()]
+											){
+												data_post.nmsubkegiatan = sub_keg.nmsubkegiatan;
+												data_post.idsubkegiatan = jQuery(sub_keg.action).attr('data-id');
+						        				pesan_loading('Simpan data kontrak '+current_data.no_kontrak, true);
+						        				relayAjax({
+													url: config.fmis_url+'/penatausahaan/skpd/tu/kontrak/create',
+													type: 'post',
+													data: data_post,
+											        success: function(res){
+											        	resolve_reduce(nextData);
+											        }
+											    });
+											}else{
+												if(kontrak_fmis[current_data.no_kontrak.trim()]){
+													var kontrak_fmis_selected = kontrak_fmis[current_data.no_kontrak.trim()];
+												}else{
+													var kontrak_fmis_selected = kontrak_fmis['DRAFT-'+current_data.no_kontrak.trim()];
+												}
+												if(
+													kontrak_fmis_selected.action.indexOf('update') == -1
+													|| (
+														replace_string(current_data.keperluan, true, true, true) == replace_string(kontrak_fmis_selected.keperluan, true, true, true)
+													)
+												){
+													return resolve_reduce(nextData);
+												}
+												console.log('current_data, kontrak_fmis_selected', current_data, kontrak_fmis_selected);
+												var id_kontrak_fmis = kontrak_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
+												pesan_loading('Perlu update data kontrak '+current_data.no_kontrak, true);
+						        				relayAjax({
+													url: config.fmis_url+'/penatausahaan/skpd/tu/kontrak/update/'+id_kontrak_fmis,
+													type: 'post',
+													data: data_post,
+											        success: function(res){
+											        	resolve_reduce(nextData);
+											        }
+											    });
+											}
+										}else{
+							        		console.log('current_data', current_data);
+							        		pesan_loading("Sub kegiatan tidak ditemukan!");
+					                    	return resolve_reduce(nextData);
+							        	}
+					        		})
+					                .catch(function(e){
+					                    console.log(e);
+					                    return Promise.resolve(nextData);
+					                });
+					            })
+					            .catch(function(e){
+					                console.log(e);
+					                return Promise.resolve(nextData);
+					            });
+					        }, Promise.resolve(data_selected[last]))
+					        .then(function(data_last){
+						    	return resolve2();
+							});
+						});
+					})
+			        .then(function(){
+			        	// singkronisasi rincian SPP
+			        	return new Promise(function(resolve2, reject2){
+			    			get_list_kontrak()
+							.then(function(kontrak_fmis){
+								var last = data_selected.length - 1;
+								data_selected.reduce(function(sequence, nextData){
+						            return sequence.then(function(current_data){
+						        		return new Promise(function(resolve_reduce, reject_reduce){
+						        			if(
+												kontrak_fmis[current_data.no_kontrak.trim()]
+												|| kontrak_fmis['DRAFT-'+current_data.no_kontrak.trim()]
+											){
+												if(kontrak_fmis[current_data.no_kontrak.trim()]){
+													var kontrak_fmis_selected = kontrak_fmis[current_data.no_kontrak.trim()];
+												}else{
+													var kontrak_fmis_selected = kontrak_fmis['DRAFT-'+current_data.no_kontrak.trim()];
+												}
+												if(kontrak_fmis_selected.action.indexOf('update') == -1){
+													return resolve_reduce(nextData);
+												}
+												current_data.kontrak_fmis = kontrak_fmis_selected;
+												get_kontrak_rinci_fmis(current_data.kontrak_fmis)
+						            			.then(function(kontrak_fmis_rinci){
+						            				current_data.kontrak_fmis_rinci = kontrak_fmis_rinci;
+							            			get_kontrak_rinci_simda(current_data)
+							            			.then(function(kontrak_simda_rinci){
+							            				current_data.kontrak_simda_rinci = kontrak_simda_rinci;
+							            				cek_insert_kontrak_rinci(current_data)
+							            				.then(function(){
+							            					resolve_reduce(nextData);
+							            				})
+							            			});
+						            			});
+						        			}else{
+						        				pesan_loading('Tidak ditemukan! Data kontrak '+current_data.no_kontrak, true);
+						        				resolve_reduce(nextData);
+						        			}
+						        		})
+						                .catch(function(e){
+						                    console.log(e);
+						                    return Promise.resolve(nextData);
+						                });
+						            })
+						            .catch(function(e){
+						                console.log(e);
+						                return Promise.resolve(nextData);
+						            });
+						        }, Promise.resolve(data_selected[last]))
+						        .then(function(data_last){
+							    	return resolve2();
+								});
+							});
+						});
+			        })
+			        .then(function(){
+			        	resolve()
+			        });
+				});
+			})
+	        .then(function(){
+		    	run_script('reload_kontrak');
+				alert('Berhasil singkronisasi kontrak!');
 		    	run_script('program_hide');
 				hide_loading();
 			});

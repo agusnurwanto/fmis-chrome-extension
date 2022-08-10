@@ -1000,6 +1000,78 @@ if(current_url.indexOf('parameter/rekening') != -1){
 		jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').prop('checked', cek);
 		jQuery('#konfirmasi-program tbody tr input[type="checkbox"][disabled]').prop('checked', false);
 	});
+}else if(current_url.indexOf('/penatausahaan/skpd/tu/kontrak') != -1){
+	var modal_spp = ''
+		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'
+	        +'<div class="modal-dialog modal-xl" role="document">'
+	            +'<div class="modal-content">'
+	                +'<div class="modal-header bgpanel-theme" style="background: #8997bd;">'
+	                    +'<h4 class="modal-title text-white" id="">Daftar Kontrak</h4>'
+	                    +'<button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true"><i class="mdi mdi-close-circle"></i></span></button>'
+	                +'</div>'
+	                +'<div class="modal-body">'
+	                	+'<div class="form-group row p-2">'
+	                		+'<label for="pilih_bank" class="col-sm-3 col-form-label text-left font-weight-semibold border-bottom">Pilih Bank</label>'
+	                		+'<select class="form-control col-sm-9" id="pilih_bank"></select>'
+	                	+'</div>'
+	                  	+'<table class="table table-hover table-striped" id="konfirmasi-program">'
+	                      	+'<thead>'
+	                        	+'<tr style="background: #8997bd;">'
+	                          		+'<th class="text-white"><input type="checkbox" id="modal_cek_all"></th>'
+	                          		+'<th class="text-white" width="300">No Kontrak</th>'
+	                          		+'<th class="text-white" width="300">SKPD</th>'
+	                          		+'<th class="text-white" width="500">Uraian</th>'
+	                        	+'</tr>'
+	                      	+'</thead>'
+	                      	+'<tbody></tbody>'
+	                  	+'</table>'
+	                +'</div>'
+	                +'<div class="modal-footer">'
+	                    +'<button type="button" class="btn btn-success" id="singkronisasi-kontrak-modal">Proses</button>'
+	                    +'<button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>'
+	                +'</div>'
+	            +'</div>'
+	        +'</div>'
+	    +'</div>';
+	jQuery('body').append(modal_spp);
+	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkronisasi_data_kontrak">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Data Kontrak dari SIMDA'
+    +'</button>';
+    jQuery('.btn[data-title="Tambah Kontrak"]').parent().append(btn);
+    jQuery('#singkronisasi_data_kontrak').on('click', function(){
+    	show_loading();
+    	get_id_sub_unit_penatausahaan()
+    	.then(function(sub_unit_fmis){
+	    	var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'get_kontrak',
+							idsubunit: sub_unit_fmis.idsubunit,
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+	    });
+    });
+    jQuery('#singkronisasi-kontrak-modal').on('click', function(){
+    	singkronisasi_kontrak_modal();
+    });
+	jQuery('#modal_cek_all').on('click', function(){
+		var cek = jQuery(this).is(':checked');
+		jQuery('#konfirmasi-program tbody tr input[type="checkbox"]').prop('checked', cek);
+		jQuery('#konfirmasi-program tbody tr input[type="checkbox"][disabled]').prop('checked', false);
+	});
 }else if(current_url.indexOf('/penatausahaan/skpkd/bud/spd') != -1){
 	var modal_spd = ''
 		+'<div class="modal fade" id="mod-konfirmasi-program" tabindex="-1" role="dialog" data-backdrop="static" aria-hidden="true" style="z-index: 99999">'

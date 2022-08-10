@@ -65,6 +65,14 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			continue_spp_rinci(res.data);
+		}else if(res.action == 'get_kontrak'){
+			_alert = false;
+			cek_hide_loading = false;
+			singkronisasi_kontrak(res.data);
+		}else if(res.action == 'get_kontrak_addendum'){
+			_alert = false;
+			cek_hide_loading = false;
+			continue_kontrak_rinci(res.data);
 		}else if(res.action == 'get_tagihan'){
 			_alert = false;
 			cek_hide_loading = false;

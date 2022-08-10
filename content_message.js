@@ -76,5 +76,8 @@ window.addEventListener('message', function(event) {
     	case 'reload_tagihan':
     		tableTagihan.ajax.reload(null, false);
 			break;
+    	case 'reload_kontrak':
+    		tableKontrak.ajax.reload(null, false);
+			break;
 	}
 });
