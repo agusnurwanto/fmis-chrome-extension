@@ -3763,7 +3763,7 @@ function get_sub_keg_kontrak(){
 	});
 }
 
-function get_kontrak_rinci_fmis(kontrak_fmis){
+function get_kontrak_addendum_fmis(kontrak_fmis){
 	return new Promise(function(resolve2, reject2){
 		var id_kontrak_fmis = kontrak_fmis.action.split('href="').pop().split('"')[0].split('/').pop();
 		relayAjax({
@@ -3775,9 +3775,9 @@ function get_kontrak_rinci_fmis(kontrak_fmis){
 	});
 }
 
-function get_kontrak_rinci_simda(kontrak_simda){
+function get_kontrak_addendum_simda(kontrak_simda){
 	return new Promise(function(resolve, reject){
-		pesan_loading('get kontrak rinci SIMDA dengan no='+kontrak_simda.no_kontrak, true);
+		pesan_loading('get kontrak addendum SIMDA dengan no='+kontrak_simda.no_kontrak, true);
 		window.continue_kontrak_rinci = resolve;
 		var data = {
 		    message:{
@@ -3801,58 +3801,53 @@ function get_kontrak_rinci_simda(kontrak_simda){
 	});
 }
 
-function cek_insert_kontrak_rinci(kontrak){
+function cek_insert_kontrak_addendum(kontrak){
 	return new Promise(function(resolve, reject){
+		var kontrak_fmis = {};
+		kontrak.kontrak_fmis_addendum.map(function(b, i){
+			kontrak_fmis[b.addendm_no] = b;
+		});
 		var id_kontrak_fmis = kontrak.kontrak_fmis.action.split('href="').pop().split('"')[0].split('/').pop();
-		load_kontrak_sub_keg(id_kontrak_fmis)
-		.then(function(res_sub){
-			var last = kontrak.kontrak_simda_rinci.length - 1;
-	        var kdurut = 0;
-	        var kontrak_unik = {};
-	        kontrak.kontrak_fmis_rinci.map(function(b, i){
-    			var nama_unik = b.no_kontrak;
-    			if(!kontrak_unik[nama_unik]){
-    				kontrak_unik[nama_unik] = {
-						jml_sipd: 0,
-						jml_fmis: 1
-					};
-    			}else{
-    				kontrak_unik[nama_unik].jml_fmis++;
-    			}
-        	});
-	        kontrak.kontrak_simda_rinci.map(function(b, i){
-    			var nama_unik = b.no_kontrak;
-    			if(!kontrak_unik[nama_unik]){
-    				kontrak_unik[nama_unik] = {
-						jml_sipd: 1,
-						jml_fmis: 0
-					};
-    			}else{
-    				kontrak_unik[nama_unik].jml_sipd++;
-    			}
-        	});
-
-	        console.log('kontrak_unik', kontrak_unik);
-			var cek_double = {sipd: {}, fmis: {}};
-	        kontrak.kontrak_simda_rinci.reduce(function(sequence, nextData){
-	            return sequence.then(function(current_data){
-	            	return new Promise(function(resolve_reduce, reject_reduce){
-
-	            	})
-	                .catch(function(e){
-	                    console.log(e);
-	                    return Promise.resolve(nextData);
-	                });
-	            })
-	            .catch(function(e){
-	                console.log(e);
-	                return Promise.resolve(nextData);
-	            });
-	        }, Promise.resolve(kontrak.kontrak_simda_rinci[last]))
-	        .then(function(data_last){
-
-	        });
-	    });
+		var last = kontrak.kontrak_simda_addendum.length - 1;
+        kontrak.kontrak_simda_addendum.reduce(function(sequence, nextData){
+            return sequence.then(function(current_data){
+            	return new Promise(function(resolve_reduce, reject_reduce){
+            		if(!kontrak_fmis[current_data.no_addendum]){
+	            		var data_post = {
+	            			_token: _token,
+							addendm_no: current_data.no_addendum,
+							addendum_tgl: current_data.tgl_addendum.split(' ')[0],
+							keperluan: current_data.keperluan,
+							waktu: current_data.waktu,
+							nilai: current_data.nilai
+	            		}
+	            		pesan_loading('Simpan data kontrak addendum '+current_data.no_addendum, true);
+	    				relayAjax({
+							url: config.fmis_url+'/penatausahaan/skpd/tu/kontrak/addendum/create/'+id_kontrak_fmis,
+							type: 'post',
+							data: data_post,
+					        success: function(res){
+					        	resolve_reduce(nextData);
+					        }
+					    });
+	    			}else{
+	            		pesan_loading('Sudah ada! kontrak addendum '+current_data.no_addendum, true);
+					    resolve_reduce(nextData);
+	    			}
+            	})
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(kontrak.kontrak_simda_addendum[last]))
+        .then(function(data_last){
+        	resolve();
+        });
 	});
 }
 
@@ -3980,7 +3975,7 @@ function singkronisasi_kontrak_modal(){
 						});
 					})
 			        .then(function(){
-			        	// singkronisasi rincian SPP
+			        	// singkronisasi kontrak addendum
 			        	return new Promise(function(resolve2, reject2){
 			    			get_list_kontrak()
 							.then(function(kontrak_fmis){
@@ -4001,13 +3996,13 @@ function singkronisasi_kontrak_modal(){
 													return resolve_reduce(nextData);
 												}
 												current_data.kontrak_fmis = kontrak_fmis_selected;
-												get_kontrak_rinci_fmis(current_data.kontrak_fmis)
-						            			.then(function(kontrak_fmis_rinci){
-						            				current_data.kontrak_fmis_rinci = kontrak_fmis_rinci;
-							            			get_kontrak_rinci_simda(current_data)
-							            			.then(function(kontrak_simda_rinci){
-							            				current_data.kontrak_simda_rinci = kontrak_simda_rinci;
-							            				cek_insert_kontrak_rinci(current_data)
+												get_kontrak_addendum_fmis(current_data.kontrak_fmis)
+						            			.then(function(kontrak_fmis_addendum){
+						            				current_data.kontrak_fmis_addendum = kontrak_fmis_addendum;
+							            			get_kontrak_addendum_simda(current_data)
+							            			.then(function(kontrak_simda_addendum){
+							            				current_data.kontrak_simda_addendum = kontrak_simda_addendum;
+							            				cek_insert_kontrak_addendum(current_data)
 							            				.then(function(){
 							            					resolve_reduce(nextData);
 							            				})
