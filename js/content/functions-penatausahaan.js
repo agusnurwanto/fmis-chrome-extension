@@ -30,7 +30,26 @@ function get_list_kontrak(){
 	        	resolve2(data);
 	        },
 	        error: function(e){
-	        	console.log('Error save program!', e, this.data);
+	        	console.log('Error get kontrak!', e, this.data);
+	        }
+		});
+	});
+}
+
+function get_list_kontrak_tagihan(){
+	return new Promise(function(resolve2, reject2){
+		var url = config.fmis_url+'/penatausahaan/skpd/tu/tagihan/data-kontrak';
+		relayAjax({
+			url: url,
+	        success: function(res){
+	        	var data = {};
+	        	res.data.map(function(b, i){
+	        		data[b.kontrak_no] = b;
+	        	})
+	        	resolve2(data);
+	        },
+	        error: function(e){
+	        	console.log('Error get kontrak!', e, this.data);
 	        }
 		});
 	});
@@ -225,6 +244,10 @@ function singkronisasi_tagihan(data){
 		run_script('program_destroy');
 		var body = '';
 		tagihan_simda.map(function(b, i){
+			var no_kontrak = '';
+			if(b.no_kontrak){
+				no_kontrak = ' ( No Kontrak: '+b.no_kontrak+' )';
+			}
 			if(
 				!tagihan_fmis[b.no_tagihan.trim()]
 				&& !tagihan_fmis['DRAFT-'+b.no_tagihan.trim()]
@@ -232,7 +255,7 @@ function singkronisasi_tagihan(data){
 				body += ''
 					+'<tr>'
 						+'<td><input type="checkbox" value="'+b.no_tagihan.trim()+'"></td>'
-						+'<td>'+b.no_tagihan.trim()+'</td>'
+						+'<td>'+b.no_tagihan.trim()+no_kontrak+'</td>'
 						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
 						+'<td>'+b.uraian+'</td>'
 					+'</tr>';
@@ -251,7 +274,7 @@ function singkronisasi_tagihan(data){
 				body += ''
 					+'<tr>'
 						+'<td><input '+disabled+' type="checkbox" value="'+b.no_tagihan.trim()+'"> <b>EXISTING'+status+'</b></td>'
-						+'<td>'+b.no_tagihan.trim()+'</td>'
+						+'<td>'+b.no_tagihan.trim()+no_kontrak+'</td>'
 						+'<td>'+b.kd_sub_unit+' '+b.skpd.nama_skpd+'</td>'
 						+'<td>'+b.uraian+'</td>'
 					+'</tr>';
@@ -1714,6 +1737,7 @@ function cek_insert_spp_rinci(spp){
 
 function cek_insert_tagihan_rinci(tagihan){
 	return new Promise(function(resolve, reject){
+		console.log('tagihan rinci', tagihan);
 		var id_tagihan_fmis = tagihan.tagihan_fmis.action.split('href="').pop().split('"')[0].split('/').pop();
 		load_tagihan_sub_keg(id_tagihan_fmis)
 		.then(function(res_sub){
@@ -1877,6 +1901,9 @@ function cek_insert_tagihan_rinci(tagihan){
 								        .then(function(data_last){
 			            					resolve22(id_rekening);
 			            				})
+			            			})
+			            			.catch(function(e){
+			            				reject22(e);
 			            			});
 			            		}else{
 			            			var id_rekening = [];
@@ -2029,7 +2056,7 @@ function cek_insert_tagihan_rinci(tagihan){
 		        		return new Promise(function(resolve_reduce2, reject_reduce2){
 		        			var url_form = need_update.action.split('href="');
 		        			if(url_form.length >= 3){
-			        			pesan_loading('Kosongkan tagihan rinci rek='+need_update.rekening+', total=0, no tagihan='+tagihan.no_tagihan, true);
+			        			pesan_loading('Kosongkan tagihan rinci rek='+need_update.entity_code+', total=0, no tagihan='+tagihan.no_tagihan, true);
 	            				relayAjax({
 									url: url_form[1].split('"')[0],
 							        success: function(res){
@@ -2052,13 +2079,13 @@ function cek_insert_tagihan_rinci(tagihan){
 											type: 'post',
 											data: data_post,
 									        success: function(res){
-									        	resolve_reduce(nextData);
+									        	resolve_reduce2(nextData);
 									        }
 									    });
 			            			}
 							    });
 	            			}else{
-            					pesan_loading('Tombol edit tidak ada! tagihan rinci rek='+need_update.rekening+', total='+need_update.nilai+', no tagihan='+tagihan.no_spd, true);
+            					pesan_loading('Tombol edit tidak ada! tagihan rinci rek='+need_update.entity_code+', total='+need_update.nilai+', no tagihan='+tagihan.no_spd, true);
 								resolve_reduce2(nextData2);
 	            			}
 		        		})
@@ -3607,79 +3634,137 @@ function singkronisasi_tagihan_modal(){
 			new Promise(function(resolve, reject){
     			get_list_tagihan()
 				.then(function(tagihan_fmis){
-					var last = data_selected.length - 1;
-					data_selected.reduce(function(sequence, nextData){
-			            return sequence.then(function(current_data){
-			        		return new Promise(function(resolve_reduce, reject_reduce){
-								var jns_belanja_ls = 1;
-								var idjnstagihan = 1;
-								if(current_data.jns_tagihan == 5){
-									jns_belanja_ls = 5;
-									idjnstagihan = 9;
-								}
-								var data_post = {
-		        					_token: _token,
-									tagihan_no: current_data.no_tagihan.trim(),
-									tagihan_tgl: current_data.tgl_tagihan.split(' ')[0],
-									uraian: current_data.uraian,
-									tipetagihan: 0,
-									jns_belanja_ls: jns_belanja_ls,
-									idjnstagihan: idjnstagihan,
-									pct_tkdn: 0,
-									idrup: ""
-		        				}
-								if(
-									!tagihan_fmis[current_data.no_tagihan.trim()]
-									&& !tagihan_fmis['DRAFT-'+current_data.no_tagihan.trim()]
-								){
-			        				pesan_loading('Simpan data tagihan '+current_data.no_tagihan, true);
-			        				relayAjax({
-										url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/create/0',
-										type: 'post',
-										data: data_post,
-								        success: function(res){
-								        	resolve_reduce(nextData);
-								        }
-								    });
-								}else{
-									if(tagihan_fmis[current_data.no_tagihan.trim()]){
-										var tagihan_fmis_selected = tagihan_fmis[current_data.no_tagihan.trim()];
-									}else{
-										var tagihan_fmis_selected = tagihan_fmis['DRAFT-'+current_data.no_tagihan.trim()];
+	    			get_list_kontrak_tagihan()
+					.then(function(kontrak_fmis){
+						var last = data_selected.length - 1;
+						data_selected.reduce(function(sequence, nextData){
+				            return sequence.then(function(current_data){
+				        		return new Promise(function(resolve_reduce, reject_reduce){
+									/*
+										# ID jns_belanja_ls FMIS
+										- 1 Belanja Gaji, 2 Belanja Barang Jasa, 3 Belanja Pihak 3 Lainnya, 5 Pembiayaan
+										- 2 Belanja barang dan jasa, 4 Belanja modal
+
+										# ID jns_tagihan FMIS
+										- 1 Belanja Operasional-Non Termin, 2 Belanja Operasional-Uang Muka, 3 Belanja Operasional-Termin
+										- 5 Belanja Modal-Non Termin, 6 Belanja Modal-Uang Muka, 7 Belanja Modal-Termin
+
+										# ref_jenis_tagihan SIMDA
+										- 0 Belanja Modal Uang Muka
+										- 1 Belanja Operasional
+										- 2 Belanja Modal Non Termin
+										- 3 Belanja Modal Termin
+										- 4 Belanja Modal Termin Terakhir
+										- 5 Pembiayaan
+									*/
+									var jns_belanja_ls = 1;
+									var idjnstagihan = 1;
+									if(current_data.no_kontrak){
+										jns_belanja_ls = 2;
+										idjnstagihan = 3;
+									}
+									// pembiayaan
+									if(current_data.jns_tagihan == 5){
+										jns_belanja_ls = 5;
+										idjnstagihan = 9;
+									// Belanja Modal Uang Muka
+									}else if(current_data.jns_tagihan == 0){
+										jns_belanja_ls = 4;
+										idjnstagihan = 6;
+									// Belanja Modal Non Termin
+									}else if(current_data.jns_tagihan == 2){
+										jns_belanja_ls = 4;
+										idjnstagihan = 5;
+									// Belanja Modal Termin / Belanja Modal Termin Terakhir
+									}else if(
+										current_data.jns_tagihan == 3 
+										|| current_data.jns_tagihan == 4
+									){
+										jns_belanja_ls = 4;
+										idjnstagihan = 7;
+									}
+									var data_post = {
+			        					_token: _token,
+										tagihan_no: current_data.no_tagihan.trim(),
+										tagihan_tgl: current_data.tgl_tagihan.split(' ')[0],
+										uraian: current_data.uraian,
+										tipetagihan: 0,
+										jns_belanja_ls: jns_belanja_ls,
+										idjnstagihan: idjnstagihan,
+										pct_tkdn: 0,
+										idrup: ""
+			        				}
+									if(current_data.no_kontrak){
+										if(!kontrak_fmis[current_data.no_kontrak]){
+											pesan_loading('No Kontrak SIMDA tidak ditemukan '+current_data.no_kontrak);
+											return resolve_reduce(nextData);
+										}
+										var idkontrak = kontrak_fmis[current_data.no_kontrak].action.split('?idkontrak=')[1].split('"')[0];
+										data_post.tipetagihan = 1;
+										data_post.idkontrak = idkontrak;
+										data_post.pct_realisasi = 0;
+										console.log('Tipe tagihan KONTRAK '+current_data.no_kontrak, data_post);
 									}
 									if(
-										tagihan_fmis_selected.action.indexOf('update') == -1
-										|| (
-											replace_string(current_data.uraian, true, true, true) == replace_string(tagihan_fmis_selected.uraian, true, true, true)
-										)
+										!tagihan_fmis[current_data.no_tagihan.trim()]
+										&& !tagihan_fmis['DRAFT-'+current_data.no_tagihan.trim()]
 									){
-										return resolve_reduce(nextData);
+				        				pesan_loading('Simpan data tagihan '+current_data.no_tagihan, true);
+				        				relayAjax({
+											url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/create/0',
+											type: 'post',
+											data: data_post,
+									        success: function(res){
+									        	resolve_reduce(nextData);
+									        }
+									    });
+									}else{
+										if(tagihan_fmis[current_data.no_tagihan.trim()]){
+											var tagihan_fmis_selected = tagihan_fmis[current_data.no_tagihan.trim()];
+										}else{
+											var tagihan_fmis_selected = tagihan_fmis['DRAFT-'+current_data.no_tagihan.trim()];
+										}
+										if(
+											tagihan_fmis_selected.action.indexOf('update') == -1
+											|| (
+												(
+													replace_string(current_data.uraian, true, true, true) == replace_string(tagihan_fmis_selected.uraian, true, true, true)
+												)
+												&& (
+													current_data.no_kontrak
+													&& current_data.no_kontrak == tagihan_fmis_selected.get_trn_kontrak.kontrak_no
+												)
+											)
+										){
+											pesan_loading('Sudah ada! data tagihan '+current_data.no_tagihan, true);
+											return resolve_reduce(nextData);
+										}
+										console.log('current_data, tagihan_fmis_selected', current_data, tagihan_fmis_selected);
+										var id_tagihan_fmis = tagihan_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
+										pesan_loading('Perlu update data tagihan '+current_data.no_tagihan, true);
+				        				relayAjax({
+											url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/update/'+id_tagihan_fmis,
+											type: 'post',
+											data: data_post,
+									        success: function(res){
+									        	resolve_reduce(nextData);
+									        }
+									    });
 									}
-									console.log('current_data, tagihan_fmis_selected', current_data, tagihan_fmis_selected);
-									var id_tagihan_fmis = tagihan_fmis_selected.action.split('href="').pop().split('"')[0].split('/').pop();
-									pesan_loading('Perlu update data tagihan '+current_data.no_tagihan, true);
-			        				relayAjax({
-										url: config.fmis_url+'/penatausahaan/skpd/tu/tagihan/update/'+id_tagihan_fmis,
-										type: 'post',
-										data: data_post,
-								        success: function(res){
-								        	resolve_reduce(nextData);
-								        }
-								    });
-								}
-			        		})
-			                .catch(function(e){
-			                    console.log(e);
-			                    return Promise.resolve(nextData);
-			                });
-			            })
-			            .catch(function(e){
-			                console.log(e);
-			                return Promise.resolve(nextData);
-			            });
-			        }, Promise.resolve(data_selected[last]))
-			        .then(function(data_last){
-				    	resolve();
+				        		})
+				                .catch(function(e){
+				                    console.log(e);
+				                    return Promise.resolve(nextData);
+				                });
+				            })
+				            .catch(function(e){
+				                console.log(e);
+				                return Promise.resolve(nextData);
+				            });
+				        }, Promise.resolve(data_selected[last]))
+				        .then(function(data_last){
+					    	resolve();
+						});
 					});
 				});
 			})
