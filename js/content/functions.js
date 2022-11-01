@@ -5932,6 +5932,8 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 	        			if(master_sumberdana[sumber_dana_sipd_master]){
 	        				idsumberdana = master_sumberdana[sumber_dana_sipd_master];
 	        				uraian_sumberdana = sumber_dana_sipd_master;
+	        			}else{
+	        				console.log('Sumber Dana SIPD tidak ditemukan di FMIS!', sumber_dana_sipd_master);
 	        			}
 						if(!cek_exist){
 	        				var data = {
@@ -5981,7 +5983,11 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 		        				});
 		        				if(!cek_exist){
 		        					// cek jika aktivitas di fmis hanya satu dan di sipd juga hanya satu, maka aktivitas fmis diupdate sesuai aktivitas di sipd
-		        					if(cek_aktivitas_sub_unit.length == 1){
+		        					if(
+		        						cek_aktivitas_sub_unit.length == 1
+		        						&& sub_keg.aktivitas.length == 1
+		        						&& all_aktivitas.length == 1
+		        					){
 		        						cek_exist = true;
 		        						aktivitas_exist_update = cek_aktivitas_sub_unit[0];
 		        					}
@@ -7488,17 +7494,21 @@ function tampil_pagu_sub_keg(){
     });
 }
 
-function kosongkan_rincian_item(rincian){
+function kosongkan_rincian_item(rincian, ulangi=false){
 	return new Promise(function(resolve, reduce){
 		var cek_link = rincian.action.split('href="');
-		if(cek_link.length >= 4){
-			var url_form_delete = cek_link[3].split('"')[0];
+		if(rincian.action.indexOf('data-action="delete"') != -1 && ulangi == false){
+			if(cek_link.length >= 4){
+				var url_form_delete = cek_link[3].split('"')[0];
+			}else{
+				var url_form_delete = cek_link[2].split('"')[0];
+			}
 			relayAjax({
 				url: url_form_delete+'&action=delete',
 	            success: function(form_delete){
 	            	var form = jQuery(form_delete.form);
 	            	var url_delete = form.attr('action');
-	    			relayAjax({
+	    			jQuery.ajax({
 						url: url_delete,
 						data: {
 							_method: 'DELETE',
@@ -7509,13 +7519,18 @@ function kosongkan_rincian_item(rincian){
 			            	resolve();
 			            },
 			            error: function(e){
-			            	console.log('Error hapus rincian!', e, rka);
+			            	console.log('Error hapus rincian!', e);
+			            	kosongkan_rincian_item(rincian, true)
+			            	.then(function(){
+			            		resolve();
+			            	})
 			            }
 					});
 	            }
 			});
 		}else{
 			if(to_number(rincian.jumlah) == 0){
+				console.log('jumlah pagu rincian sudah 0', rincian);
 				return resolve();
 			}
 			var url_form_update = cek_link[1].split('"')[0];
@@ -7575,6 +7590,7 @@ function kosongkan_rincian_item(rincian){
 		            	resolve();
 		            },
 		            error: function(e){
+		            	resolve();
 		            	console.log('Error save rincian!', e, this.data);
 		            }
 				});
@@ -7585,7 +7601,8 @@ function kosongkan_rincian_item(rincian){
 
 function kosongkan_rincian(){
 	var sub_kegiatan = [];
-	jQuery('#table-subkegiatan tbody .btn-group-sm .btn.btn-success.my-1.tab-next').map(function(i, b){
+	// jQuery('#table-subkegiatan tbody .btn-group-sm .btn.btn-success.my-1.tab-next').map(function(i, b){
+	jQuery('#table-subkegiatan tbody .btn-group-sm .btn.btn-primary.tab-next').map(function(i, b){
 		var kode_sub = jQuery(b).attr('data-code');
 		sub_kegiatan.push({
 			code: kode_sub,
@@ -7600,6 +7617,7 @@ function kosongkan_rincian(){
 	if(!confirm('Apakah anda yakin untuk menghapus atau mengosongkan nilai rincian dari '+sub_kegiatan.length+' sub kegiatan ini?')){
 		return;
 	}
+	var nama_aktivitas = prompt('Aktivitas apa yang mau dihapus? Kosongkan jika mau menghapus semua aktivitas dalam sub kegiatan ini.')
 	show_loading();
 	window._type_singkronisasi_rka = 'rka-opd';
 	var total = 0;
@@ -7616,32 +7634,41 @@ function kosongkan_rincian(){
 			        	aktivitas_exist.data.reduce(function(sequence2, nextData2){
 					        return sequence2.then(function(aktivitas){
 					    		return new Promise(function(resolve_reduce2, reject_reduce2){
-						        	get_rka_aktivitas(aktivitas)
-									.then(function(rka){
-										var data_rka = rka.data;
-										var last3 = data_rka.length - 1;
-							        	data_rka.reduce(function(sequence3, nextData3){
-									        return sequence3.then(function(rincian){
-					    						return new Promise(function(resolve_reduce3, reject_reduce3){
-					    							kosongkan_rincian_item(rincian)
-					    							.then(function(){
-					    								return resolve_reduce3(nextData3);
-					    							});
-									        	})
-									            .catch(function(e){
-									                console.log(e);
-									                return Promise.resolve(nextData3);
-									            });
-									        })
-									        .catch(function(e){
-									            console.log(e);
-									            return Promise.resolve(nextData3);
-									        });
-									    }, Promise.resolve(data_rka[last3]))
-									    .then(function(data_last){
-											return resolve_reduce2(nextData2);
+					    			console.log('cek hapus rincian aktivitas', aktivitas);
+					    			if(
+					    				!nama_aktivitas
+					    				|| nama_aktivitas == aktivitas.uraian
+					    			){
+							        	get_rka_aktivitas(aktivitas)
+										.then(function(rka){
+											var data_rka = rka.data;
+											var last3 = data_rka.length - 1;
+								        	data_rka.reduce(function(sequence3, nextData3){
+										        return sequence3.then(function(rincian){
+						    						return new Promise(function(resolve_reduce3, reject_reduce3){
+						    							kosongkan_rincian_item(rincian)
+						    							.then(function(){
+						    								return resolve_reduce3(nextData3);
+						    							});
+										        	})
+										            .catch(function(e){
+										                console.log(e);
+										                return Promise.resolve(nextData3);
+										            });
+										        })
+										        .catch(function(e){
+										            console.log(e);
+										            return Promise.resolve(nextData3);
+										        });
+										    }, Promise.resolve(data_rka[last3]))
+										    .then(function(data_last){
+												return resolve_reduce2(nextData2);
+											});
 										});
-									});
+									}else{
+										console.log('Aktivitas tidak dihapus! = '+aktivitas.uraian);
+										resolve_reduce2(nextData2);
+									}
 								})
 					            .catch(function(e){
 					                console.log(e);
