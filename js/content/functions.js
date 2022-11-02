@@ -5349,9 +5349,9 @@ function get_id_ssh_rka_lama(rka){
 function get_id_ssh_rka(rka, options){
 	pesan_loading('GET DATA SSH "'+rka.nama_komponen+'" HARGA "'+rka.harga_satuan+'"', true);
 	return new Promise(function(resolve, reject){
-		var unik_rincian = replace_string(
-				(rka.harga_satuan+' '+rka.satuan+' '+rka.nama_komponen).substring(0, 250).trim()
-		, true);
+		var unik_rincian = (rka.harga_satuan+' '+rka.satuan+' '+rka.nama_komponen).substring(0, 250).trim();
+		unik_rincian = unik_rincian.split('\n')[0];
+		unik_rincian = replace_string(unik_rincian, true);
 		// pencairan item ssh jika ada karakter [ atau ] di halaman tambah rincian tidak jalan. berbeda jika dicari di halman perkada lancar. maka perlu di split.
 		unik_rincian = unik_rincian.split('[')[0];
 		unik_rincian = unik_rincian.split('>')[0];
@@ -5554,7 +5554,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 					});
 
 					// cek jika aktivitas tidak ditemukan maka langsung diresolve
-					if(!cek_aktivitas_sub_unit){
+					if(!cek_aktivitas_sub_unit && rka_sipd.length > 0){
 						return resolve_reduce(nextData);
 					}
 
@@ -7634,7 +7634,6 @@ function kosongkan_rincian(){
 			        	aktivitas_exist.data.reduce(function(sequence2, nextData2){
 					        return sequence2.then(function(aktivitas){
 					    		return new Promise(function(resolve_reduce2, reject_reduce2){
-					    			console.log('cek hapus rincian aktivitas', aktivitas);
 					    			if(
 					    				!nama_aktivitas
 					    				|| nama_aktivitas == aktivitas.uraian
@@ -8777,6 +8776,15 @@ function singkronisasi_pendapatan(data_sipd){
 													.then(function(ssh){
 														if(ssh){
 															kdurut++;
+															if(
+																ssh.harga == '0.00'
+																|| ssh.harga == '.00'
+																|| ssh.harga == '0,00'
+																|| ssh.harga == ',00'
+															){
+																console.log('Harga SSH 0, skip insert!', ssh);
+																return resolve_reduce2(nextData2);
+															}
 									        				var data_post = {
 									        					_token: _token,
 									        					idsumberdana : aktivitas_fmis.idsumberdana1,
@@ -8860,7 +8868,7 @@ function singkronisasi_pendapatan(data_sipd){
 											            success: function(form_edit){
 								        					var form = jQuery(form_edit.form);
 						        							data_post.idrapbdrkaaktivitas = form.find('input[name="idrapbdrkaaktivitas"]').val();
-								        					data_post.uraian = form.find('input[name="uraian"]').val();
+								        					data_post.uraian = form.find('textarea[name="uraian"]').val();
 								        					data_post.idrapbdrkabelanja = form.find('input[name="idrapbdrkabelanja"]').val();
 								        					data_post.uraian_rekening = cek_exist_update.rekening_display;
 								        					data_post.volume_renja1 = 0;
@@ -8967,7 +8975,7 @@ function singkronisasi_pendapatan(data_sipd){
 											            success: function(form_edit){
 								        					var form = jQuery(form_edit.form);
 							    							data_post.idrapbdrkaaktivitas = form.find('input[name="idrapbdrkaaktivitas"]').val();
-								        					data_post.uraian = form.find('input[name="uraian"]').val();
+								        					data_post.uraian = form.find('textarea[name="uraian"]').val();
 								        					data_post.idrapbdrkabelanja = form.find('input[name="idrapbdrkabelanja"]').val();
 								        					data_post.uraian_rekening = cek_exist_update.rekening_display;
 								        					data_post.volume_renja1 = 0;
@@ -9149,7 +9157,7 @@ function update_pagu_sub_from_rincian(kegiatan){
 	        						idsubkegiatan: sub_keg_fmis.idsubkegiatan,
 	        						uraian: nama_sub_giat,
 	        						pagu_tahun1: to_number(sub_keg_fmis.pagu_tahun1),
-	        						pagu_tahun2: pagu_rincian,
+	        						pagu_tahun2: Math.round(pagu_rincian),
 	        						pagu_tahun3: to_number(sub_keg_fmis.pagu_tahun3)
 	        					};
 								pesan_loading('UPDATE PAGU RINCIAN SUB KEGIATAN '+nama_sub_giat, true);
