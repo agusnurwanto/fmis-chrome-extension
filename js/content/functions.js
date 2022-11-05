@@ -7950,7 +7950,7 @@ function singkron_rka_all_skpd_modal(){
 		    }, Promise.resolve(skpd_selected[last]))
 		    .then(function(data_last){
 		    	run_script('custom_dt_skpd_hide');
-		    	alert('Sukses singkronisasi RKA!');
+		    	alert('Sukses singkronisasi data!');
 		    	hide_loading();
 		    });
 		}else{
@@ -7997,49 +7997,84 @@ function singkronisasi_anggaran_kas(data_sipd){
         			var nama_aktivitas_fmis = aktivitas.nm_aktivitas;
         			var nama_sub_fmis = aktivitas.nmsubkegiatan;
         			console.log('Cek insert aktivitas "'+nama_aktivitas_fmis+'" Sub kegiatan "'+nama_sub_fmis+'"', aktivitas);
-        			var nama_skpd_fmis = nama_aktivitas_fmis.split(' | ');
-        			if(nama_skpd_fmis.length > 1){
-        				nama_skpd_fmis = nama_skpd_fmis[1];
-        			}else{
-        				nama_skpd_fmis = nama_skpd_fmis[0];
-        			}
-        			// cek apakah aktivitas fmis ada di sipd
-        			if(kas_unik[replace_string(nama_sub_fmis+aktivitas.idsubunit)]){
-        				var aktivitas_sipd = kas_unik[replace_string(nama_sub_fmis+aktivitas.idsubunit)];
-	        			var code_aktivitas = aktivitas.action.split('data-code="')[1].split('"')[0];
-	        			relayAjax({
-							url: config.fmis_url+'/anggaran/rka-renkas/rincian/form?code='+code_aktivitas+'&action=create',
-				            success: function(form_tambah){
-				            	var form = jQuery(form_tambah.form);
-				            	var akun_fmis = [];
-				            	form.find('#uraian_rekening option').map(function(i, b){
-				            		var val = jQuery(b).val();
-				            		if(val){
-					            		var akun = jQuery(b).text().trim().split(' ');
-					            		var kode_akun = akun.shift();
-					            		var nama_akun = akun.join(' ');
-					            		var pagu_akun = +jQuery(b).attr('data-pagu');
-					            		akun_fmis.push({
-					            			uraian_rekening: val,
-					            			kode_akun: kode_akun,
-					            			nama_akun: nama_akun,
-					            			pagu_akun: pagu_akun
-					            		});
-					            	}
-				            	});
-				            	aktivitas_sipd.code_aktivitas = code_aktivitas;
-				            	aktivitas_sipd.form_tambah = form_tambah.form;
-				            	aktivitas_sipd.aktivitas_fmis = aktivitas;
-				            	cek_insert_akun_rak(aktivitas_sipd, akun_fmis)
-				            	.then(function(){
-				            		resolve_reduce(nextData);
-				            	});
-				            }
-				        });
-	        		}else{
-	        			pesan_loading('Aktivitas "'+nama_aktivitas_fmis+'" tidak ditemukan di SIPD! Sub kegiatan "'+nama_sub_fmis+'"', true);
-	        			resolve_reduce(nextData);
-	        		}
+
+		        	var code_aktivitas = aktivitas.action.split('data-code="')[1].split('"')[0];
+        			new Promise(function(resolve_reduce2, reject_reduce2){
+	        			// cek apakah aktivitas fmis ada di sipd
+	        			if(kas_unik[replace_string(nama_sub_fmis+aktivitas.idsubunit)]){
+	        				var aktivitas_sipd = kas_unik[replace_string(nama_sub_fmis+aktivitas.idsubunit)];
+		        			relayAjax({
+								url: config.fmis_url+'/anggaran/rka-renkas/rincian/form?code='+code_aktivitas+'&action=create',
+					            success: function(form_tambah){
+					            	var form = jQuery(form_tambah.form);
+					            	var akun_fmis = [];
+					            	// get rekening yang belum ditambahkan ke fmis
+					            	form.find('#uraian_rekening option').map(function(i, b){
+					            		var val = jQuery(b).val();
+					            		if(val){
+						            		var akun = jQuery(b).text().trim().split(' ');
+						            		var kode_akun = akun.shift();
+						            		var nama_akun = akun.join(' ');
+						            		var pagu_akun = +jQuery(b).attr('data-pagu');
+						            		akun_fmis.push({
+						            			uraian_rekening: val,
+						            			kode_akun: kode_akun,
+						            			nama_akun: nama_akun,
+						            			pagu_akun: pagu_akun
+						            		});
+						            	}
+					            	});
+					            	aktivitas_sipd.code_aktivitas = code_aktivitas;
+					            	aktivitas_sipd.form_tambah = form_tambah.form;
+					            	aktivitas_sipd.aktivitas_fmis = aktivitas;
+					            	cek_insert_akun_rak(aktivitas_sipd, akun_fmis)
+					            	.then(function(){
+					            		resolve_reduce2();
+					            	});
+					            }
+					        });
+		        		}else{
+		        			pesan_loading('Aktivitas "'+nama_aktivitas_fmis+'" tidak ditemukan di SIPD! Sub kegiatan "'+nama_sub_fmis+'"', true);
+		        			resolve_reduce2();
+		        		}
+		        	})
+		        	.then(function(){
+		        		// kirim data aktivitas dan anggaran kas ke lokal
+		        		get_renkas({
+		        			code_aktivitas: code_aktivitas,
+		        			aktivitas_fmis: aktivitas
+		        		})
+		        		.then(function(akun_exist){
+		        			var akun = [];
+		        			akun_exist.data.map(function(b, i){
+		        				b.action = '';
+		        				akun.push(b);
+		        			});
+		        			var new_aktivitas = aktivitas;
+		        			new_aktivitas.action = '';
+			        		var data = {
+							    message:{
+							        type: "get-url",
+							        content: {
+									    url: config.url_server_lokal,
+									    type: 'post',
+									    data: { 
+											action: 'singkron_kas_fmis',
+											tahun_anggaran: config.tahun_anggaran,
+											api_key: config.api_key,
+											aktivitas: new_aktivitas,
+											akun: akun
+										},
+						    			return: false
+									}
+							    }
+							};
+							chrome.runtime.sendMessage(data, function(response) {
+							    console.log('responeMessage', response);
+							});
+			        		resolve_reduce(nextData);
+						});
+					});
         		})
                 .catch(function(e){
                     console.log(e);
@@ -8057,14 +8092,25 @@ function singkronisasi_anggaran_kas(data_sipd){
 	});
 }
 
-function cek_insert_akun_rak(aktivitas_sipd, akun_fmis){
+function get_renkas(aktivitas_sipd) {
 	return new Promise(function(resolve, reject){
-		pesan_loading('Get anggaran kas existing per rekening!', true);
+		pesan_loading('Get anggaran kas existing per rekening! aktivitas '+aktivitas_sipd.aktivitas_fmis.nm_aktivitas, true);
 		relayAjax({
 			url: config.fmis_url+'/anggaran/rka-renkas/rincian/datatable?code='+aktivitas_sipd.code_aktivitas,
             success: function(akun_exist){
-				console.log('aktivitas_sipd, akun_exist', aktivitas_sipd, akun_exist);
-            	var last = akun_fmis.length - 1;
+            	return resolve(akun_exist);
+            }
+        });
+	});
+}
+
+function cek_insert_akun_rak(aktivitas_sipd, akun_fmis){
+	return new Promise(function(resolve, reject){
+		new Promise(function(resolve2, reject2){
+			get_renkas(aktivitas_sipd)
+			.then(function(akun_exist){
+				console.log('Insert baru jika belum ada!', aktivitas_sipd, akun_fmis);
+	        	var last = akun_fmis.length - 1;
 				akun_fmis.reduce(function(sequence, nextData){
 		            return sequence.then(function(akun){
 		        		return new Promise(function(resolve_reduce, reject_reduce){
@@ -8136,10 +8182,149 @@ function cek_insert_akun_rak(aktivitas_sipd, akun_fmis){
 		            });
 		        }, Promise.resolve(akun_fmis[last]))
 		        .then(function(data_last){
+		        	resolve2();
+		        });
+			});
+		})
+		.then(function(){
+			get_renkas(aktivitas_sipd)
+			.then(function(akun_exist){
+				console.log('Update kas jika tidak sama!', akun_exist);
+				var last = akun_exist.data.length - 1;
+				akun_exist.data.reduce(function(sequence, nextData){
+		            return sequence.then(function(akun){
+		        		return new Promise(function(resolve_reduce, reject_reduce){
+		        			var kode_akun = akun.rekening_display.split(' ')[0];
+		        			var cek_rek_sipd = false;
+	        				aktivitas_sipd.kas.map(function(b, i){
+	        					if(kode_akun == b.kode_akun){
+	        						cek_rek_sipd = b;
+	        					}
+	        				});
+    						var url_edit = akun.action.split('href="')[1];
+    						url_edit = url_edit.split('"')[0];
+	        				if(cek_rek_sipd){
+	        					// cek jika ada perbedaan pagu kas per bulan
+	        					if(
+	        						to_number(akun.jan) != cek_rek_sipd.bulan_1
+	        						|| to_number(akun.feb) != cek_rek_sipd.bulan_2
+	        						|| to_number(akun.mar) != cek_rek_sipd.bulan_3
+	        						|| to_number(akun.apr) != cek_rek_sipd.bulan_4
+	        						|| to_number(akun.mei) != cek_rek_sipd.bulan_5
+	        						|| to_number(akun.jun) != cek_rek_sipd.bulan_6
+	        						|| to_number(akun.jul) != cek_rek_sipd.bulan_7
+	        						|| to_number(akun.aug) != cek_rek_sipd.bulan_8
+	        						|| to_number(akun.sep) != cek_rek_sipd.bulan_9
+	        						|| to_number(akun.okt) != cek_rek_sipd.bulan_10
+	        						|| to_number(akun.nov) != cek_rek_sipd.bulan_11
+	        						|| to_number(akun.des) != cek_rek_sipd.bulan_12
+	        					){
+	        						relayAjax({
+										url: url_edit+'&action=edit',
+							            success: function(form_tambah){
+							            	var form = jQuery(form_tambah.form);
+			        						var url_simpan = form.attr('action');
+			        						var data_post = {
+			        							_method: 'PUT',
+			        							_token: _token,
+			        							uraian_rekening: akun.rekening_display,
+			        							jan: cek_rek_sipd.bulan_1.replace(/\./g, ','),
+			        							feb: cek_rek_sipd.bulan_2.replace(/\./g, ','),
+			        							mar: cek_rek_sipd.bulan_3.replace(/\./g, ','),
+			        							apr: cek_rek_sipd.bulan_4.replace(/\./g, ','),
+			        							mei: cek_rek_sipd.bulan_5.replace(/\./g, ','),
+			        							jun: cek_rek_sipd.bulan_6.replace(/\./g, ','),
+			        							jul: cek_rek_sipd.bulan_7.replace(/\./g, ','),
+			        							aug: cek_rek_sipd.bulan_8.replace(/\./g, ','),
+			        							sep: cek_rek_sipd.bulan_9.replace(/\./g, ','),
+			        							okt: cek_rek_sipd.bulan_10.replace(/\./g, ','),
+			        							nov: cek_rek_sipd.bulan_11.replace(/\./g, ','),
+			        							des: cek_rek_sipd.bulan_12.replace(/\./g, ',')
+			        						};
+			        						pesan_loading('Update anggaran kas '+akun.rekening_display+', aktivitas '+aktivitas_sipd.aktivitas_fmis.nm_aktivitas+', sub kegiatan '+aktivitas_sipd.aktivitas_fmis.sub_display, true);
+						        			relayAjax({
+												url: url_simpan,
+												type: 'post',
+												data: data_post,
+									            success: function(){
+									            	resolve_reduce(nextData);
+									            }
+									        });
+						        		}
+						        	});
+	        					}else{
+	        						pesan_loading('Kas untuk rekening '+akun.rekening_display+' sudah sesuai!', true);
+		        					resolve_reduce(nextData);
+	        					}
+	        				}else{
+	        					if(
+	        						to_number(akun.jan) != 0
+	        						|| to_number(akun.feb) != 0
+	        						|| to_number(akun.mar) != 0
+	        						|| to_number(akun.apr) != 0
+	        						|| to_number(akun.mei) != 0
+	        						|| to_number(akun.jun) != 0
+	        						|| to_number(akun.jul) != 0
+	        						|| to_number(akun.aug) != 0
+	        						|| to_number(akun.sep) != 0
+	        						|| to_number(akun.okt) != 0
+	        						|| to_number(akun.nov) != 0
+	        						|| to_number(akun.des) != 0
+	        					){
+			        				relayAjax({
+										url: url_edit+'&action=edit',
+							            success: function(form_tambah){
+							            	var form = jQuery(form_tambah.form);
+			        						var url_simpan = form.attr('action');
+			        						var data_post = {
+				        						_method: 'PUT',
+			        							_token: _token,
+			        							uraian_rekening: akun.rekening_display,
+			        							jan: 0,
+			        							feb: 0,
+			        							mar: 0,
+			        							apr: 0,
+			        							mei: 0,
+			        							jun: 0,
+			        							jul: 0,
+			        							aug: 0,
+			        							sep: 0,
+			        							okt: 0,
+			        							nov: 0,
+			        							des: 0
+			        						};
+			        						pesan_loading('Kosongkan anggaran kas '+akun.rekening_display, true);
+						        			relayAjax({
+												url: url_simpan,
+												type: 'post',
+												data: data_post,
+									            success: function(){
+									            	resolve_reduce(nextData);
+									            }
+									        });
+						        		}
+						        	});
+			        			}else{
+			        				pesan_loading('Anggaran kas '+akun.rekening_display+' sudah kosong!', true);
+					            	resolve_reduce(nextData);
+			        			}
+	        				}
+		        		})
+		        		.catch(function(e){
+		                    console.log(e);
+		                    return Promise.resolve(nextData);
+		                });
+		            })
+		            .catch(function(e){
+		                console.log(e);
+		                return Promise.resolve(nextData);
+		            });
+		        }, Promise.resolve(akun_exist.data[last]))
+		        .then(function(data_last){
 		        	resolve();
 		        });
-            }
-        });
+			});
+		})
 	});
 }
 
