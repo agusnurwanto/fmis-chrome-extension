@@ -43,6 +43,14 @@ function run_script(command, data=false){
 	}, '*');
 }
 
+function removeNewlines(str) {
+	//remove line breaks from str
+	str = str.replace(/\s{2,}/g, ' ');
+	str = str.replace(/\t/g, ' ');
+	str = str.toString().trim().replace(/\n/g," ");
+	return str;
+}
+
 function run_script_lama(code){
 	var script = document.createElement('script');
 	script.appendChild(document.createTextNode(code));
@@ -4645,6 +4653,7 @@ function get_master_prog_fmis(idsasaran, idrkpdranwalprogram){
 									.then(function(data_program){
 										console.log('data_program', data_program);
 										data_program.map(function(b, i){
+											b.nama_program = removeNewlines(b.nama_program);
 											var data_prog = {
 												id: b.id_program,
 												nama: b.nama_program,
@@ -4695,6 +4704,7 @@ function get_master_keg_fmis(options){
 						url: config.fmis_url+'/anggaran/rka-opd/kegiatan/datatable-ref?code='+code_program,
 						success: function(kegiatan){
 							kegiatan.data.map(function(b, i){
+								b.nmkegiatan = removeNewlines(b.nmkegiatan);
 								var id_kegiatan = b.action.split('data-id="')[1].split('"')[0];
 								var data_keg = {
 									id: id_kegiatan,
@@ -4840,6 +4850,7 @@ function get_master_sub_keg_fmis(options){
 						url: config.fmis_url+'/anggaran/rka-opd/subkegiatan/datatable-ref?code='+code_kegiatan,
 						success: function(subkegiatan){
 							subkegiatan.data.map(function(b, i){
+								b.nmsubkegiatan = removeNewlines(b.nmsubkegiatan);
 								var id_sub_kegiatan = b.action.split('data-id="')[1].split('"')[0];
 								var nama_sub_kegiatan = b.nmsubkegiatan;
 								var data_sub_keg = {
@@ -6848,6 +6859,7 @@ function mapping_sub_kegiatan(){
 					url: config.fmis_url+'/parameter/program-kegiatan/datatable?table=tabel-program&code='+current_data.code,
 			        success: function(res){
 			    		res.data.map(function(b, i){
+			    			b.nmprogram = removeNewlines(b.nmprogram);
 			    			program.push({
 								param: {
 									data: {
@@ -6862,6 +6874,7 @@ function mapping_sub_kegiatan(){
 										url: config.fmis_url+'/parameter/program-kegiatan/datatable?table=tabel-kegiatan&code='+ret.data.code,
 								        success: function(res){
 								    		res.data.map(function(b, i){
+								    			b.nmkegiatan = removeNewlines(b.nmkegiatan);
 								    			kegiatan.push({
 								    				param: {
 														data: {
@@ -6877,6 +6890,7 @@ function mapping_sub_kegiatan(){
 															url: config.fmis_url+'/parameter/program-kegiatan/datatable?table=tabel-sub-kegiatan&code='+ret2.data.code,
 													        success: function(res){
 													    		res.data.map(function(b, i){
+													    			b.nmsubkegiatan = removeNewlines(b.nmsubkegiatan);
 													    			sub_kegiatan.push({
 													    				bidang: ret2.data.bidang,
 											    						program: ret2.data.program,
