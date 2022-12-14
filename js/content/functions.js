@@ -3764,6 +3764,7 @@ function singkronisasi_program(sub_keg){
 		program.data.reduce(function(sequence, nextData){
             return sequence.then(function(current_data){
         		return new Promise(function(resolve_reduce, reject_reduce){
+        			current_data.uraian = removeNewlines(current_data.uraian);
         			program_fmis[current_data.uraian] = current_data;
 					get_list_kegiatan(current_data)
 					.then(function(kegiatan){
@@ -3772,6 +3773,7 @@ function singkronisasi_program(sub_keg){
 						kegiatan.data.reduce(function(sequence2, nextData2){
 				            return sequence2.then(function(current_data2){
 				        		return new Promise(function(resolve_reduce2, reject_reduce2){
+				        			current_data2.uraian = removeNewlines(current_data2.uraian);
 				        			program_fmis[current_data.uraian].kegiatan[current_data2.uraian] = current_data2;
 				        			get_list_sub_kegiatan(current_data2)
 				        			.then(function(sub_kegiatan){
@@ -3928,6 +3930,7 @@ function delete_rka(sub_keg){
 			program_exist.data.reduce(function(sequence, nextData){
 	            return sequence.then(function(program){
 	        		return new Promise(function(resolve_reduce, reject_reduce){
+	        			program.uraian = removeNewlines(program.uraian);
 						var keyword = program.DT_RowId;
 						prog_fmis_delete[keyword] = program;
 						daftar_sub += ''
@@ -3944,6 +3947,7 @@ function delete_rka(sub_keg){
 								kegiatan_exist.data.reduce(function(sequence2, nextData2){
 						            return sequence2.then(function(kegiatan){
 						            	return new Promise(function(resolve_reduce2, reject_reduce2){
+						            		kegiatan.uraian = removeNewlines(kegiatan.uraian);
 											var keyword = program.DT_RowId+'-'+kegiatan.DT_RowId;
 											keg_fmis_delete[keyword] = kegiatan;
 											daftar_sub += ''
@@ -4744,6 +4748,7 @@ function get_master_keg_fmis(options){
 }
 
 function cek_insert_kegiatan_fmis(program, sub_kegiatan_filter_program){
+	program.uraian = removeNewlines(program.uraian);
 	var sub_kegiatan_filter_kegiatan = [];
 	return new Promise(function(resolve, reduce){
 		get_list_kegiatan(program)
@@ -4756,6 +4761,8 @@ function cek_insert_kegiatan_fmis(program, sub_kegiatan_filter_program){
 				sub_kegiatan_filter_program.reduce(function(sequence, nextData){
 		            return sequence.then(function(current_data){
 		        		return new Promise(function(resolve_reduce, reject_reduce){
+		        			current_data.nama_program = removeNewlines(current_data.nama_program);
+		        			current_data.nama_giat = removeNewlines(current_data.nama_giat);
 		        			// cek proses kegiatan hanya yang nama programnya sama
 		        			if(current_data.nama_program == program.uraian){
 		        				current_data.nama_giat = current_data.nama_giat.toLowerCase();
@@ -4763,6 +4770,7 @@ function cek_insert_kegiatan_fmis(program, sub_kegiatan_filter_program){
 								if(master_kegiatan[current_data.nama_giat]){
 									var cek_exist = false;
 									kegiatan_exist.data.map(function(b, i){
+										b.uraian = removeNewlines(b.uraian);
 										if(b.uraian.toLowerCase() == current_data.nama_giat){
 											cek_exist = b;
 										}
@@ -4890,6 +4898,7 @@ function get_master_sub_keg_fmis(options){
 }
 
 function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
+	kegiatan.uraian = removeNewlines(kegiatan.uraian);
 	var sub_kegiatan_filter = [];
 	return new Promise(function(resolve, reduce){
 		get_list_sub_kegiatan(kegiatan)
@@ -4902,6 +4911,8 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 			.then(function(master_sub_kegiatan){
 				var sub_kegiatan_total = [];
 				sub_kegiatan_filter_kegiatan.map(function(b, i){
+					b.nama_giat = removeNewlines(b.nama_giat);
+					b.nama_sub_giat = removeNewlines(b.nama_sub_giat);
 					var keyword = b.nama_giat+b.nama_sub_giat;
 					if(!sub_kegiatan_total[keyword]){
 						b.pagu_n_lalu = +b.pagu_n_lalu;
@@ -4919,6 +4930,8 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 				sub_kegiatan_filter_kegiatan.reduce(function(sequence, nextData){
 		            return sequence.then(function(current_data){
 		        		return new Promise(function(resolve_reduce, reject_reduce){
+		        			current_data.nama_sub_giat = removeNewlines(current_data.nama_sub_giat);
+		        			current_data.nama_giat = removeNewlines(current_data.nama_giat);
 		        			// cek proses kegiatan hanya yang nama programnya sama
 		        			if(current_data.nama_giat == kegiatan.uraian.toLowerCase()){
 								var nama_sub_giat = current_data.nama_sub_giat.split(' ');
