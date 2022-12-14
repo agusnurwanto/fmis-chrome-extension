@@ -3777,6 +3777,7 @@ function singkronisasi_program(sub_keg){
 				        			.then(function(sub_kegiatan){
 										program_fmis[current_data.uraian].kegiatan[current_data2.uraian].sub_kegiatan = sub_kegiatan.data;
 										sub_kegiatan.data.map(function(b, i){
+											b.uraian = removeNewlines(b.uraian);
 											sub_keg_fmis[b.uraian.trim().toLowerCase()] = b;
 										});
 										resolve_reduce2(nextData2);
@@ -3882,6 +3883,7 @@ function singkronisasi_rka(sub_keg){
 	get_list_sub_kegiatan(options)
 	.then(function(sub_kegiatan){
 		sub_kegiatan.data.map(function(b, i){
+			b.uraian = removeNewlines(b.uraian);
 			sub_keg_fmis[program_fmis+'|'+keg_fmis+'|'+b.uraian] = b;
 		});
 		run_script('program_destroy');
@@ -3954,6 +3956,7 @@ function delete_rka(sub_keg){
 							        		get_list_sub_kegiatan(kegiatan)
 											.then(function(sub_kegiatan){
 												sub_kegiatan.data.map(function(b, i){
+													b.uraian = removeNewlines(b.uraian);
 													var keyword = program.DT_RowId+'-'+kegiatan.DT_RowId+'-'+b.DT_RowId;
 													b.kegiatan = kegiatan;
 													b.program = program;
@@ -4926,6 +4929,7 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 								if(master_sub_kegiatan[nama_sub_giat]){
 									var cek_exist = false;
 									sub_kegiatan_exist.data.map(function(b, i){
+										b.uraian = removeNewlines(b.uraian);
 										if(b.uraian.trim().toLowerCase() == nama_sub_giat){
 											cek_exist = b;
 											kdurut_exist = b.kdurut;
@@ -5063,6 +5067,7 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 											nama_sub_giat = nama_sub_giat.trim().toLowerCase();
 						        			var sub_kegiatan_sipd = false;
 						        			sub_kegiatan_exist.data.map(function(sub_kegiatan_fmis, i){
+						        				sub_kegiatan_fmis.uraian = removeNewlines(sub_kegiatan_fmis.uraian);
 						        				if(
 						        					current_data.nama_giat == kegiatan.uraian.toLowerCase()
 						        					&& sub_kegiatan_fmis.uraian.trim().toLowerCase() == nama_sub_giat
@@ -9300,9 +9305,9 @@ function update_pagu_sub_from_rincian(kegiatan){
 											pagu_sub_keg_sipd[b.idsubunit] = {
 												idsubunit: b.idsubunit,
 												idunit: b.idunit,
-												sub_kegiatan: sub_keg_fmis.uraian,
-												kegiatan: sub_keg_fmis.nmkegiatan,
-												program: sub_keg_fmis.nmprogram,
+												sub_kegiatan: removeNewlines(sub_keg_fmis.uraian),
+												kegiatan: removeNewlines(sub_keg_fmis.nmkegiatan),
+												program: removeNewlines(sub_keg_fmis.nmprogram),
 												rincian: [],
 												total: 0
 											};
