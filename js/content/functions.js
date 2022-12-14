@@ -3655,6 +3655,7 @@ function get_list_program(options){
 function get_list_kegiatan(options){
 	return new Promise(function(resolve, reject){
 		if(_type_singkronisasi_rka == 'rka-opd'){
+			options.nmprogram = removeNewlines(options.nmprogram);
 			pesan_loading('GET KEGIATAN EXISTING UNTUK PROGRAM = '+options.nmprogram, true);
 			var code_program = options.action.split('data-code="')[1].split('"')[0];
 			// get program fmis
@@ -3680,6 +3681,7 @@ function get_list_kegiatan(options){
 function get_list_sub_kegiatan(options){
 	return new Promise(function(resolve, reject){
 		if(_type_singkronisasi_rka == 'rka-opd'){
+			options.nmkegiatan = removeNewlines(options.nmkegiatan);
 			pesan_loading('GET SUB KEGIATAN EXISTING UNTUK KEGIATAN = '+options.nmkegiatan, true);
 			var code_kegiatan = options.action.split('data-code="')[1].split('"')[0];
 			relayAjax({
@@ -3816,6 +3818,7 @@ function singkronisasi_program(sub_keg){
 				var sub_giat = b.nama_sub_giat.split(' ');
 				sub_giat.shift();
 				sub_giat = sub_giat.join(' ');
+				sub_giat = removeNewlines(sub_giat);
 				// cek jika sub giat belum ada di fmis maka ditampilkan
 				if(!sub_keg_fmis[sub_giat.trim().toLowerCase()]){
 					daftar_sub += ''
@@ -6232,8 +6235,10 @@ function singkronisasi_program_modal(options, cb){
 							sub_kegiatan.reduce(function(sequence, nextData){
 					            return sequence.then(function(current_data){
 					        		return new Promise(function(resolve_reduce, reject_reduce){
+					        			current_data.nama_program = removeNewlines(current_data.nama_program);
 				        				var check_exist = false;
 				        				program_exist.data.map(function(b, i){
+				        					b.uraian = removeNewlines(b.uraian);
 				        					if(current_data.nama_program == b.uraian){
 				        						check_exist = b;
 				        						kdurut_exist = b.kdurut;
