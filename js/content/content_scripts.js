@@ -113,7 +113,26 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 			_alert = false;
 			cek_hide_loading = false;
 			if(res.run == 'singkronisasi_program_all_skpd'){
-				options_all_skpd.sub_kegiatan = res.data;
+				if(
+					sub_kegiatan_selected_all_skpd
+					&& sub_kegiatan_selected_all_skpd.length >= 1
+				){
+					var selected = [];
+					res.data.map(function(b, i){
+						var check = false;
+						sub_kegiatan_selected_all_skpd.map(function(bb, ii){
+							if(b.nama_sub_giat.indexOf(bb) != -1){
+								check = true;
+							}
+						});
+						if(check){
+							selected.push(b);
+						}
+					})
+					options_all_skpd.sub_kegiatan = selected;
+				}else{
+					options_all_skpd.sub_kegiatan = res.data;
+				}
 				singkronisasi_program_modal(options_all_skpd, function(){
 					// resolve singkron all skpd
 					lanjut_singkron_rka_all_skpd(nextData_all_skpd);

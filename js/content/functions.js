@@ -7807,6 +7807,13 @@ function singkron_rka_all_skpd_modal(){
 			&& confirm('Apakah anda yakin untuk melakukan singkronisasi RKA dari WP-SIPD?')
 		){
 			show_loading();
+			window.sub_kegiatan_selected_all_skpd = prompt('Masukan daftar sub kegiatan yang mau disingkronkan dipisah dengan koma (,). Biarkan kosong jika mau melakukan singkronisasi seluruh sub kegiatan.');
+			if(sub_kegiatan_selected_all_skpd.trim() == ''){
+				sub_kegiatan_selected_all_skpd = false;
+			}else{
+				sub_kegiatan_selected_all_skpd = sub_kegiatan_selected_all_skpd.split(',');
+			}
+
 			window.lingkup_rka_global = jQuery('input[name="data-singkron"]:checked').val();
 			window.pagu_sub_keg_global = jQuery('input[name="pagu-sub-keg"]:checked').val();
 			var last = skpd_selected.length - 1;
