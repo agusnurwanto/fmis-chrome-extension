@@ -62,7 +62,7 @@ function capitalizeFirstLetter(string) {
   	return string.charAt(0).toUpperCase() + string.slice(1);
 }
 
-function relayAjax(options, retries=20, delay=5000, timeout=1800000){
+function relayAjax(options, retries=20, delay=5000, timeout=180000000){
 	options.timeout = timeout;
 	options.cache = false;
 	if(options.length){
@@ -97,12 +97,13 @@ function relayAjax(options, retries=20, delay=5000, timeout=1800000){
 		};
 	}
     jQuery.ajax(options)
-    .fail(function(jqXHR, exception){
-    	// console.log('jqXHR, exception', jqXHR, exception);
+    .fail(function(jqXHR, exception, message){
+    	console.log('jqXHR, exception, message', jqXHR, exception, message);
     	if(
     		jqXHR.status != '0' 
     		&& jqXHR.status != '503'
     		&& jqXHR.status != '500'
+    		&& message != 'timeout'
     	){
     		if(jqXHR.responseJSON){
     			options.success(jqXHR.responseJSON);
@@ -8020,15 +8021,39 @@ function singkronisasi_anggaran_kas(data_sipd){
 	var html_program_rkpd = options_all_skpd.html_program_rkpd;
 	var kas_unik = {};
 	data_sipd.data.map(function(b, i){
-		var nama_sub = get_text_bidur(b.nama_sub_giat);
-		if(b.id_mapping){
-			var id_skpd_fmis = b.id_mapping.split('.');
-			if(id_skpd_fmis.length > 1){
-				id_skpd_fmis = id_skpd_fmis[1];
-			}else{
-				id_skpd_fmis = id_skpd_fmis[0];
+		if(
+			sub_kegiatan_selected_all_skpd
+			&& sub_kegiatan_selected_all_skpd.length >= 1
+		){
+			var check = false;
+			sub_kegiatan_selected_all_skpd.map(function(bb, ii){
+				if(b.nama_sub_giat.indexOf(bb) != -1){
+					check = true;
+				}
+			});
+			if(check){
+				var nama_sub = get_text_bidur(b.nama_sub_giat);
+				if(b.id_mapping){
+					var id_skpd_fmis = b.id_mapping.split('.');
+					if(id_skpd_fmis.length > 1){
+						id_skpd_fmis = id_skpd_fmis[1];
+					}else{
+						id_skpd_fmis = id_skpd_fmis[0];
+					}
+					kas_unik[replace_string(nama_sub+id_skpd_fmis)] = b;
+				}
 			}
-			kas_unik[replace_string(nama_sub+id_skpd_fmis)] = b;
+		}else{
+			var nama_sub = get_text_bidur(b.nama_sub_giat);
+			if(b.id_mapping){
+				var id_skpd_fmis = b.id_mapping.split('.');
+				if(id_skpd_fmis.length > 1){
+					id_skpd_fmis = id_skpd_fmis[1];
+				}else{
+					id_skpd_fmis = id_skpd_fmis[0];
+				}
+				kas_unik[replace_string(nama_sub+id_skpd_fmis)] = b;
+			}
 		}
 	});
 	console.log('kas_unik', kas_unik);
