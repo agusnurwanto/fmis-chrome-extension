@@ -169,6 +169,14 @@ function singkronisasi_ssh(options){
 				var nama_item = item_ssh+' '+b.id_standar_harga+' '+b.nama_standar_harga;
 				var sub_kelompok = b.kode_kel_standar_harga;
 			}
+			if(
+				golongan.indexOf(filter_ssh) == -1
+				&& kelompok.indexOf(filter_ssh) == -1
+				&& sub_kelompok.indexOf(filter_ssh) == -1
+				&& nama_item.indexOf(filter_ssh) == -1
+			){
+				return;
+			}
 			if(!data_ssh[golongan]){
 				data_ssh[golongan] = {
 					nama: golongan,
