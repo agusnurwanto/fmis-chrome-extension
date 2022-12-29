@@ -5595,6 +5595,8 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
     					}
 					});
 
+					var nama_skpd_aktivitas = uraian_aktivitas_fmis.split(' | ');
+
 					// cek jika aktivitas tidak ditemukan tapi rincian ada dan sub unitnya berbeda
 					if(
 						false == cek_aktivitas_sub_unit 
@@ -5604,11 +5606,17 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 					// cek jika rka sipd kosong, dan aktivitas tidak ada di fmis
 					}else if(
 						rka_sipd.length == 0
-						&& uraian_aktivitas_fmis.indexOf(' | '+sub_keg.nama_sub_skpd) == -1
+						&& nama_skpd_aktivitas[1]
+						&& nama_skpd_aktivitas[1] != sub_keg.nama_sub_skpd
 					){
 						return resolve_reduce(nextData);
 					}else{
-						console.log(cek_aktivitas_sub_unit, rka_sipd, uraian_aktivitas_fmis.indexOf(' | '+sub_keg.nama_sub_skpd));
+						console.log(
+							cek_aktivitas_sub_unit, 
+							rka_sipd, 
+							sub_keg.nama_sub_skpd, 
+							uraian_aktivitas_fmis
+						);
 					}
 
         			get_rka_aktivitas(aktivitas)
