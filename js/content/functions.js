@@ -5562,7 +5562,7 @@ function replace_number(number){
 
 function cek_insert_rka_fmis(rka_sipd, sub_keg){
 	return new Promise(function(resolve, reject){
-		console.log('cek dan insert RKA '+sub_keg.nama_sub_giat, rka_sipd, sub_keg.aktivitas);
+		console.log('cek dan insert RKA '+sub_keg.nama_sub_giat, rka_sipd, sub_keg.aktivitas, sub_keg);
 		var last1 = sub_keg.aktivitas.length - 1;
 		sub_keg.aktivitas.reduce(function(sequence, nextData){
             return sequence.then(function(aktivitas){
@@ -5570,6 +5570,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 					var cek_aktivitas_sub_unit = false;
 					// inisiasi data rincian unik sipd
 					var rka_unik = {};
+					var uraian_aktivitas_fmis = replace_string(aktivitas.uraian, true, true);
 					rka_sipd.map(function(b, i){
     					var sumber_dana_sipd = b.sumber_dana[0].nama_dana.split('] - ');
 	        			if(sumber_dana_sipd.length > 1){
@@ -5578,7 +5579,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 		    				sumber_dana_sipd = sumber_dana_sipd[0].replace(/ - /g,'-').trim();
 		    			}
 						var nama_aktivitas = (sumber_dana_sipd+' | '+sub_keg.nama_sub_skpd).substring(0, 500).trim();
-						if(nama_aktivitas == replace_string(aktivitas.uraian, true, true)){
+						if(nama_aktivitas == uraian_aktivitas_fmis){
 							cek_aktivitas_sub_unit = true;
 						}
 
@@ -5594,9 +5595,20 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
     					}
 					});
 
-					// cek jika aktivitas tidak ditemukan maka langsung diresolve. jika rincian ada dan sub unitnya berbeda
-					if(!cek_aktivitas_sub_unit && rka_sipd.length > 0){
+					// cek jika aktivitas tidak ditemukan tapi rincian ada dan sub unitnya berbeda
+					if(
+						false == cek_aktivitas_sub_unit 
+						&& rka_sipd.length > 0
+					){
 						return resolve_reduce(nextData);
+					// cek jika rka sipd kosong, dan aktivitas tidak ada di fmis
+					}else if(
+						rka_sipd.length == 0
+						&& uraian_aktivitas_fmis.indexOf(' | '+sub_keg.nama_sub_skpd) == -1
+					){
+						return resolve_reduce(nextData);
+					}else{
+						console.log(cek_aktivitas_sub_unit, rka_sipd, uraian_aktivitas_fmis.indexOf(' | '+sub_keg.nama_sub_skpd));
 					}
 
         			get_rka_aktivitas(aktivitas)
@@ -5825,7 +5837,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 									});
 				        		}
 				        	}
-				        	console.log('kosongkan_rincian', kosongkan_rincian);
+				        	console.log('kosongkan_rincian, rka_unik, rka_unik_fmis', kosongkan_rincian, rka_unik, rka_unik_fmis);
 				        	var last = kosongkan_rincian.length - 1;
 				        	kosongkan_rincian.reduce(function(sequence2, nextData2){
 					            return sequence2.then(function(current_data){
