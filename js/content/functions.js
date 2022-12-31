@@ -8055,12 +8055,12 @@ function singkronisasi_anggaran_kas(data_sipd){
 		){
 			var check = false;
 			sub_kegiatan_selected_all_skpd.map(function(bb, ii){
-				if(b.nama_sub_giat.indexOf(bb) != -1){
+				if(removeNewlines(b.nama_sub_giat).indexOf(removeNewlines(bb)) != -1){
 					check = true;
 				}
 			});
 			if(check){
-				var nama_sub = get_text_bidur(b.nama_sub_giat);
+				var nama_sub = removeNewlines(get_text_bidur(b.nama_sub_giat));
 				if(b.id_mapping){
 					var id_skpd_fmis = b.id_mapping.split('.');
 					if(id_skpd_fmis.length > 1){
@@ -8072,7 +8072,7 @@ function singkronisasi_anggaran_kas(data_sipd){
 				}
 			}
 		}else{
-			var nama_sub = get_text_bidur(b.nama_sub_giat);
+			var nama_sub = removeNewlines(get_text_bidur(b.nama_sub_giat));
 			if(b.id_mapping){
 				var id_skpd_fmis = b.id_mapping.split('.');
 				if(id_skpd_fmis.length > 1){
@@ -8092,7 +8092,7 @@ function singkronisasi_anggaran_kas(data_sipd){
             return sequence.then(function(aktivitas){
         		return new Promise(function(resolve_reduce, reject_reduce){
         			var nama_aktivitas_fmis = aktivitas.nm_aktivitas;
-        			var nama_sub_fmis = aktivitas.nmsubkegiatan;
+        			var nama_sub_fmis = removeNewlines(aktivitas.nmsubkegiatan);
         			console.log('Cek insert aktivitas "'+nama_aktivitas_fmis+'" Sub kegiatan "'+nama_sub_fmis+'"', aktivitas);
 
 		        	var code_aktivitas = aktivitas.action.split('data-code="')[1].split('"')[0];
