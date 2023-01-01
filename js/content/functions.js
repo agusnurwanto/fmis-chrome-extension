@@ -1945,6 +1945,96 @@ function delete_all_golongan(){
 	}
 }
 
+function simpan_ulang_all_skpd(){
+	if(confirm('Apakah anda yakin untuk menyimpan ulang data All SKPD di FMIS?')){
+		show_loading();
+		var sendData = [];
+		jQuery('#bidang li[data-type="bidang"]').map(function(i, b){
+			sendData.push(new Promise(function(resolve_reduce2, reject_reduce2){
+				var code_bidang = jQuery(b).attr('data-code');
+				relayAjax({
+					url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_bidang+'&table=skpd',
+					success: function(skpd_all){
+						var _data_all = skpd_all.data;
+	        			var sendData2 = _data_all.map(function(skpd, i){
+	        				return new Promise(function(resolve_reduce2, reject_reduce2){
+					    		var url_edit = skpd.action.split('href=\"')[1].split('\"')[0];
+					    		url_edit = jQuery('<textarea />').html(url_edit).text();
+			        			relayAjax({
+									url: url_edit+'&action=edit',
+									success: function(form_edit){
+										var url_save = form_edit.form.split('action=\"')[1].split('\"')[0];
+										var form = jQuery(form_edit.form);
+										var kdskpd = +skpd.DT_RowIndex;
+										var nmskpd = skpd.nmskpd;
+										var idbidang_utama = form.find('input[name="idbidang_utama"]:checked').val();
+										var idbidang2 = form.find('#idbidang2').val();
+										var idbidang3 = form.find('#idbidang3').val();
+										pesan_loading('UPDATE SKPD '+nmskpd, true);
+										relayAjax({
+											url: url_save,
+											type: "post",
+								            data: {
+								                _token: _token,
+								                _method: 'PUT',
+								                idbidang_utama: idbidang_utama,
+								                idbidang2: idbidang2,
+								                idbidang3: idbidang3,
+								                kdskpd: kdskpd,
+								                nmskpd: nmskpd
+								            },
+											success: function(res){
+												resolve_reduce2(res);
+											}
+										});
+									}
+								});
+			                });
+		                });
+		                Promise.all(sendData2)
+						.then(function(val_all){
+							var url_tambah_skpd = config.fmis_url+'/parameter/unit-organisasi/form?code='+code_bidang+'&table=skpd';
+	        				relayAjax({
+								url: config.fmis_url+'/parameter/unit-organisasi/datatable?code='+code_bidang+'&table=skpd',
+								success: function(skpd){
+									relayAjax({
+										url: url_tambah_skpd+'&action=create',
+										success: function(form_edit){
+											var _data = [];
+											var form = jQuery(form_edit.form);
+											var idbidang = form.find('input[name="idbidang"]').val();
+											skpd.data.map(function(_unit, _i){
+												var unit = {
+													nama_skpd: _unit.nmskpd,
+													subunit: []
+												};
+												unit.idbidang = idbidang;
+												unit.fmis = _unit;
+												_data.push(unit);
+											});
+											singkron_unit_sipd(_data, function(){
+												resolve_reduce2();
+											});
+										}
+									});
+								}
+							});
+				        })
+				        .catch(function(e){
+				            console.log(e);
+				        });
+					}
+				});
+	        }));
+	    });
+	    Promise.all(sendData)
+		.then(function(val_all){
+			hide_loading();
+			alert('Berhasil simpan All SKPD!');
+		});
+	}
+}
+
 function singkron_skpd_sipd_all(data_skpd){
 	if(confirm('Apakah anda yakin untuk mengsingkronkan data All SKPD dari SIPD?')){
 		show_loading();
@@ -1952,7 +2042,7 @@ function singkron_skpd_sipd_all(data_skpd){
 		jQuery('#bidang li[data-type="bidang"]').map(function(i, b){
 			sendData.push(new Promise(function(resolve_reduce2, reject_reduce2){
 				var code_bidur = jQuery(b).attr('data-code');
-				var url_tambah_skpd = config.fmis_url+'/parameter/unit-organisasi/form?code='+code_bidur+'&table=skpd'
+				var url_tambah_skpd = config.fmis_url+'/parameter/unit-organisasi/form?code='+code_bidur+'&table=skpd';
 				singkron_skpd_sipd(url_tambah_skpd, data_skpd, function(){
 					resolve_reduce2();
 				});

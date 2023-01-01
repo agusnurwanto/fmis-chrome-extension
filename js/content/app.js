@@ -220,6 +220,9 @@ if(current_url.indexOf('parameter/rekening') != -1){
     });
 
 	var btn = ''
+	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 3px;" id="simpan-skpd-all">'
+        +'<i class="fa fa-cloud-download-alt fa-fw"></i> Simpan Ulang All SKPD'
+    +'</button>'
 	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px;" id="singkron-skpd-all">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi All SKPD SIPD'
     +'</button>'
@@ -251,6 +254,9 @@ if(current_url.indexOf('parameter/rekening') != -1){
     });
     jQuery('#delete-skpd-all').on('click', function(){
     	delete_skpd_all_fmis();
+    });
+    jQuery('#simpan-skpd-all').on('click', function(){
+    	simpan_ulang_all_skpd();
     });
 }else if(current_url.indexOf('/parameter/program-kegiatan') != -1){
 	var btn = ''
