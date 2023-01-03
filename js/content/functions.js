@@ -169,14 +169,32 @@ function singkronisasi_ssh(options){
 				var nama_item = item_ssh+' '+b.id_standar_harga+' '+b.nama_standar_harga;
 				var sub_kelompok = b.kode_kel_standar_harga;
 			}
-			if(
-				golongan.indexOf(filter_ssh) == -1
-				&& kelompok.indexOf(filter_ssh) == -1
-				&& sub_kelompok.indexOf(filter_ssh) == -1
-				&& nama_item.indexOf(filter_ssh) == -1
-			){
+
+			var check_filter = false;
+			filter_ssh.map(function(filter, ii){
+				if(filter.substr(0,2) == '!='){
+					filter = filter.replace('!=', '');
+					if(
+						golongan.indexOf(filter) != -1
+						|| kelompok.indexOf(filter) != -1
+						|| sub_kelompok.indexOf(filter) != -1
+						|| nama_item.indexOf(filter) != -1
+					){
+						check_filter = true;
+					}
+				}else if(
+					golongan.indexOf(filter) == -1
+					&& kelompok.indexOf(filter) == -1
+					&& sub_kelompok.indexOf(filter) == -1
+					&& nama_item.indexOf(filter) == -1
+				){
+					check_filter = true;
+				}
+			});
+			if(check_filter){
 				return;
 			}
+
 			if(!data_ssh[golongan]){
 				data_ssh[golongan] = {
 					nama: golongan,

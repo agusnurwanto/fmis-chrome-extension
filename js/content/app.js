@@ -59,7 +59,8 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	jQuery('#singkron-ssh-sipd').on('click', function(){
     	if(confirm('Apakah anda yakin untuk melakukan singkronisasi data Struktur SSH dari WP-SIPD ke FMIS?')){
 			var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 7=Pendapatan & Pembiayaan, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
-			window.filter_ssh = prompt('Masukan filter string SSH. Jika kosong semua data SSH akan disingkronisasi.');
+			window.filter_ssh = prompt('Masukan filter string SSH. Jika kosong semua data SSH akan disingkronisasi. Pisahkan dengan tanda "koma" (,). Tambahkan "tanda seru dan sama dengan" (!=) di depan jika ada kata yang tidak ingin disingkronisasikan.');
+			filter_ssh = filter_ssh.split(',');
 			if(idkelompok >= 1){
 				show_loading();
 				jQuery('#persen-loading').attr('persen', 0);
@@ -1403,7 +1404,8 @@ if(current_url.indexOf('parameter/rekening') != -1){
 jQuery('body').on('click', '#singkron-tarif-ssh-sipd', function(){
     if(confirm('Apakah anda yakin untuk melakukan singkronisasi data tarif SSH dari WP-SIPD ke FMIS?')){
 		var idkelompok = prompt('Masukan ID kelompok dari SIPD! 1=SSH, 4=SBU, 2=HSPK, 3=ASB, 7=Pendapatan & Pembiayaan, 8=RKA APBD Murni SIMDA, 9=RKA', 1);
-		window.filter_ssh = prompt('Masukan filter string SSH. Jika kosong semua data SSH akan disingkronisasi.');
+		window.filter_ssh = prompt('Masukan filter string SSH. Jika kosong semua data SSH akan disingkronisasi. Pisahkan dengan tanda "koma" (,). Tambahkan "tanda seru dan sama dengan" (!=) di depan jika ada kata yang tidak ingin disingkronisasikan.');
+		filter_ssh = filter_ssh.split(',');
 		if(idkelompok >= 1){
 			show_loading();
 			jQuery('#persen-loading').attr('persen', 0);
