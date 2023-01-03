@@ -104,6 +104,9 @@ function postData(url = '', data = {}) {
 
     return fetch(url, parameter)
     .then(response => {
+        if (!response.ok) {
+            throw Error(response.statusText);
+        }
         return response.text();
     })
     .then((data) => {
