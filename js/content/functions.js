@@ -5745,7 +5745,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 						var data_rka = rka.data;
 						data_rka.map(function(b, i){
 							var uraian_belanja = replace_string(b.uraian_belanja, false, false);
-							var uraian_belanja_unik = aktivitas.uraian+uraian_belanja+b.kode_rekening+to_number(b.harga);
+							var uraian_belanja_unik = replace_string(aktivitas.uraian, true, true)+uraian_belanja+b.kode_rekening+to_number(b.harga);
 							if(!rka_unik[uraian_belanja_unik]){
         						rka_unik[uraian_belanja_unik] = {
         							jml_sipd: 0,
@@ -5775,7 +5775,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 			        				if(nama_aktivitas == replace_string(aktivitas.uraian, true, true)){
 				        				var kelompok_keterangan = replace_string(current_data.subs_bl_teks+' | '+current_data.ket_bl_teks, true, true).substring(0, 500).trim();
 			        					var nama_rincian = replace_string(kelompok_keterangan+' | '+current_data.nama_komponen+' | '+current_data.spek_komponen, false, false).substring(0, 500).trim();
-										var nama_rincian_unik = aktivitas.uraian+nama_rincian+current_data.kode_akun+current_data.harga_satuan;
+										var nama_rincian_unik = replace_string(aktivitas.uraian, true, true)+nama_rincian+current_data.kode_akun+current_data.harga_satuan;
 			        					var cek_exist = false;
 			        					var need_update = false;
 			        					if(!cek_double.sipd[nama_rincian_unik]){
@@ -5785,7 +5785,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 										cek_double.fmis = {};
 										data_rka.map(function(b, i){
 											var uraian_belanja = replace_string(b.uraian_belanja, false, false);
-											var uraian_belanja_unik = aktivitas.uraian+uraian_belanja+b.kode_rekening+to_number(b.harga);
+											var uraian_belanja_unik = replace_string(aktivitas.uraian, true, true)+uraian_belanja+b.kode_rekening+to_number(b.harga);
 											if(!cek_double.fmis[uraian_belanja_unik]){
 												cek_double.fmis[uraian_belanja_unik] = [];
 											}
@@ -5939,7 +5939,7 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 				        	var rka_unik_fmis = {};
 				        	data_rka.map(function(b, i){
 								var uraian_belanja = replace_string(b.uraian_belanja, false, false);
-								var uraian_belanja_unik = aktivitas.uraian+uraian_belanja+b.kode_rekening+to_number(b.harga);;
+								var uraian_belanja_unik = replace_string(aktivitas.uraian, true, true)+uraian_belanja+b.kode_rekening+to_number(b.harga);;
 								if(!rka_unik_fmis[uraian_belanja_unik]){
 									rka_unik_fmis[uraian_belanja_unik] = [];
 								}
