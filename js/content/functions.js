@@ -171,7 +171,11 @@ function singkronisasi_ssh(options){
 			}
 
 			var check_filter = false;
+			var check_looping = false;
 			filter_ssh.map(function(filter, ii){
+				if(check_looping){
+					return;
+				}
 				if(filter.substr(0,2) == '!='){
 					filter = filter.replace('!=', '');
 					if(
@@ -181,6 +185,7 @@ function singkronisasi_ssh(options){
 						|| nama_item.indexOf(filter) != -1
 					){
 						check_filter = true;
+						return;
 					}
 				}else if(
 					golongan.indexOf(filter) == -1
@@ -189,7 +194,9 @@ function singkronisasi_ssh(options){
 					&& nama_item.indexOf(filter) == -1
 				){
 					check_filter = true;
+					return;
 				}
+				check_looping = true;
 			});
 			if(check_filter){
 				return;
