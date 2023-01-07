@@ -672,7 +672,7 @@ function singkronisasi_spd_lokal(spd){
 								    url: config.url_server_lokal,
 								    type: 'post',
 								    data: { 
-										action: 'singkroniasi_spd_fmis',
+										action: 'singkronisasi_spd_fmis',
 										tahun_anggaran: config.tahun_anggaran,
 										data: spd_fmis,
 										api_key: config.api_key

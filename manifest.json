@@ -27,6 +27,7 @@
 				"js/select2.min.js",
 				"js/content/content_scripts.js",
 				"js/content/functions.js",
+				"js/content/functions2.js",
 				"js/content/functions-penatausahaan.js",
 				"js/content/app.js"
 			],

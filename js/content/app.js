@@ -1219,15 +1219,16 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	                      	+'<thead>'
 	                        	+'<tr style="background: #8997bd;">'
 	                          		+'<th class="text-white"><input type="checkbox" id="modal_cek_all"></th>'
-	                          		+'<th class="text-white" width="300">Program</th>'
-	                          		+'<th class="text-white" width="300">Kegiatan</th>'
-	                          		+'<th class="text-white" width="500">Sub Kegiatan</th>'
+	                          		+'<th class="text-white" style="width: 300px;">Program</th>'
+	                          		+'<th class="text-white" style="width: 300px;">Kegiatan</th>'
+	                          		+'<th class="text-white" style="width: 500px;">Sub Kegiatan</th>'
 	                        	+'</tr>'
 	                      	+'</thead>'
 	                      	+'<tbody></tbody>'
 	                  	+'</table>'
 	                +'</div>'
 	                +'<div class="modal-footer">'
+	                    +'<button type="button" class="btn btn-warning" id="ganti_nama" style="display:none;">Ganti Nama Aktivitas</button>'
 	                    +'<button type="button" class="btn btn-success" id="singkron_program_modal">Proses</button>'
 	                    +'<button type="button" class="btn btn-default" data-dismiss="modal">Tutup</button>'
 	                +'</div>'
@@ -1242,7 +1243,9 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	jQuery('#singkron_program_modal').on('click', function(){
 		var table = jQuery('#konfirmasi-program');
 		var idkegiatan = table.attr('data-singkron-rka');
-		if(idkegiatan != '' && idkegiatan.indexOf('delete-') != -1){
+		if(idkegiatan != '' && idkegiatan == 'update-rka'){
+			update_rka_modal();
+		}else if(idkegiatan != '' && idkegiatan.indexOf('delete-') != -1){
 			delete_rka_modal(idkegiatan.split('-')[1]);
 		}else if(idkegiatan != ''){
 			singkronisasi_rka_modal(idkegiatan);
@@ -1251,6 +1254,12 @@ if(current_url.indexOf('parameter/rekening') != -1){
 		}
 	});
 	var btn = ''
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 10px; float: right;" id="backup_db_lokal">'
+        +'<i class="fa fa-cloud-download-alt fa-fw"></i> Backup RKA DB Lokal'
+    +'</button>'
+	+'<button type="button" class="btn btn-outline-warning btn-sm" style="margin-left: 10px; float: right;" id="update-aktivitas">'
+        +'<i class="fa fa-trash fa-fw"></i> Update Status / Hapus Aktivitas'
+    +'</button>'
 	+'<button type="button" class="btn btn-outline-danger btn-sm" style="margin-left: 10px; float: right;" id="delete-rka">'
         +'<i class="fa fa-trash fa-fw"></i> Delete RKA'
     +'</button>'
@@ -1269,8 +1278,11 @@ if(current_url.indexOf('parameter/rekening') != -1){
     		gl_dokumen_rka();
     	}
     });
-    jQuery('#delete-rka').on('click', function(){
-		show_loading();
+    jQuery('#ganti_nama').on('click', function(){
+    	ganti_nama_aktivitas();
+    });
+    jQuery('#backup_db_lokal').on('click', function(){
+    	jQuery('#ganti_nama').hide();
 		var tambah_program = jQuery('a.btn-sm[title="Tambah Program"]');
 		if(_type_singkronisasi_rka == 'rka-opd'){
 			var code_program = jQuery('a.btn-sm[title="Tambah Program RKA"]').attr('href').split('code=')[1];
@@ -1280,20 +1292,69 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			}
 		}
 		if(tambah_program.length >= 1){
-			if(typeof sasaran_fmis != 'undefined'){
+			if(typeof sasaran_fmis == 'undefined'){
+				var sasaran_fmis = jQuery('button.previous-tab[data-tab-target="#sasaran-tab"]').closest('tr').find('td').eq(2).text().split(' ');
+				sasaran_fmis.shift();
+				sasaran_fmis = sasaran_fmis.join(' ');
+			}
+			if(confirm('Apakah anda yakin untuk mengsingkronkan data RKA dari sasaran '+sasaran_fmis+'? data lokal akan diupdate!')){
+				show_loading();
+	    		singkron_rka_ke_lokal();
+	    	}
+		}else{
+			alert('Masuk ke tab Program dulu!');
+		}
+    });
+    jQuery('#delete-rka').on('click', function(){
+    	jQuery('#ganti_nama').hide();
+		var tambah_program = jQuery('a.btn-sm[title="Tambah Program"]');
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			var code_program = jQuery('a.btn-sm[title="Tambah Program RKA"]').attr('href').split('code=')[1];
+			if(code_program){
+				tambah_program = code_program;
+				var sasaran_fmis = jQuery('button.tab-return[onclick="changeTab(\'#tab-sasaran\')"]').closest('tr').find('td').eq(2).text();
+			}
+		}
+		if(tambah_program.length >= 1){
+			if(typeof sasaran_fmis == 'undefined'){
 				var sasaran_fmis = jQuery('button.previous-tab[data-tab-target="#sasaran-tab"]').closest('tr').find('td').eq(2).text().split(' ');
 				sasaran_fmis.shift();
 				sasaran_fmis = sasaran_fmis.join(' ');
 			}
 			if(confirm('Apakah anda yakin untuk menghapus data Program, Kegaitan, Sub Kegiatan, Aktivitas dan Rincian dari sasaran '+sasaran_fmis+'?')){
+				show_loading();
 	    		delete_rka();
 	    	}
 		}else{
-			hide_loading();
+			alert('Masuk ke tab Program dulu!');
+		}
+    });
+    jQuery('#update-aktivitas').on('click', function(){
+    	jQuery('#ganti_nama').show();
+		var tambah_program = jQuery('a.btn-sm[title="Tambah Program"]');
+		if(_type_singkronisasi_rka == 'rka-opd'){
+			var code_program = jQuery('a.btn-sm[title="Tambah Program RKA"]').attr('href').split('code=')[1];
+			if(code_program){
+				tambah_program = code_program;
+				var sasaran_fmis = jQuery('button.tab-return[onclick="changeTab(\'#tab-sasaran\')"]').closest('tr').find('td').eq(2).text();
+			}
+		}
+		if(tambah_program.length >= 1){
+			if(typeof sasaran_fmis == 'undefined'){
+				var sasaran_fmis = jQuery('button.previous-tab[data-tab-target="#sasaran-tab"]').closest('tr').find('td').eq(2).text().split(' ');
+				sasaran_fmis.shift();
+				sasaran_fmis = sasaran_fmis.join(' ');
+			}
+			if(confirm('Apakah anda yakin untuk mengupdate status data aktivitas di FMIS dari sasaran '+sasaran_fmis+'?')){
+    			show_loading();
+	    		update_aktivitas();
+	    	}
+		}else{
 			alert('Masuk ke tab Program dulu!');
 		}
     });
     jQuery('#singkron-program').on('click', function(){
+    	jQuery('#ganti_nama').hide();
     	if(confirm('Apakah anda yakin untuk mengsingkronkan data program RENJA dari WP-SIPD?')){
 			show_loading();
 			get_id_unit_fmis()
@@ -1342,11 +1403,12 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			})
 			.catch(function(e){
 				hide_loading();
-				alert('Dokumen RENJA belum dibuat!');
+				alert('Dokumen RKA belum dibuat!');
 			});
 		}
     });
     jQuery('#singkron-rka').on('click', function(){
+    	jQuery('#ganti_nama').hide();
     	if(confirm('Apakah anda yakin untuk mengsingkronkan data RKA dari WP-SIPD?')){
 			show_loading();
 			get_id_unit_fmis()
@@ -1395,7 +1457,7 @@ if(current_url.indexOf('parameter/rekening') != -1){
 			})
 			.catch(function(e){
 				hide_loading();
-				alert('Dokumen RENJA belum dibuat!');
+				alert('Dokumen RKA belum dibuat!');
 			});
 		}
     });
