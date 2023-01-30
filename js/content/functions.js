@@ -6185,8 +6185,9 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 							        				var form = jQuery(form_edit.form);
 							        				data_post.idrapbdrkaaktivitas = '';
 							        				data_post.idrapbdrkasubkegiatan = form.find('input[name="idrapbdrkasubkegiatan"]').val();
+							        				data_post.idsubunit = aktivitas_exist_update.idsubunit; // jika ada perubahan PA/KPA
 							        				data_post.jn_asb = aktivitas_exist_update.jn_asb;
-							        				data_post.jn_rkud = aktivitas_exist_update.jn_rkud;
+							        				data_post.jn_rkud = aktivitas_exist_update.jn_rkud; // jika ada perubahan jenis rkud
 							        				data_post.status_luncuran = aktivitas_exist_update.status_luncuran;
 							        				data_post.idasb = aktivitas_exist_update.idasb;
 							        				data_post.idpptk = '';
