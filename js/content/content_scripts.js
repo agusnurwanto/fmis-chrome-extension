@@ -119,16 +119,45 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 				){
 					var selected = [];
 					res.data.map(function(b, i){
-						var check = false;
+						var cek_exclude = [];
+						var cek_include = [];
 						sub_kegiatan_selected_all_skpd.map(function(bb, ii){
-							if(b.nama_sub_giat.indexOf(bb) != -1){
-								check = true;
+							if(bb.substr(0,2) == '!='){
+								cek_exclude.push(bb.replace('!=', ''));
+							}else{
+								cek_include.push(bb);
 							}
 						});
-						if(check){
-							selected.push(b);
+						if(cek_include.length == 0){
+							var check = true;
+							cek_exclude.map(function(bb, ii){
+								if(removeNewlines(b.nama_sub_giat).indexOf(removeNewlines(bb)) != -1){
+									check = false;
+								}
+							});
+							if(check){
+								selected.push(b);
+							}
+						}else{
+							var check = false;
+							cek_include.map(function(bb, ii){
+								if(removeNewlines(b.nama_sub_giat).indexOf(removeNewlines(bb)) != -1){
+									var check2 = false;
+									cek_exclude.map(function(bbb, iii){
+										if(removeNewlines(b.nama_sub_giat).indexOf(removeNewlines(bbb)) != -1){
+											check2 = true;
+										}
+									});
+									if(!check2){
+										check = true;
+									}
+								}
+							});
+							if(check){
+								selected.push(b);
+							}
 						}
-					})
+					});
 					options_all_skpd.sub_kegiatan = selected;
 				}else{
 					options_all_skpd.sub_kegiatan = res.data;
