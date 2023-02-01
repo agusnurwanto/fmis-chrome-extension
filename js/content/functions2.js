@@ -235,7 +235,7 @@ function aksi_delete_rka(aktivitas){
 	        		return new Promise(function(resolve_reduce3, reject_reduce3){
 	        			pesan_loading('HAPUS RINCIAN = '+rka.uraian_belanja, true);
 	        			if(_type_singkronisasi_rka == 'rka-opd'){
-	        				var url_form_delete = rka.action.split('href="')[3].split('"')[0];
+	        				var url_form_delete = jQuery(rka.action).find('.btn-danger[data-action="delete"]').attr('href');
 		        			relayAjax({
 								url: url_form_delete+'&action=delete',
 					            success: function(form_delete){

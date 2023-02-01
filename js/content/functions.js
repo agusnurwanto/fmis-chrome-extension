@@ -5454,7 +5454,6 @@ function get_id_ssh_rka(rka, options){
 					console.log('Item SSH tidak ditemukan', unik_rincian, rka, url_ssh);
 					resolve(false);
 				}else{
-					var data_ssh = ssh.data[0];
 					if(_type_singkronisasi_rka == 'rka-opd'){
 						data_ssh.idssh_4 = data_ssh.action.split('data-id="')[1].split('"')[0];
 						var form = jQuery(options.form_tambah_rka);
@@ -6091,7 +6090,6 @@ function cek_insert_aktivitas_fmis(rka_sipd, sub_keg){
 		        					// cek jika aktivitas di fmis hanya satu dan di sipd juga hanya satu, maka aktivitas fmis diupdate sesuai aktivitas di sipd
 		        					if(
 		        						cek_aktivitas_sub_unit.length == 1
-		        						&& sub_keg.aktivitas.length == 1
 		        						&& all_aktivitas.length == 1
 		        					){
 		        						cek_exist = true;
