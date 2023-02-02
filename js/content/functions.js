@@ -8099,10 +8099,10 @@ function singkronisasi_anggaran_kas(data_sipd){
 			var cek_exclude = [];
 			var cek_include = [];
 			sub_kegiatan_selected_all_skpd.map(function(bb, ii){
-				if(bb.substr(0,2) == '!='){
-					cek_exclude.push(bb.replace('!=', ''));
+				if(bb.trim().substr(0,2) == '!='){
+					cek_exclude.push(bb.trim().replace('!=', ''));
 				}else{
-					cek_include.push(bb);
+					cek_include.push(bb.trim());
 				}
 			});
 			if(cek_include.length == 0){

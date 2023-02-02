@@ -2707,6 +2707,17 @@ function get_id_sub_unit_penatausahaan(){
 	});
 }
 
+function get_sp2d_terbit(){
+	return new Promise(function(resolve, reduce){
+		relayAjax({
+			url: config.fmis_url+'/penatausahaan/skpkd/bud/sp2d/data',
+	        success: function(res){
+	        	resolve(res.data);
+	        }
+	    });
+	});
+}
+
 function get_sp2d(){
 	return new Promise(function(resolve, reduce){
 		relayAjax({

@@ -647,3 +647,22 @@ function ganti_nama_aktivitas(){
 		hide_loading();
 	}
 }
+
+async function getFileFromUrl(url, name = 'doc.pdf', defaultType = 'application/pdf'){
+  	const response = await fetch(url);
+  	const data = await response.blob();
+  	return previewFile(new File([data], name, {
+    	type: data.type || defaultType,
+  	}));
+}
+
+function previewFile(file) {
+	console.log('Read file!', file);
+	return new Promise(function(resolve, reduce){
+	  	var reader  = new FileReader();
+	  	reader.onloadend = function () {
+	    	resolve(reader.result);
+	  	}
+	  	reader.readAsArrayBuffer(file);
+	})
+}

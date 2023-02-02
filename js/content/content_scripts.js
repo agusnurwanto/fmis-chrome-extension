@@ -117,17 +117,17 @@ chrome.runtime.onMessage.addListener( function(request, sender, sendResponse) {
 					sub_kegiatan_selected_all_skpd
 					&& sub_kegiatan_selected_all_skpd.length >= 1
 				){
+					var cek_exclude = [];
+					var cek_include = [];
+					sub_kegiatan_selected_all_skpd.map(function(bb, ii){
+						if(bb.trim().substr(0,2) == '!='){
+							cek_exclude.push(bb.trim().replace('!=', ''));
+						}else{
+							cek_include.push(bb.trim());
+						}
+					});
 					var selected = [];
 					res.data.map(function(b, i){
-						var cek_exclude = [];
-						var cek_include = [];
-						sub_kegiatan_selected_all_skpd.map(function(bb, ii){
-							if(bb.substr(0,2) == '!='){
-								cek_exclude.push(bb.replace('!=', ''));
-							}else{
-								cek_include.push(bb);
-							}
-						});
 						if(cek_include.length == 0){
 							var check = true;
 							cek_exclude.map(function(bb, ii){

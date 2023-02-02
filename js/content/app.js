@@ -824,10 +824,67 @@ if(current_url.indexOf('parameter/rekening') != -1){
 	    +'</div>';
 	jQuery('body').append(modal_spp);
 	var btn = ''
-	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px; float: right;" id="singkronisasi_data_sp2d">'
+	+'<button type="button" class="btn btn-outline-success btn-sm" style="margin-left: 3px; float: right; display: none;" id="singkronisasi_data_sp2d">'
         +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Singkronisasi Data SP2D dari SIMDA'
+    +'</button>'
+	+'<button type="button" class="btn btn-warning btn-sm" style="margin-left: 3px; float: right;" id="backup_data_sp2d">'
+        +'<i class="fa fa-cloud-upload-alt fa-fw"></i> Backup Data SP2D ke Lokal'
     +'</button>';
     jQuery('h4.card-title').append(btn);
+    jQuery('#backup_data_sp2d').on('click', function(){
+    	show_loading();
+    	get_sp2d_terbit()
+    	.then(function(sp2d){
+    		sp2d.map(function(b, i){
+    			b.url_sp2d = jQuery(b.action).find('a').attr('href');
+    			b.action = '';
+    			sp2d[i] = b;
+    			if(i==1){
+    				let _url_sp2d = b.url_sp2d;
+    				getFileFromUrl(_url_sp2d)
+    				.then(async function(arrayBuffer){
+    					// kirim file pdf ke server
+    					const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+						const formData = new FormData();
+						formData.append("file", blob);
+						formData.append("action", 'save_file');
+						formData.append("tahun_anggaran", config.tahun_anggaran);
+						formData.append("api_key", config.api_key);
+						formData.append("url", _url_sp2d);
+						await fetch(config.url_server_lokal, {
+							method: "POST",
+							mode: 'no-cors',
+					        cache: 'no-cache',
+					        credentials: 'include',
+					        redirect: 'follow',
+					        referrerPolicy: 'strict-origin-when-cross-origin',
+							body: formData
+						});
+    				});
+    			}
+    		});
+    		pesan_loading('Simpan data SP2D ke Lokal!');
+    		var data = {
+			    message:{
+			        type: "get-url",
+			        content: {
+					    url: config.url_server_lokal,
+					    type: 'post',
+					    data: { 
+							action: 'backup_sp2d_fmis',
+							sp2d: sp2d,
+							tahun_anggaran: config.tahun_anggaran,
+							api_key: config.api_key
+						},
+		    			return: true
+					}
+			    }
+			};
+			chrome.runtime.sendMessage(data, function(response) {
+			    console.log('responeMessage', response);
+			});
+	    });
+    });
     jQuery('#singkronisasi_data_sp2d').on('click', function(){
     	show_loading();
     	get_sp2d()
