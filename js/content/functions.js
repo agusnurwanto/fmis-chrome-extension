@@ -5412,9 +5412,9 @@ function get_id_ssh_rka_lama(rka){
 function get_id_ssh_rka(rka, options){
 	pesan_loading('GET DATA SSH "'+rka.nama_komponen+'" HARGA "'+rka.harga_satuan+'"', true);
 	return new Promise(function(resolve, reject){
-		var unik_rincian = (rka.harga_satuan+' '+rka.satuan+' '+rka.nama_komponen).substring(0, 250).trim();
+		var unik_rincian = (rka.harga_satuan+' '+rka.satuan+' '+rka.nama_komponen)
 		unik_rincian = unik_rincian.split('\n')[0];
-		unik_rincian = replace_string(unik_rincian, true);
+		unik_rincian = replace_string(unik_rincian, true).substring(0, 250).trim();
 		// pencairan item ssh jika ada karakter [ atau ] di halaman tambah rincian tidak jalan. berbeda jika dicari di halman perkada lancar. maka perlu di split.
 		unik_rincian = unik_rincian.split('[')[0];
 		unik_rincian = unik_rincian.split('>')[0];

@@ -844,9 +844,10 @@ if(current_url.indexOf('parameter/rekening') != -1){
     				getFileFromUrl(_url_sp2d)
     				.then(async function(arrayBuffer){
     					// kirim file pdf ke server
-    					const blob = new Blob([arrayBuffer], { type: 'application/pdf' });
-						const formData = new FormData();
+    					let blob = new Blob([arrayBuffer], { type: 'application/pdf' });
+						let formData = new FormData();
 						formData.append("file", blob);
+						formData.append("file_name", b.sp2d_no+'|'+config.tahun_anggaran+'.pdf');
 						formData.append("action", 'save_file');
 						formData.append("tahun_anggaran", config.tahun_anggaran);
 						formData.append("api_key", config.api_key);
@@ -854,10 +855,6 @@ if(current_url.indexOf('parameter/rekening') != -1){
 						await fetch(config.url_server_lokal, {
 							method: "POST",
 							mode: 'no-cors',
-					        cache: 'no-cache',
-					        credentials: 'include',
-					        redirect: 'follow',
-					        referrerPolicy: 'strict-origin-when-cross-origin',
 							body: formData
 						});
     				});
