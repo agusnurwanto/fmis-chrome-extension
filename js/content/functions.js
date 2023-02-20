@@ -1139,7 +1139,8 @@ function getIdSatuan(satuan, force, val_cb){
 					resolve(val_cb);
 				});
 			}else if(id_satuan == 0){
-				relayAjax({
+				// dibuat sekali request agar tidak mengganggu proses singkron
+				jQuery.ajax({
 					url: config.fmis_url + '/parameter/satuan/store',
 					type: "post",
 		            data: {
@@ -5807,6 +5808,13 @@ function cek_insert_rka_fmis(rka_sipd, sub_keg){
 								        				}
 								        			})
 								        			.then(function(url_simpan){
+								        				if(
+								        					data_post.harga == '0'
+								        					&& data_post.jumlah == '0'
+								        				){
+								        					console.log('Lewati simpan rincian jumlah 0!', data_post);
+								        					return resolve_reduce2(nextData2);
+								        				}
 								        				// ajax dibuat sekali karena terjadi double input rincian, ketika jaringan ke server fmis lambat
 							        					jQuery.ajax({
 															url: url_simpan,

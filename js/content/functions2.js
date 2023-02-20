@@ -235,28 +235,10 @@ function aksi_delete_rka(aktivitas){
 	        		return new Promise(function(resolve_reduce3, reject_reduce3){
 	        			pesan_loading('HAPUS RINCIAN = '+rka.uraian_belanja, true);
 	        			if(_type_singkronisasi_rka == 'rka-opd'){
-	        				var url_form_delete = jQuery(rka.action).find('.btn-danger[data-action="delete"]').attr('href');
-		        			relayAjax({
-								url: url_form_delete+'&action=delete',
-					            success: function(form_delete){
-					            	var form = jQuery(form_delete.form);
-					            	var url_delete = form.attr('action');
-				        			relayAjax({
-										url: url_delete,
-										data: {
-											_method: 'DELETE',
-											_token: _token
-										},
-										type: "post",
-							            success: function(res){
-							            	resolve_reduce3(nextData3);
-							            },
-							            error: function(e){
-							            	console.log('Error hapus rincian!', e, rka);
-							            }
-									});
-					            }
-							});
+	        				kosongkan_rincian_item(rka)
+	        				.then(function(){
+	        					resolve_reduce3(nextData3);
+	        				});
 	        			}else{
 	        				var url_delete = rka.action.split('href="')[2].split('"')[0];
 		        			relayAjax({
