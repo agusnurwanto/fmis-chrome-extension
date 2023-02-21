@@ -4487,9 +4487,9 @@ function get_id_sub_unit_fmis(options, id_mapping_skpd, nama_sub_skpd){
 	});
 }
 
-function get_id_unit_fmis(){
-	pesan_loading('GET ID UNIT FMIS', true);
+function get_id_unit_fmis(from_user=false){
 	return new Promise(function(resolve, reject){
+		pesan_loading('GET ID UNIT FMIS', true);
 		var url_unit = config.fmis_url+'/perencanaan-tahunan/renja-murni';
 		if(_type_singkronisasi_rka == 'rka-opd'){
 			url_unit = config.fmis_url+'/anggaran/rka-opd/dokumen/datatable';
@@ -4499,17 +4499,21 @@ function get_id_unit_fmis(){
 			success: function(renja){
 				if(renja.data.length >= 1){
 					if(_type_singkronisasi_rka == 'rka-opd'){
-						var nama_dokumen = jQuery('.info-dokumen strong').eq(0).text().trim();
-						var idunit = false;
-						renja.data.map(function(b, i){
-							if(nama_dokumen == b.no_rka){
-								idunit = b.idunit;
-							}
-						});
-						if(idunit){
-							resolve(idunit);
+						if(from_user){
+							resolve(renja.data[0].idunit);
 						}else{
-							reject();
+							var nama_dokumen = jQuery('.info-dokumen strong').eq(0).text().trim();
+							var idunit = false;
+							renja.data.map(function(b, i){
+								if(nama_dokumen == b.no_rka){
+									idunit = b.idunit;
+								}
+							});
+							if(idunit){
+								resolve(idunit);
+							}else{
+								reject('ID unit Tidak ditemukan!');
+							}
 						}
 					}else{
 						resolve(renja.data[0].idunit);
