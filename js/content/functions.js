@@ -8174,26 +8174,61 @@ function singkronisasi_anggaran_kas(data_sipd){
 			}
 		}
 	});
-	console.log('kas_unik', kas_unik);
 	get_aktivitas_kas()
 	.then(function(aktivitas_all){
+		var aktivitas_per_sub = {};
+		aktivitas_all.map(function(b, i){
+			var key = removeNewlines(b.nmprogram+' | '+b.nmkegiatan+' | '+b.nmsubkegiatan);
+			if(!aktivitas_per_sub[replace_string(key)]){
+				aktivitas_per_sub[replace_string(key)] = [];
+			}
+			aktivitas_per_sub[replace_string(key)].push(b);
+		});
+
+		var aktivitas_filter = {};
+		for(var i in kas_unik){
+			var nama_sub = removeNewlines(kas_unik[i].nama_program+' | '+kas_unik[i].nama_giat+' | '+get_text_bidur(kas_unik[i].nama_sub_giat));
+			if(!aktivitas_filter[replace_string(nama_sub)]){
+				aktivitas_filter[replace_string(nama_sub)] = [];
+			}
+			aktivitas_filter[replace_string(nama_sub)].push(kas_unik[i]);
+		}
+
+		console.log('kas_unik', kas_unik, aktivitas_per_sub, aktivitas_filter);
 		var last = aktivitas_all.length - 1;
 		aktivitas_all.reduce(function(sequence, nextData){
             return sequence.then(function(aktivitas){
         		return new Promise(function(resolve_reduce, reject_reduce){
         			var nama_aktivitas_fmis = aktivitas.nm_aktivitas;
         			var nama_sub_fmis = removeNewlines(aktivitas.nmprogram+' | '+aktivitas.nmkegiatan+' | '+aktivitas.nmsubkegiatan);
-        			console.log('Cek insert aktivitas "'+nama_aktivitas_fmis+'" Sub kegiatan "'+nama_sub_fmis+'"', aktivitas);
+        			// hanya sub kegiatan terpilih yang boleh lanjut
+        			if(!aktivitas_filter[replace_string(nama_sub_fmis)]){
+        				return resolve_reduce(nextData);
+        			}
 
+        			console.log('Cek insert aktivitas "'+nama_aktivitas_fmis+'" Sub kegiatan "'+nama_sub_fmis+'"', aktivitas);
 		        	var code_aktivitas = aktivitas.action.split('data-code="')[1].split('"')[0];
         			new Promise(function(resolve_reduce2, reject_reduce2){
 	        			// cek apakah aktivitas fmis ada di sipd
 	        			var key = nama_aktivitas_fmis.split(' | ');
 	        			if(
-	        				key[1] 
-	        				&& kas_unik[replace_string(nama_sub_fmis+' | '+key[1])]
+	        				(
+	        					key[1] 
+	        					&& kas_unik[replace_string(nama_sub_fmis+' | '+key[1])]
+	        				)
+	        				|| (
+	        					aktivitas_per_sub[replace_string(nama_sub_fmis)].length == 1
+	        					&& aktivitas_filter[replace_string(nama_sub_fmis)].length == 1
+	        				)
 	        			){
-	        				var aktivitas_sipd = kas_unik[replace_string(nama_sub_fmis+' | '+key[1])];
+	        				if(
+	        					key[1] 
+	        					&& kas_unik[replace_string(nama_sub_fmis+' | '+key[1])]
+	        				){
+	        					var aktivitas_sipd = kas_unik[replace_string(nama_sub_fmis+' | '+key[1])];
+	        				}else{
+	        					var aktivitas_sipd = aktivitas_filter[replace_string(nama_sub_fmis)][0];
+	        				}
 		        			relayAjax({
 								url: config.fmis_url+'/anggaran/rka-renkas/rincian/form?code='+code_aktivitas+'&action=create',
 					            success: function(form_tambah){
