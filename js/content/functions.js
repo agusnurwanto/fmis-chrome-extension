@@ -171,13 +171,10 @@ function singkronisasi_ssh(options){
 			}
 
 			var check_filter = false;
-			var check_looping = false;
+			var check_filter_include = false;
 			filter_ssh.map(function(filter, ii){
-				if(check_looping){
-					return;
-				}
-				if(filter.substr(0,2) == '!='){
-					filter = filter.replace('!=', '');
+				if(filter.substr(0,2) != '!='){
+					check_filter_include = true;
 					if(
 						golongan.indexOf(filter) != -1
 						|| kelompok.indexOf(filter) != -1
@@ -187,51 +184,74 @@ function singkronisasi_ssh(options){
 						check_filter = true;
 						return;
 					}
-				}else if(
-					golongan.indexOf(filter) == -1
-					&& kelompok.indexOf(filter) == -1
-					&& sub_kelompok.indexOf(filter) == -1
-					&& nama_item.indexOf(filter) == -1
-				){
-					check_filter = true;
-					return;
 				}
-				check_looping = true;
 			});
-			if(check_filter){
-				return;
+
+			// jika ada yg terfilter atau cek filter include == kosong
+			if(
+				check_filter 
+				|| !check_filter_include
+			){
+				filter_ssh.map(function(filter2, ii2){
+					if(filter2.substr(0,2) == '!='){
+						filter2 = filter2.replace('!=', '');
+						if(
+							golongan.indexOf(filter2) != -1
+							|| kelompok.indexOf(filter2) != -1
+							|| sub_kelompok.indexOf(filter2) != -1
+							|| nama_item.indexOf(filter2) != -1
+						){
+							check_filter = true;
+							return;
+						}
+					}
+				});
 			}
 
-			if(!data_ssh[golongan]){
-				data_ssh[golongan] = {
-					nama: golongan,
-					jenis: b.kelompok,
-					data: {}
+			// jika ada yg terfilter atau tidak ada filter
+			if(
+				check_filter
+				|| filter_ssh.length == 0
+			){
+				if(filter_ssh.length >= 1){
+					console.log('filter_ssh', golongan, kelompok, sub_kelompok, nama_item, filter_ssh);
 				}
-				ssh_golongan_all_length++;
-			}
-			if(!data_ssh[golongan].data[kelompok]){
-				data_ssh[golongan].data[kelompok] = {
-					nama: kelompok,
-					jenis: b.kelompok,
-					data: {}
+
+				if(!data_ssh[golongan]){
+					data_ssh[golongan] = {
+						nama: golongan,
+						jenis: b.kelompok,
+						data: {}
+					}
+					ssh_golongan_all_length++;
 				}
-				ssh_kelompok_all_length++;
-			}
-			if(!data_ssh[golongan].data[kelompok].data[sub_kelompok]){
-				data_ssh[golongan].data[kelompok].data[sub_kelompok] = {
-					nama: nama_subkelompok,
-					jenis: b.kelompok,
-					data: {}
+				if(!data_ssh[golongan].data[kelompok]){
+					data_ssh[golongan].data[kelompok] = {
+						nama: kelompok,
+						jenis: b.kelompok,
+						data: {}
+					}
+					ssh_kelompok_all_length++;
 				}
-				ssh_sub_kelompok_all_length++;
-			}
-			data_ssh[golongan].data[kelompok].data[sub_kelompok].data[item_ssh] = {
-				nama: nama_item,
-				jenis: b.kelompok,
-				data: b
+				if(!data_ssh[golongan].data[kelompok].data[sub_kelompok]){
+					data_ssh[golongan].data[kelompok].data[sub_kelompok] = {
+						nama: nama_subkelompok,
+						jenis: b.kelompok,
+						data: {}
+					}
+					ssh_sub_kelompok_all_length++;
+				}
+				data_ssh[golongan].data[kelompok].data[sub_kelompok].data[item_ssh] = {
+					nama: nama_item,
+					jenis: b.kelompok,
+					data: b
+				}
 			}
 		});
+
+		if(filter_ssh.length >= 1){
+			console.log('filter_ssh', filter_ssh);
+		}
 		run_script('window.data_ssh', JSON.stringify(data_ssh));
 		var modal_title = jQuery('#modal .modal-title > span').text();
 		if(
