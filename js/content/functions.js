@@ -90,9 +90,10 @@ function relayAjax(options, retries=20, delay=5000, timeout=180000000){
 			}else{
 				var newstart = options.all_data.length - 1;
 				options.url = options.url.replace('&start='+start, '&start='+newstart);
+				var new_delay = Math.random() * (delay/1000);
 				setTimeout(function(){
 	                relayAjax(options);
-	            }, 1000);
+	            }, new_delay * 1000);
 			}
 		};
 	}
@@ -266,6 +267,13 @@ function singkronisasi_ssh(options){
 					success: function(golongan){
 						var data_all = [];
 						var no_urut_golongan = 0;
+						var new_golongan_data = {};
+						golongan.data.map(function(b, i){
+							new_golongan_data[b.uraian] = b;
+							if(no_urut_golongan < +b.kdurut){
+								no_urut_golongan = +b.kdurut;
+							}
+						});
 						for(var gol_id in data_ssh){
 							var nama_golongan = data_ssh[gol_id].nama;
 							var jns_golongan = data_ssh[gol_id].jenis;
@@ -281,16 +289,7 @@ function singkronisasi_ssh(options){
 							}else{
 								continue;
 							}
-							var cek = false;
-							golongan.data.map(function(b, i){
-								if(b.uraian == nama_golongan){
-									cek = true;
-								}
-								if(no_urut_golongan < +b.kdurut){
-									no_urut_golongan = +b.kdurut;
-								}
-							});
-							if(cek == false){
+							if(!new_golongan_data[nama_golongan]){
 								no_urut_golongan++;
 								data_all.push({
 									url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/save',
@@ -464,6 +463,7 @@ function singkronisasi_ssh_tarif(data_ssh, cb, options){
 }
 
 function singkronisasi_ssh_kelompok(data_ssh, cb, options){
+	// ge semua golongan ssh
 	relayAjax({
 		url: config.fmis_url+'/parameter/ssh/struktur-ssh/golongan/datatable',
 		success: function(golongan){
@@ -478,6 +478,7 @@ function singkronisasi_ssh_kelompok(data_ssh, cb, options){
 					}
 				});
 				if(kode_golongan != ''){
+					// set code golongan dan get kelompok berdasarkan kode golongan
 					data_ssh[gol_id].code = kode_golongan;
 					sendData.push(new Promise(function(resolve, reject){
 						relayAjax({
@@ -487,18 +488,17 @@ function singkronisasi_ssh_kelompok(data_ssh, cb, options){
 								// console.log('gol_id', _gol_id, data_ssh[_gol_id]);
 								var no_urut_kelompok = 0;
 								pesan_loading('GET KELOMPOK DARI GOLONGAN '+data_ssh[_gol_id].nama, true);
+								var new_kelompok_data = {};
+								kelompok.data.map(function(b, i){
+									new_kelompok_data[b.uraian] = b;
+									if(no_urut_kelompok < +b.kdurut){
+										no_urut_kelompok = +b.kdurut;
+									}
+								});
 								for(var kelompok_id in data_ssh[_gol_id].data){
 									var nama_kelompok = data_ssh[_gol_id].data[kelompok_id].nama;
-									var cek = false;
-									kelompok.data.map(function(b, i){
-										if(b.uraian == nama_kelompok){
-											cek = true;
-										}
-										if(no_urut_kelompok < +b.kdurut){
-											no_urut_kelompok = +b.kdurut;
-										}
-									});
-									if(cek == false){
+									// cek jika golongan belum ada maka buat parameter untuk simpan kelompok
+									if(!new_kelompok_data[nama_kelompok]){
 										no_urut_kelompok++;
 										data_all.push({
 											url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/save/'+data_ssh[_gol_id].code,
@@ -564,83 +564,20 @@ function singkronisasi_ssh_kelompok(data_ssh, cb, options){
 }
 
 function singkronisasi_ssh_sub_kelompok(data_ssh, cb, options){
-	var data_all = [];
-	var sendData = [];
+	var data_kelompok = [];
 	for(var gol_id in data_ssh){
 		var nama_golongan = data_ssh[gol_id].nama;
 		if(data_ssh[gol_id].code){
-			sendData.push(new Promise(function(resolve, reject){
-				relayAjax({
-					url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/datatable?code='+data_ssh[gol_id].code+'&gol_id='+gol_id,
-					success: function(kelompok){
-						// console.log('gol_id', _gol_id);
-						var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
-						var sendDataSub = [];
-						for(var kelompok_id in data_ssh[_gol_id].data){
-							var nama_kelompok = data_ssh[_gol_id].data[kelompok_id].nama;
-							var kode_kelompok = '';
-							kelompok.data.map(function(b, i){
-								if(b.uraian == nama_kelompok){
-									kode_kelompok = b.action.split('code="')[1].split('"')[0];
-								}
-							});
-							if(kode_kelompok != ''){
-								data_ssh[_gol_id].data[kelompok_id].code = kode_kelompok;
-								sendDataSub.push(new Promise(function(resolve2, reject2){
-								relayAjax({
-									url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+data_ssh[_gol_id].data[kelompok_id].code+'&gol_id='+_gol_id+'&kelompok_id='+kelompok_id,
-									length: 1000,
-									success: function(subkelompok){
-										var __gol_id = this.url.split('&gol_id=')[1].split('&')[0];
-										var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
-										pesan_loading('GET SUB KELOMPOK DARI KELOMPOK '+data_ssh[__gol_id].data[_kelompok_id].nama, true);
-										var no_urut_subkelompok = 0;
-										for(var subkelompok_id in data_ssh[__gol_id].data[_kelompok_id].data){
-											var nama_subkelompok = replace_string(data_ssh[__gol_id].data[_kelompok_id].data[subkelompok_id].nama, true);
-											var cek = false;
-											subkelompok.data.map(function(b, i){
-												if(replace_string(b.uraian, true) == nama_subkelompok){
-													cek = true;
-												}
-												if(no_urut_subkelompok < +b.kdurut){
-													no_urut_subkelompok = +b.kdurut;
-												}
-											});
-											if(cek == false){
-												no_urut_subkelompok++;
-												data_all.push({
-													url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/save/'+data_ssh[__gol_id].data[_kelompok_id].code,
-										            type: "post",
-										            data: {
-										                _token: _token,
-										                kdurut: no_urut_subkelompok,
-										                uraian: nama_subkelompok
-										            }
-												});
-											}
-										}
-										resolve2();
-									}
-								});
-							}));
-							}
-						}
-						Promise.all(sendDataSub)
-						.then(function(val_all){
-							resolve();
-					    })
-					    .catch(function(err){
-					        console.log('err', err);
-							alert('Ada kesalahan sistem!');
-							hide_loading();
-					    });
-					}
-				});
-			}));
+			data_kelompok.push({
+				code: data_ssh[gol_id].code,
+				gol_id: gol_id,
+				gol_data: data_ssh[gol_id].data
+			})
 		}
 	}
-	Promise.all(sendData)
-	.then(function(val_all){
+	get_kelompok(data_kelompok, data_ssh)
+	.then(function(new_data){
+		var data_all = new_data.data_all;
 		// console.log('data_all kelompok', data_all);
 		jQuery('#persen-loading').attr('persen', 0);
 		var last = data_all.length - 1;
@@ -670,7 +607,7 @@ function singkronisasi_ssh_sub_kelompok(data_ssh, cb, options){
             });
         }, Promise.resolve(data_all[last]))
         .then(function(data_last){
-			singkronisasi_ssh_item(data_ssh, cb, options);
+			singkronisasi_ssh_item(new_data.data_ssh, cb, options);
         })
         .catch(function(e){
             console.log(e);
@@ -683,127 +620,99 @@ function singkronisasi_ssh_sub_kelompok(data_ssh, cb, options){
     });
 }
 
+function get_kelompok(_data_all, data_ssh){
+	return new Promise(function(resolve, reject){
+		var last = _data_all.length - 1;
+		var data_all = [];
+		_data_all.reduce(function(sequence, nextData){
+            return sequence.then(function(gol){
+        		return new Promise(function(resolve_reduce, reject_reduce){
+        			// get data kelompok berdasarkan kode golongan
+        			relayAjax({
+						url: config.fmis_url+'/parameter/ssh/struktur-ssh/kelompok/datatable?code='+gol.code+'&gol_id='+gol.gol_id,
+						success: function(kelompok){
+							// console.log('gol_id', _gol_id);
+							var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
+							var data_sub_kelompok = [];
+							var new_kelompok_data = {};
+							kelompok.data.map(function(b, i){
+								new_kelompok_data[b.uraian] = b;
+							});
+							for(var kelompok_id in gol.gol_data){
+								var nama_kelompok = gol.gol_data[kelompok_id].nama;
+								var kode_kelompok = '';
+								if(new_kelompok_data[nama_kelompok]){
+									kode_kelompok = new_kelompok_data[nama_kelompok].action.split('code="')[1].split('"')[0];
+								}
+								if(kode_kelompok != ''){
+									data_ssh[gol.gol_id].data[kelompok_id].code = kode_kelompok;
+									data_sub_kelompok.push({
+										code_gol: gol.code,
+										code_kel: kode_kelompok,
+										gol_id: gol.gol_id,
+										kelompok_id: kelompok_id,
+										kelompok_data: gol.gol_data[kelompok_id].data,
+										tipe: 'get_kelompok'
+									});
+								}
+							}
+
+							// get data sub kelompok berdasarkan kelompok dan return param ajax simpan sub kelompok jika belum ada
+							get_sub_kel_ssh(data_sub_kelompok, data_ssh)
+							.then(function(new_data){
+								new_data.data_all.map(function(b, i){
+									data_all.push(b);
+								})
+								resolve_reduce(nextData);
+							});
+						}
+					});
+
+                })
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(_data_all[last]))
+        .then(function(data_last){
+			resolve({
+				data_all: data_all,
+				data_ssh: data_ssh
+			});
+        })
+        .catch(function(e){
+            console.log(e);
+        });
+    });
+}
+
 function singkronisasi_ssh_item(data_ssh, cb, options){
-	var data_all = [];
-	var sendData = [];
+	var data_sub_kelompok = [];
 	for(var gol_id in data_ssh){
 		var nama_golongan = data_ssh[gol_id].nama;
 		if(data_ssh[gol_id].code){
 			for(var kelompok_id in data_ssh[gol_id].data){
 				if(data_ssh[gol_id].data[kelompok_id].code){
-					sendData.push(new Promise(function(resolve, reject){
-						relayAjax({
-							url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+data_ssh[gol_id].data[kelompok_id].code+'&gol_id='+gol_id+'&kelompok_id='+kelompok_id,
-							length: 1000,
-							success: function(subkelompok){
-								// console.log('gol_id', _gol_id);
-								var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
-								var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
-								var sendDataSub = [];
-								for(var subkelompok_id in data_ssh[_gol_id].data[_kelompok_id].data){
-									var nama_subkelompok = data_ssh[_gol_id].data[_kelompok_id].data[subkelompok_id].nama;
-									var kode_subkelompok = '';
-									subkelompok.data.map(function(b, i){
-										if(replace_string(b.uraian, true) == nama_subkelompok){
-											kode_subkelompok = b.action.split('code="')[1].split('"')[0];
-										}
-									});
-									if(kode_subkelompok != ''){
-										data_ssh[_gol_id].data[_kelompok_id].data[subkelompok_id].code = kode_subkelompok;
-										sendDataSub.push(new Promise(function(resolve2, reject2){
-											relayAjax({
-												url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/datatable?code='+kode_subkelompok+'&gol_id='+_gol_id+'&kelompok_id='+_kelompok_id+'&subkelompok_id='+subkelompok_id,
-												length: 1000,
-												success: function(item){
-													var __gol_id = this.url.split('&gol_id=')[1].split('&')[0];
-													var __kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
-													var __subkelompok_id = this.url.split('&subkelompok_id=')[1].split('&')[0];
-													var no_urut_item = 0;
-													var sendDataSatuan = [];
-													pesan_loading('GET ITEM SSH DARI SUB KELOMPOK '+data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].nama, true);
-													for(var item_id in data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data){
-														var nama_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].nama, true).substring(0, 250).trim();
-														var cek = false;
-														item.data.map(function(b, i){
-															var id_ssh_fmis = get_id_ssh(b.uraian);
-															var id_ssh_sipd = get_id_ssh(nama_item);
-															if(id_ssh_fmis == id_ssh_sipd){
-																cek = true;
-															}
-															if(no_urut_item < +b.kdurut){
-																no_urut_item = +b.kdurut;
-															}
-														});
-														if(cek == false){
-															no_urut_item++;
-															var keterangan_item = replace_string(data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.spek, true).substring(0, 250).trim();;
-															var satuan_asli = data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].data[item_id].data.satuan;
-															if(
-																!satuan_asli 
-																|| satuan_asli == ''
-															){
-																satuan_asli = 'kosong';
-															}else if(
-																__kelompok_id == 'Pendapatan'
-																|| __kelompok_id == 'Pembiayaan penerimaan'
-																|| __kelompok_id == 'Pembiayaan pengeluaran'
-															){
-																satuan_asli = 'tahun';
-															}else{
-																satuan_asli = satuan_asli.toLowerCase().trim();
-															}
-															var satuan = satuan_asli+' ('+satuan_asli+')';
-															sendDataSatuan.push(new Promise(function(resolve3, reject3){
-																getIdSatuan(satuan_asli, false, {
-																	url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/save/'+data_ssh[__gol_id].data[__kelompok_id].data[__subkelompok_id].code,
-														            type: "post",
-														            data: {
-														                _token: _token,
-														                kdurut: no_urut_item,
-														                uraian: nama_item,
-														                spesifikasi: keterangan_item,
-														                uraian_satuan: satuan,
-														                status: 1
-														            }
-																}).then(function(val){
-																	data_all.push(val);
-																	resolve3();
-																});
-															}));
-														}
-													}
-													Promise.all(sendDataSatuan)
-													.then(function(val_all){
-														resolve2();
-												    })
-												    .catch(function(err){
-												        console.log('err', err);
-														resolve2();
-												    });
-												}
-											});
-										}));
-									}
-								}
-								Promise.all(sendDataSub)
-								.then(function(val_all){
-									resolve();
-							    })
-							    .catch(function(err){
-							        console.log('err', err);
-									alert('Ada kesalahan sistem!');
-									hide_loading();
-							    });
-							}
-						});
-					}));
-
+					data_sub_kelompok.push({
+						code_gol: data_ssh[gol_id].code,
+						code_kel: data_ssh[gol_id].data[kelompok_id].code,
+						gol_id: gol_id,
+						kelompok_id: kelompok_id,
+						kelompok_data: data_ssh[gol_id].data[kelompok_id].data,
+						tipe: 'get_sub_kelompok'
+					});
 				}
 			}
 		}
 	}
-	Promise.all(sendData)
-	.then(function(val_all){
+	get_sub_kel_ssh(data_sub_kelompok, data_ssh)
+	.then(function(new_data){
+		var data_all = new_data.data_all;
 		var _leng = 5;
 		var _data_all = [];
 		var _data = [];
@@ -854,7 +763,7 @@ function singkronisasi_ssh_item(data_ssh, cb, options){
             });
         }, Promise.resolve(_data_all[last]))
         .then(function(data_last){
-			singkronisasi_ssh_rekening(data_ssh, cb, options);
+			singkronisasi_ssh_rekening(new_data.data_ssh, cb, options);
         })
         .catch(function(e){
             console.log(e);
@@ -865,6 +774,193 @@ function singkronisasi_ssh_item(data_ssh, cb, options){
 		alert('Ada kesalahan sistem!');
 		hide_loading();
     });
+}
+
+function get_sub_kel_ssh(_data_all, data_ssh){
+	return new Promise(function(resolve, reject){
+		var last = _data_all.length - 1;
+		var data_all_sub_kel = [];
+		var data_all = [];
+		_data_all.reduce(function(sequence, nextData){
+            return sequence.then(function(sub_kel){
+        		return new Promise(function(resolve_reduce, reject_reduce){
+        			relayAjax({
+						url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/datatable?code='+sub_kel.code_kel+'&gol_id='+sub_kel.gol_id+'&kelompok_id='+sub_kel.kelompok_id,
+						length: 1000,
+						success: function(subkelompok){
+							// console.log('gol_id', _gol_id);
+							var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
+							var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
+							var data_item = [];
+
+							var no_urut_subkelompok = 0;
+							var new_sub_kelompok_data = {};
+							subkelompok.data.map(function(b, i){
+								new_sub_kelompok_data[replace_string(b.uraian, true)] = b;
+								if(no_urut_subkelompok < +b.kdurut){
+									no_urut_subkelompok = +b.kdurut;
+								}
+							});
+							if(sub_kel.tipe == 'get_kelompok'){
+								pesan_loading('GET SUB KELOMPOK DARI KELOMPOK '+data_ssh[_gol_id].data[_kelompok_id].nama, true);
+								for(var subkelompok_id in sub_kel.kelompok_data){
+									var nama_subkelompok = replace_string(sub_kel.kelompok_data[subkelompok_id].nama, true);
+									// cek jika sub kelompok belum ada maka simpan kelompok ssh
+									if(!new_sub_kelompok_data[nama_subkelompok]){
+										no_urut_subkelompok++;
+										data_all.push({
+											url: config.fmis_url+'/parameter/ssh/struktur-ssh/subkelompok/save/'+sub_kel.code_kel,
+								            type: "post",
+								            data: {
+								                _token: _token,
+								                kdurut: no_urut_subkelompok,
+								                uraian: nama_subkelompok
+								            }
+										});
+									}
+								}
+								resolve_reduce(nextData);
+							}else{
+								for(var subkelompok_id in sub_kel.kelompok_data){
+									var nama_subkelompok = replace_string(sub_kel.kelompok_data[subkelompok_id].nama, true);
+									var kode_subkelompok = '';
+									if(new_sub_kelompok_data[nama_subkelompok]){
+										kode_subkelompok = new_sub_kelompok_data[nama_subkelompok].action.split('code="')[1].split('"')[0];
+									}
+									if(kode_subkelompok != ''){
+										// penting menyimpan kode sub kelompok di variable global
+										data_ssh[_gol_id].data[_kelompok_id].data[subkelompok_id].code = kode_subkelompok;
+										
+										data_item.push({
+											kode_gol: sub_kel.code_gol,
+											kode_kel: sub_kel.code_kel,
+											kode_subkelompok: kode_subkelompok,
+											gol_id: _gol_id,
+											kelompok_id: _kelompok_id,
+											subkelompok_id: subkelompok_id,
+											subkelompok_data: sub_kel.kelompok_data[subkelompok_id].data,
+											subkelompok_nama: sub_kel.kelompok_data[subkelompok_id].nama
+										});
+									}
+								}
+								console.log('get_ssh_item ', data_item, sub_kel);
+								get_ssh_item(data_item).then(function(val){
+									val.map(function(b, i){
+										data_all.push(b);
+									})
+									resolve_reduce(nextData);
+								});
+							}
+						}
+					});
+                })
+                .catch(function(e){
+                    console.log(e);
+                    return Promise.resolve(nextData);
+                });
+            })
+            .catch(function(e){
+                console.log(e);
+                return Promise.resolve(nextData);
+            });
+        }, Promise.resolve(_data_all[last]))
+        .then(function(data_last){
+			resolve({
+				data_all: data_all,
+				data_ssh: data_ssh
+			});
+        })
+	});
+}
+
+function get_ssh_item(old_data_all){
+	return new Promise(function(resolve, reject){
+		var _data_all = [];
+		var data_all = [];
+		old_data_all.map(function(b, i){
+			_data_all.push({
+				param: {
+					data: b
+				},
+				cb: function(ret2, ret_cb2){
+					var item = ret2.data;
+					relayAjax({
+						url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/datatable?code='+item.kode_subkelompok+'&gol_id='+item.gol_id+'&kelompok_id='+item.kelompok_id+'&subkelompok_id='+item.subkelompok_id,
+						length: 1000,
+						success: function(item_data){
+							var __gol_id = this.url.split('&gol_id=')[1].split('&')[0];
+							var __kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
+							var __subkelompok_id = this.url.split('&subkelompok_id=')[1].split('&')[0];
+							var no_urut_item = 0;
+							var sendDataSatuan = [];
+							pesan_loading('GET ITEM SSH DARI SUB KELOMPOK '+item.subkelompok_nama, true);
+							var new_item_data = {};
+							item_data.data.map(function(b, i){
+								var id_ssh_fmis = get_id_ssh(b.uraian);
+								new_item_data[id_ssh_fmis] = b;
+								if(no_urut_item < +b.kdurut){
+									no_urut_item = +b.kdurut;
+								}
+							});
+							for(var item_id in item.subkelompok_data){
+								var nama_item = replace_string(item.subkelompok_data[item_id].nama, true).substring(0, 250).trim();
+								var id_ssh_sipd = get_id_ssh(nama_item);
+								// jika item tidak ditemukan maka simpan data
+								if(!new_item_data[id_ssh_sipd]){
+									no_urut_item++;
+									var keterangan_item = replace_string(item.subkelompok_data[item_id].data.spek, true).substring(0, 250).trim();
+									var satuan_asli = item.subkelompok_data[item_id].data.satuan;
+									if(
+										!satuan_asli 
+										|| satuan_asli == ''
+									){
+										satuan_asli = 'kosong';
+									}else if(
+										__kelompok_id == 'Pendapatan'
+										|| __kelompok_id == 'Pembiayaan penerimaan'
+										|| __kelompok_id == 'Pembiayaan pengeluaran'
+									){
+										satuan_asli = 'tahun';
+									}else{
+										satuan_asli = satuan_asli.toLowerCase().trim();
+									}
+									var satuan = satuan_asli+' ('+satuan_asli+')';
+									sendDataSatuan.push(new Promise(function(resolve3, reject3){
+										getIdSatuan(satuan_asli, false, {
+											url: config.fmis_url+'/parameter/ssh/struktur-ssh/item/save/'+item.kode_subkelompok,
+								            type: "post",
+								            data: {
+								                _token: _token,
+								                kdurut: no_urut_item,
+								                uraian: nama_item,
+								                spesifikasi: keterangan_item,
+								                uraian_satuan: satuan,
+								                status: 1
+								            }
+										}).then(function(val){
+											data_all.push(val);
+											resolve3();
+										});
+									}));
+								}
+							}
+							Promise.all(sendDataSatuan)
+							.then(function(val_all){
+								ret_cb2();
+						    })
+						    .catch(function(err){
+						        console.log('err', err);
+								ret_cb2();
+						    });
+						}
+					});
+				}
+			})
+		});
+		reduce_promise(_data_all, function(val_all){
+			resolve(data_all);
+		}, 50);
+	});
 }
 
 function singkronisasi_ssh_rekening(data_ssh, cb, options){
