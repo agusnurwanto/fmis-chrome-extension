@@ -989,16 +989,18 @@ function singkronisasi_ssh_rekening(data_ssh, cb, options){
 											var _gol_id = this.url.split('&gol_id=')[1].split('&')[0];
 											var _kelompok_id = this.url.split('&kelompok_id=')[1].split('&')[0];
 											var _subkelompok_id = this.url.split('&subkelompok_id=')[1].split('&')[0];
+											var new_item = {};
+											item.data.map(function(b, i){
+												var id_ssh_fmis = get_id_ssh(b.uraian);
+												new_item[id_ssh_fmis] = b;
+											});
 											for(var item_id in ret.subkelompok.data){
 												var nama_item = ret.subkelompok.data[item_id].nama;
+												var id_ssh_sipd = get_id_ssh(nama_item);
 												var kode_item = false;
-												item.data.map(function(b, i){
-													var id_ssh_fmis = get_id_ssh(b.uraian);
-													var id_ssh_sipd = get_id_ssh(nama_item);
-													if(id_ssh_fmis == id_ssh_sipd){
-														kode_item = b.action.split('code="')[1].split('"')[0];
-													}
-												});
+												if(new_item[id_ssh_sipd]){
+													kode_item = new_item[id_ssh_sipd].action.split('code="')[1].split('"')[0];
+												}
 												if(kode_item != false){
 													ret.subkelompok.data[item_id].code = kode_item;
 													sendDataSub.push({
