@@ -5286,7 +5286,7 @@ function cek_insert_sub_kegiatan_fmis(kegiatan, sub_kegiatan_filter_kegiatan){
 		        		typeof pagu_sub_keg_global != 'undefined'
 		        		&& pagu_sub_keg_global == 1
 		        	){
-		        		update_pagu_sub_from_rincian(kegiatan)
+		        		update_pagu_sub_from_rincian(kegiatan, cek_sub_kegiatan)
 		        		.then(function(){
 		        			resolve(sub_kegiatan_filter);
 		        		});
@@ -9620,7 +9620,10 @@ function singkronisasi_pendapatan(data_sipd){
 	});
 }
 
-function update_pagu_sub_from_rincian(kegiatan){
+function update_pagu_sub_from_rincian(kegiatan, cek_sub_kegiatan = false){
+	if(cek_sub_kegiatan){
+		console.log('cek_sub_kegiatan filter update_pagu_sub_from_rincian', cek_sub_kegiatan);
+	}
 	return new Promise(function(resolve, reject){
 		get_list_sub_kegiatan(kegiatan)
 		.then(function(sub_kegiatan_exist){
@@ -9628,13 +9631,17 @@ function update_pagu_sub_from_rincian(kegiatan){
 			sub_kegiatan_exist.data.reduce(function(sequence, nextData){
 	            return sequence.then(function(sub_keg_fmis){
 	        		return new Promise(function(resolve_reduce, reject_reduce){
-	        			get_list_aktivitas(sub_keg_fmis)
-						.then(function(aktivitas_exist){
-							kirim_data_rka_ke_lokal(aktivitas_exist, sub_keg_fmis)
-							.then(function(){
-								resolve_reduce(nextData);
+	        			if(cek_sub_kegiatan[sub_keg_fmis.uraian.trim().toLowerCase()]){
+		        			get_list_aktivitas(sub_keg_fmis)
+							.then(function(aktivitas_exist){
+								kirim_data_rka_ke_lokal(aktivitas_exist, sub_keg_fmis)
+								.then(function(){
+									resolve_reduce(nextData);
+								});
 							});
-						});
+	        			}else{
+	        				resolve_reduce(nextData);
+	        			}
 	        		})
 	                .catch(function(e){
 	                    console.log(e);
