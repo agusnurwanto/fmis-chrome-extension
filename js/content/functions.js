@@ -9631,7 +9631,7 @@ function update_pagu_sub_from_rincian(kegiatan, cek_sub_kegiatan = false){
 			sub_kegiatan_exist.data.reduce(function(sequence, nextData){
 	            return sequence.then(function(sub_keg_fmis){
 	        		return new Promise(function(resolve_reduce, reject_reduce){
-	        			if(cek_sub_kegiatan[sub_keg_fmis.uraian.trim().toLowerCase()]){
+	        			if(cek_sub_kegiatan==false || cek_sub_kegiatan[sub_keg_fmis.uraian.trim().toLowerCase()]){
 		        			get_list_aktivitas(sub_keg_fmis)
 							.then(function(aktivitas_exist){
 								kirim_data_rka_ke_lokal(aktivitas_exist, sub_keg_fmis)
